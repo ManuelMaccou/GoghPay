@@ -72,7 +72,7 @@ export async function generateQrCode(
     merchantId: merchant._id,
   };
 
-  const secretKey = process.env.NEXT_PUBLIC_SECURE_URL_KEY!;
+  const secretKey = process.env.SECURE_URL_KEY!;
   const baseURL = `${process.env.NEXT_PUBLIC_BASE_URL}/buy`;
   
   try {

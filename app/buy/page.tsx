@@ -12,13 +12,13 @@ import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
 import { erc20Abi } from "viem";
 import { encodeFunctionData } from "viem";
 import Image from "next/image";
-
+import NotificationMessage from "./components/Notification";
 
 interface PurchaseParams {
-  merchantId?: string;
-  product?: string;
-  price?: number;
-  walletAddress?: string;
+  merchantId: string | null;
+  product: string | null;
+  price: number;
+  walletAddress?: string | null;
 }
 
 interface VerificationParams {
@@ -29,40 +29,20 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-
-
-function verifySignature(searchParams: URLSearchParams, secretKey: string): boolean {
-  const relevantParams = ['merchantId', 'product', 'price', 'walletAddress'];
-  const params: VerificationParams = {};
-  searchParams.forEach((value, key) => {
-    if (relevantParams.includes(key)) {
-      params[key] = value;
-    }
-  });
-
-  const signature = searchParams.get('signature');
-  if (!signature) {
-    console.log('Signature not found in URL');
-    return false; 
-  }
-
-  const filteredEntries = Object.entries(params).filter(([key, value]) => value !== undefined) as [string, string][];
-  const sortedFilteredEntries = filteredEntries.sort((a, b) => a[0].localeCompare(b[0]));
-  const sortedQueryString = new URLSearchParams(sortedFilteredEntries).toString();
-
-  const computedSignature = createHmac('sha256', secretKey).update(sortedQueryString).digest('hex');
-
-  return signature === computedSignature;
-}
-
 export default function Buy() {
   const { ready, authenticated, logout } = usePrivy();
   const { wallets } = useWallets();
   const [isValid, setIsValid] = useState(false);
-  const [purchaseParams, setPurchaseParams] = useState<PurchaseParams>({});
+  const [purchaseParams, setPurchaseParams] = useState<PurchaseParams>({
+    merchantId: '',
+    product: '',
+    price: 0,
+    walletAddress: ''
+  });
   const [merchant, setMerchant] = useState<Merchant>();
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
   const [showCoinbaseOnramp, setShowCoinbaseOnramp] = useState(false);
   const [showPayButton, setShowPayButton] = useState(false);
@@ -71,7 +51,7 @@ export default function Buy() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
-  const secretKey = process.env.NEXT_PUBLIC_SECURE_URL_KEY!;
+  const secretKey = process.env.SECURE_URL_KEY!;
   const merchantId = searchParams.get('merchantId');
   const product = searchParams.get('product');    
   const walletAddress = searchParams.get('walletAddress');
@@ -95,30 +75,56 @@ export default function Buy() {
   console.log("redirectURL:", redirectURL)
 
   useEffect(() => {
-    if (!merchantId || !product || !walletAddress || !price || !verifySignature(searchParams, secretKey)) {
+    if (!merchantId || !product || !walletAddress || !price) {
       setIsValid(false);
-      setPrettyAlert("Please scan a valid QR code to make a purchase.");
+      setPrettyAlert('Please scan a valid QR code to make a purchase.');
       return;
     }
-    setIsValid(true);
-    setPurchaseParams({ merchantId, product, price, walletAddress });
 
-    async function fetchMerchant() {
+    async function verify() {
       try {
-        const response = await fetch(`/api/merchant/${merchantId}`); // Getting merchant details to display on page
+        const response = await fetch('/api/verifySignature', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            params: { merchantId, product, price, walletAddress },
+            signature: searchParams.get('signature')
+          })
+        });
+
         const data = await response.json();
-        setMerchant(data);
-      } catch (err) {
-        if (isError(err)) {
-          setError(`Error fetching merchant: ${err.message}`);
+        if (data.isValid) {
+          setIsValid(true);
+          setPurchaseParams({ merchantId, product, price, walletAddress });
+
+          const fetchMerchant = async () => {
+            try {
+              const response = await fetch(`/api/merchant/${merchantId}`); // Getting merchant details to display on page
+              const data = await response.json();
+              setMerchant(data);
+            } catch (err) {
+              if (isError(err)) {
+                setError(`Error fetching merchant: ${err.message}`);
+              } else {
+                setError('Error fetching merchant');
+              }
+            }
+          };
+
+          fetchMerchant();
         } else {
-          setError('Error fetching merchant');
+          setIsValid(false);
+          setPrettyAlert('Please scan a valid QR code to make a purchase.');
         }
+      } catch (error) {
+        console.error('Error verifying signature:', error);
+        setIsValid(false);
+        setPrettyAlert('Please scan a valid QR code to make a purchase.');
       }
     }
 
-    fetchMerchant();
-  }, [merchantId, product, walletAddress, price, searchParams, priceBigInt, secretKey]);
+    verify();
+  }, [merchantId, product, walletAddress, price, searchParams]);
 
   useEffect(() => {
     if (wallet && wallet.walletClientType === 'privy') {
@@ -160,6 +166,7 @@ export default function Buy() {
         params: [transactionRequest],
       });
 
+      setSuccess('Transaction sent successfully!');
       console.log('provider:', provider)
 
       console.log('Transaction sent! Hash:', transactionHash);
@@ -273,6 +280,8 @@ export default function Buy() {
         <Button variant='outline' mt={'9'} onClick={logout}>
           Log out
         </Button>
+        {error && <NotificationMessage message={error} type="error" />}
+          {success && <NotificationMessage message={success} type="success" />}
       </>
     )}
     </Flex>
