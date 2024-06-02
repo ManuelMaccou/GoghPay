@@ -11,7 +11,7 @@ import { createHmac } from 'crypto';
 import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
 import { erc20Abi } from "viem";
 import { encodeFunctionData } from "viem";
-import Image from "next/legacy/image";
+import Image from "next/image";
 import NotificationMessage from "./components/Notification";
 
 interface PurchaseParams {
@@ -237,19 +237,20 @@ export default function Buy() {
     {authenticated && (
       <>
         <Heading size={'8'}>Confirm payment details</Heading>
-        <Image 
+        <Image
           src={merchant?.storeImage || "/logos/gogh_logo_black.png" }
-          alt="Gogh" 
+          alt="Gogh"
           width={960}
           height={540}
-          sizes="100vw"
           priority
+          sizes="100vw"
           style={{
             width: "100%",
             height: "auto",
             marginBottom: "50px",
-          }}
-        />
+            maxWidth: "100%",
+            height: "auto"
+          }} />
 
         {showCoinbaseOnramp && (
           <>

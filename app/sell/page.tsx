@@ -6,7 +6,7 @@ import Login from '../components/Login';
 import { usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Box, Card, Flex, Text } from '@radix-ui/themes';
-import Image from "next/legacy/image";
+import Image from "next/image";
 import styles from './styles.module.css';
 
 function isError(error: any): error is Error {
@@ -82,11 +82,13 @@ export default function Sell() {
       <Image
         src="/bg_m.jpg"
         alt="background image"
-        layout="fill"
-        objectFit="cover"
         priority
         className={styles.fullBackgroundImage}
-      />
+        fill
+        sizes="100vw"
+        style={{
+          objectFit: "cover"
+        }} />
       <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
       {authenticated && user && merchantVerified ? (
         <>

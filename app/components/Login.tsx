@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './styles.module.css';
-import Image from "next/legacy/image";
+import Image from "next/image";
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import axios, { AxiosError } from 'axios';
 import { Avatar, Box, Button, Container, Flex, Heading, Section } from "@radix-ui/themes";
@@ -56,24 +56,28 @@ export default function Login() {
       <Image
         src="/bg_m.jpg"
         alt="background image"
-        layout="fill"
-        objectFit="cover"
         priority
         className={styles.fullBackgroundImage}
-      />
-   
-      <Flex direction={'column'} justify={'center'} align={'center'}>
-        <Image src="/logos/gogh_logo_white.png" 
-        alt="Gogh" 
-        width={960}
-        height={540}
+        fill
         sizes="100vw"
         style={{
-          width: "100%",
-          height: "auto",
-          marginBottom: "50px",
-        }}
-        />
+          objectFit: "cover"
+        }} />
+   
+      <Flex direction={'column'} justify={'center'} align={'center'}>
+        <Image
+          src="/logos/gogh_logo_white.png"
+          alt="Gogh"
+          width={960}
+          height={540}
+          sizes="100vw"
+          style={{
+            width: "100%",
+            height: "auto",
+            marginBottom: "50px",
+            maxWidth: "100%",
+            height: "auto"
+          }} />
         {authenticated && (
           <Button 
           highContrast
