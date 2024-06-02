@@ -11,7 +11,7 @@ import { createHmac } from 'crypto';
 import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
 import { erc20Abi } from "viem";
 import { encodeFunctionData } from "viem";
-import Image from "next/image";
+import Image from "next/legacy/image";
 import NotificationMessage from "./components/Notification";
 
 interface PurchaseParams {

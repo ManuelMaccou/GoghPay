@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { initOnRamp } from '@coinbase/cbpay-js';
-import Image from 'next/image'
+import Image from "next/legacy/image"
 import styles from '../styles.module.css'
 import { Button, Reset } from '@radix-ui/themes';
 import { useRouter } from 'next/navigation';

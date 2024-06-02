@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './styles.module.css';
-import Image from "next/image";
+import Image from "next/legacy/image";
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import axios, { AxiosError } from 'axios';
 import { Avatar, Box, Button, Container, Flex, Heading, Section } from "@radix-ui/themes";

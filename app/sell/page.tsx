@@ -6,7 +6,7 @@ import Login from '../components/Login';
 import { usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Box, Card, Flex, Text } from '@radix-ui/themes';
-import Image from "next/image";
+import Image from "next/legacy/image";
 import styles from './styles.module.css';
 
 function isError(error: any): error is Error {
