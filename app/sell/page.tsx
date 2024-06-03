@@ -3,7 +3,7 @@
 import React, { useState, FormEvent, useEffect } from 'react';
 import QRCode from 'qrcode.react';
 import Login from '../components/Login';
-import { usePrivy } from '@privy-io/react-auth';
+import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Box, Card, Flex, Text } from '@radix-ui/themes';
 import Image from "next/image";
@@ -27,17 +27,24 @@ export default function Sell() {
   };
 
   useEffect(() => {
+    
     if (!user) {
       return
     }
-    console.log("user object from privy:", user);
+    console.log('verifying merchant from sell page')
 
     const userId = user.id
-    console.log("user Id sent in for verification:", userId);
 
     async function verifyMerchantStatus() {
+      const accessToken = await getAccessToken();
       try {
-        const response = await fetch(`/api/merchant/verifyMerchantStatus/${userId}`);
+        const response = await fetch(`/api/merchant/verifyMerchantStatus/${userId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+        });
 
         if (response.status === 404) {
           setMerchantVerified(false);
@@ -49,6 +56,7 @@ export default function Sell() {
         }
 
         const data = await response.json();
+        console.log('data:', data);
         setMerchantVerified(true);
       } catch (err) {
         if (isError(err)) {

@@ -6,12 +6,23 @@ type Params = {
   userId: string
 }
 
-export async function GET(request: Request, context: { params: Params }) {
+export async function GET(req: Request, context: { params: Params }) {
+  const privyId = req.headers.get('x-user-id');
+  const userId = context.params.userId;
+
+  if (!privyId) {
+    return NextResponse.json({ error: 'User ID not provided during auth middleware' }, { status: 401 });
+  }
+
+  if (userId !== privyId) {
+    return NextResponse.json({ error: 'Unauthorized user' }, { status: 403 });
+  }
   try {
     await connectToDatabase();
-    const user_Id = context.params.userId
-    console.log("user ID to validate:", user_Id);
-    const merchant = await Merchant.findOne({ privyId: user_Id });
+    
+    console.log("userID:", userId);
+    const merchant = await Merchant.findOne({ privyId: userId });
+    console.log("merchant:", merchant);
 
     if (!merchant) {
       console.log("merchant not found");

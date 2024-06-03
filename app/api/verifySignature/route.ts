@@ -1,5 +1,4 @@
 
-import { NextApiRequest, NextApiResponse } from 'next';
 import { createHmac } from 'crypto';
 
 const secretKey = process.env.SECURE_URL_KEY!;

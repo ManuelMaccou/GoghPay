@@ -77,7 +77,6 @@ export async function generateQrCode(
   
   try {
     const signedURL = await generateSignedURL(baseURL, params, secretKey);
-    console.log('Signed URL during QR Code creation:', signedURL);
 
     return { message: "QR Code generated successfully", signedURL };
   } catch (error) {

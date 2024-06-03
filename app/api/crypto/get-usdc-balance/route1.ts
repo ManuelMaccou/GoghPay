@@ -37,13 +37,10 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get('address');
-    console.log('address:', address)
     if (!address) {
-      console.log("address not found")
       return NextResponse.json({ error: 'Address parameter is required' }, { status: 400 });
     }
     if (!ethers.isAddress(address)) {
-      console.log("Invalid Ethereum address")
       return NextResponse.json({ error: 'Invalid Ethereum address' }, { status: 400 });
     }
 
@@ -56,14 +53,11 @@ export async function GET(request: Request) {
     // Get the balance
     const balance = await usdcContract.balanceOf("0x4A6737Da9668D09aCE702c3ff5e0dA33a84d28F7");
     if (!balance) {
-      console.log("No balance returned")
       return NextResponse.json({ error: 'No balance data returned from contract' }, { status: 400 });
     }
-    console.log('Raw balance data:', balance);
 
     // USDC has 6 decimals, so convert the balance accordingly
     const balanceInUSDC = ethers.formatUnits(balance, 6);
-    console.log('blanceInUSDC:', balanceInUSDC);
 
     return NextResponse.json({ balance: balanceInUSDC });
   } catch (error) {

@@ -6,23 +6,18 @@ import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from '../types/merchant';
 import Login from '../components/Login';
-import CustomLogin from "../components/CustomLogin";
-import { createHmac } from 'crypto';
-import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Strong, Text } from "@radix-ui/themes";
 import { erc20Abi } from "viem";
 import { encodeFunctionData } from "viem";
 import Image from "next/image";
 import NotificationMessage from "./components/Notification";
+import { User } from "../types/user";
 
 interface PurchaseParams {
   merchantId: string | null;
   product: string | null;
   price: number;
   walletAddress?: string | null;
-}
-
-interface VerificationParams {
-  [key: string]: string | undefined;
 }
 
 function isError(error: any): error is Error {
@@ -40,40 +35,39 @@ export default function Buy() {
     walletAddress: ''
   });
   const [merchant, setMerchant] = useState<Merchant>();
+  const [currentUser, setCurrentUser] = useState<User>();
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
   const [showCoinbaseOnramp, setShowCoinbaseOnramp] = useState(false);
   const [showPayButton, setShowPayButton] = useState(false);
+  const [showConfirmButton, setShowConfirmButton] = useState(false);
   const [isEmbeddedWallet, setIsEmbeddedWallet] = useState(false);
   const [redirectURL, setRedirectURL] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const secretKey = process.env.SECURE_URL_KEY!;
   const merchantId = searchParams.get('merchantId');
   const product = searchParams.get('product');    
   const walletAddress = searchParams.get('walletAddress');
   const priceString = searchParams.get('price');
   const price = parseFloat(priceString || "0");
   const priceBigInt = !isNaN(price) ? BigInt(Math.round(price)) : null;
+  const {user} = usePrivy();
+
+  const {getAccessToken} = usePrivy();
 
   const wallet = wallets[0]
   const activeWalletAddress = wallet?.address
-  const merchantWalletAddress = walletAddress
-
-  console.log('merchant wallet address:', merchantWalletAddress)
-  
+  const merchantWalletAddress = walletAddress  
 
   useEffect(() => {
     const currentURL = window.location.href;
-    console.log('currentURL:', currentURL)
     setRedirectURL(currentURL);
   }, []);
   
-  console.log("redirectURL:", redirectURL)
-
+  // Verify URL and get merchant details
   useEffect(() => {
     if (!merchantId || !product || !walletAddress || !price) {
       setIsValid(false);
@@ -83,9 +77,14 @@ export default function Buy() {
 
     async function verify() {
       try {
+        const accessToken = await getAccessToken();
         const response = await fetch('/api/verifySignature', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+  
+          },
           body: JSON.stringify({
             params: { merchantId, product, price, walletAddress },
             signature: searchParams.get('signature')
@@ -99,7 +98,7 @@ export default function Buy() {
 
           const fetchMerchant = async () => {
             try {
-              const response = await fetch(`/api/merchant/${merchantId}`); // Getting merchant details to display on page
+              const response = await fetch(`/api/merchant/${merchantId}`);
               const data = await response.json();
               setMerchant(data);
             } catch (err) {
@@ -124,8 +123,9 @@ export default function Buy() {
     }
 
     verify();
-  }, [merchantId, product, walletAddress, price, searchParams]);
+  }, [merchantId, product, walletAddress, price, getAccessToken, searchParams]);
 
+  // Determine if the user has an embedded wallet
   useEffect(() => {
     if (wallet && wallet.walletClientType === 'privy') {
       setIsEmbeddedWallet(true);
@@ -134,19 +134,44 @@ export default function Buy() {
     }
   }, [wallet]);
 
+
+  // Fetch current user
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!user) return;
+      try {
+        const response = await fetch(`/api/user/me/${user.id}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user');
+        }
+        const userData = await response.json();
+        setCurrentUser(userData.user);
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+  
+    if (ready && authenticated) {
+      fetchUser();
+    }
+  }, [authenticated, ready, user]);
+  
+
   async function sendUSDC(activeWalletAddress: `0x${string}`, merchantWalletAddress: `0x${string}`, price: number) {
-    console.log('current chain:', wallet.chainId)
+    console.log('current chain:', wallet.chainId);
+    console.log('active wallet address', activeWalletAddress);
     if (!activeWalletAddress) {
       console.error('Error: Users wallet address is missing.');
       setError('There was an error. Please log in again.');
       return;
     }
     
-    console.log('active wallet address while paying:', activeWalletAddress);
     const amountInUSDC = BigInt(price * 1_000_000);
-    console.log('amountInUSDC:', amountInUSDC);
+    console.log('amount in USDC:', amountInUSDC)
 
     try {
+      setIsLoading(true);
       const data = encodeFunctionData({
         abi: erc20Abi,
         functionName: 'transfer',
@@ -167,9 +192,17 @@ export default function Buy() {
       });
 
       setSuccess('Transaction sent successfully!');
-      console.log('provider:', provider)
-
       console.log('Transaction sent! Hash:', transactionHash);
+
+      await saveTransaction({
+        merchantId: merchant?._id,
+        buyerId: currentUser?._id,
+        buyerPrivyId: currentUser?.privyId,
+        productName: purchaseParams.product,
+        productPrice: price,
+        transactionHash: transactionHash,
+      });
+
     } catch (error) {
       if (isError(error)) {
         console.error('Error sending USDC:', error.message);
@@ -178,9 +211,37 @@ export default function Buy() {
         console.error('An unexpected error occurred:', error);
         setError('An unexpected error occurred');
       }
+    } finally {
+      setIsLoading(false); // Set loading state to false
     }
   }
+
+  async function saveTransaction(transactionData: any) {
+    const accessToken = await getAccessToken();
+    try {
+      const response = await fetch('/api/transaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+
+        },
+        body: JSON.stringify(transactionData),
+      });
   
+      if (!response.ok) {
+        throw new Error('Failed to save transaction');
+      }
+  
+      const data = await response.json();
+      console.log('Transaction saved:', data);
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+    }
+  }
+
+// check the experience for non embedded wallets. Is it good?
+// Make sure to change the chainID.
   useEffect(() => {
     if(ready && authenticated && isValid && activeWalletAddress) {
       if (isEmbeddedWallet) { // Eventually this will change when magic spend supports USDC. Then you wont need to check balance and magic spend will handle it if balance is low.
@@ -209,8 +270,6 @@ export default function Buy() {
         fetchBalance();
 
         const isSufficientBalance = balance >= price + 1;
-        console.log("balance:", balance);
-        console.log('sufficient balance:', isSufficientBalance);
 
         if (!isSufficientBalance){
           setShowCoinbaseOnramp(true);
@@ -219,6 +278,9 @@ export default function Buy() {
           setShowPayButton(true);
           setShowCoinbaseOnramp(false);
         }
+      } else {
+        setShowPayButton(true);
+        setShowCoinbaseOnramp(false);
       }
     };
     
@@ -233,10 +295,12 @@ export default function Buy() {
   }
 
   return (
-    <Flex direction={'column'} height={'100vh'} align={'center'} justify={'center'}>
+    <Flex direction={'column'} my={'6'} minHeight={'100vh'} align={'center'} justify={'center'}>
     {authenticated && (
       <>
-        <Heading size={'8'}>Confirm payment details</Heading>
+      <Box maxWidth={'70%'} my={'5'}>
+        <Heading size={'7'} align={'center'}>Confirm payment details</Heading>
+        </Box>
         <Image
           src={merchant?.storeImage || "/logos/gogh_logo_black.png" }
           alt="Gogh"
@@ -249,8 +313,17 @@ export default function Buy() {
             height: "auto",
             marginBottom: "50px",
             maxWidth: "100%",
-            height: "auto"
-          }} />
+          }} /> 
+        <Flex direction={'column'} width={'80%'} m={'6'}>
+          <Flex direction={'row'} width={'100%'} justify={'between'}>
+          <Text size={'6'}><Strong>Product: </Strong></Text>
+          <Text size={'6'}>{product}</Text>
+          </Flex>
+          <Flex direction={'row'} width={'100%'} justify={'between'}>
+          <Text size={'6'}><Strong>Price: </Strong></Text>
+          <Text size={'6'}>${price}</Text>
+          </Flex>
+        </Flex>
 
         {showCoinbaseOnramp && (
           <>
@@ -261,28 +334,61 @@ export default function Buy() {
             destinationWalletAddress={activeWalletAddress || ""}
             price={purchaseParams.price || 0}
             redirectURL={redirectURL}/>
-            <Text mt={'2'}>Current balance: ${balance}</Text>
             <div id="cbpay-container"></div>
             </Flex>
           </>
         )}
         {showPayButton && (
-          <Button onClick={() => {
+          <Button size={'4'} loading={isLoading} disabled={!!success} onClick={() => {
+            setShowConfirmButton(true);
+            setShowPayButton(false);
+            setError(null);
+            setSuccess(null);
+          }}>
+            Purchase
+          </Button>
+        )}
+
+        {showConfirmButton && (
+          <Flex direction={'row'} gap={'3'}>
+          <Button size={'4'} loading={isLoading} disabled={!!success} onClick={() => {
             if (price !== null && activeWalletAddress) {
               sendUSDC(activeWalletAddress as `0x${string}`, merchantWalletAddress as `0x${string}`, price);
+              setError(null);
+              setSuccess(null);
             } else {
               console.error("Invalid price or wallet address.");
               setError("Invalid price or wallet address. Unable to process the transaction.");
             }
-          }}>Purchase</Button>
+          }}>Confirm</Button>
+          <Button size={'4'} variant="surface" onClick={() => {
+            setShowConfirmButton(false);
+            setShowPayButton(true);
+            setError(null);
+            setSuccess(null);
+          }}>
+            Cancel
+          </Button>
+
+          </Flex>
         )}
+
+        {error && 
+          <Box mx={'3'}>
+            <NotificationMessage message={error} type="error" />
+          </Box>
+        }
+        {success && 
+          <Box mx={'3'}>
+            <NotificationMessage message={success} type="success" />
+          </Box>
+        }
+        <Text mt={'2'}>Current balance: ${balance}</Text>
 
         {/* REMOVE FOR PROD */}
         <Button variant='outline' mt={'9'} onClick={logout}>
           Log out
         </Button>
-        {error && <NotificationMessage message={error} type="error" />}
-          {success && <NotificationMessage message={success} type="success" />}
       </>
     )}
     </Flex>

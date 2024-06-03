@@ -5,8 +5,7 @@ import connectToDatabase from '@/app/utils/mongodb';
 
 export async function GET(req: NextRequest, res: NextResponse) {
   try {
-    const userIdFromToken = req.headers.get('user');
-    console.log('user from privy middleware:', userIdFromToken)
+    const userIdFromToken = req.nextUrl.searchParams.get('user');
 
     if (!userIdFromToken) {
       return NextResponse.json({ message: "Unauthorized" }, {status: 401});
@@ -25,7 +24,7 @@ export async function GET(req: NextRequest, res: NextResponse) {
   }
 }
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
   try {
     const userData = await req.json();
 
@@ -33,8 +32,8 @@ export async function POST(req: NextRequest, res: NextResponse) {
       console.error('Missing user data from the request body.')
       return
     }
-    const userIdFromToken = req.headers.get('user');
-    console.log('user from privy middleware:', userIdFromToken)
+    const userIdFromToken = req.headers.get('x-user-id');
+    console.log('userIdFromToken:', userIdFromToken);
 
     if (!userIdFromToken) {
       return NextResponse.json({ message: "Unauthorized" }, {status: 401});

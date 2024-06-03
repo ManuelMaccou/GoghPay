@@ -24,9 +24,7 @@ export function SendUsdcButton({ activeWalletAddress, merchantWalletAddress, pri
     return null;
   }
 
-  console.log('active wallet address while paying:', activeWalletAddress);
   const amountInUSDC = BigInt(price * 1_000_000);
-  console.log('amountInUSDC:', amountInUSDC);
 
   const data = encodeFunctionData({
     abi: erc20Abi,
