@@ -10,7 +10,7 @@ export async function middleware(req: NextRequest) {
     // Extract the Authorization header from the request
     const authHeader = req.headers.get('authorization');
     
-    // If there is no Authorization header or it doesn't start with 'Bearer ', return an unauthorized response
+    // If there is no Authorization header or it doesn't start with 'Bearer ', return an unauthorized response.
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ message: "No authentication token provided." }, { status: 401 });
     }
