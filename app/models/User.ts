@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   walletAddress: { type: String },
   name: { type: String },
   email: { type: String },
+  merchant: { type: Boolean },
 
 });
 

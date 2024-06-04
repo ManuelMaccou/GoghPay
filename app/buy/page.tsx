@@ -4,14 +4,14 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { Merchant } from '../types/merchant';
+import { Merchant } from "../types/types";
 import Login from '../components/Login';
 import { Box, Button, Flex, Heading, Strong, Text } from "@radix-ui/themes";
 import { erc20Abi } from "viem";
 import { encodeFunctionData } from "viem";
 import Image from "next/image";
 import NotificationMessage from "./components/Notification";
-import { User } from "../types/user";
+import { User } from "../types/types";
 
 interface PurchaseParams {
   merchantId: string | null;

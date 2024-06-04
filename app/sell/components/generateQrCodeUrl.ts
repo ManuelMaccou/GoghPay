@@ -4,7 +4,7 @@ import Merchant from '../../models/Merchant';
 import connectToDatabase from '../../utils/mongodb';
 import { z } from "zod";
 import { createHmac } from 'crypto';
-import { User } from '../../types/user';
+import { User } from '@/app/types/types';
 
 interface Params {
   merchantId: string;

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import axios from 'axios';
-import { User } from '../types/user';
+import { User } from '../types/types';
 
 interface UserContextType {
     user: User | null;

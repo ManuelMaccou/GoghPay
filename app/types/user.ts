@@ -4,4 +4,5 @@ export interface User {
   walletAddress: string;
   name?: string;
   email?: string;
+  merchant?: boolean;
 }
