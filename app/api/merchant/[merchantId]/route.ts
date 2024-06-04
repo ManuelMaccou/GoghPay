@@ -19,11 +19,3 @@ export async function GET(request: Request, context: { params: Params }) {
 
   return NextResponse.json(merchant);
 }
-
-export async function POST(request: NextRequest) {
-  await connectToDatabase();
-  const { merchantId, walletAddress, user } = await request.json();
-  const newMerchant = new Merchant({ merchantId, walletAddress, user });
-  await newMerchant.save();
-  return NextResponse.json(newMerchant);
-}

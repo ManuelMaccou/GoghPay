@@ -4,7 +4,7 @@ import Merchant from '../../models/Merchant';
 import connectToDatabase from '../../utils/mongodb';
 import { z } from "zod";
 import { createHmac } from 'crypto';
-import { User } from '../../types/user';
+import { User } from '@/app/types/types';
 
 interface Params {
   merchantId: string;
@@ -72,12 +72,11 @@ export async function generateQrCode(
     merchantId: merchant._id,
   };
 
-  const secretKey = process.env.NEXT_PUBLIC_SECURE_URL_KEY!;
+  const secretKey = process.env.SECURE_URL_KEY!;
   const baseURL = `${process.env.NEXT_PUBLIC_BASE_URL}/buy`;
   
   try {
     const signedURL = await generateSignedURL(baseURL, params, secretKey);
-    console.log('Signed URL during QR Code creation:', signedURL);
 
     return { message: "QR Code generated successfully", signedURL };
   } catch (error) {

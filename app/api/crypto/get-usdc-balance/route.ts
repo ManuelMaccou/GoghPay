@@ -45,7 +45,6 @@ export async function GET(req: NextRequest) {
     const readableBalance = decimalValue / BigInt(10 ** decimals);
     const flooredBalance = Math.floor(Number(readableBalance)); 
 
-    console.log('balance:', flooredBalance);
     return new NextResponse(JSON.stringify({
       balance: flooredBalance 
     }), {

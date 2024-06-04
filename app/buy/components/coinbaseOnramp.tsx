@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { initOnRamp } from '@coinbase/cbpay-js';
-import Image from 'next/image'
+import Image from "next/image"
 import styles from '../styles.module.css'
 import { Button, Reset } from '@radix-ui/themes';
 import { useRouter } from 'next/navigation';
@@ -25,7 +25,15 @@ export function BuyWithCoinbaseButton({ onPress, isLoading }: BuyWithCoinbaseBut
     return (
         <Reset>
         <Button variant='ghost' loading={isLoading} className={styles.cbButton} onClick={onPress}>
-            <Image src={`/buttons/button-cbPay-normal-continue.png`} alt={"coinbase pay button"} width={200} height={40} />
+            <Image
+                src={`/buttons/button-cbPay-normal-continue.png`}
+                alt={"coinbase pay button"}
+                width={200}
+                height={40}
+                style={{
+                    maxWidth: "100%",
+                    height: "auto"
+                }} />
         </Button>
         </Reset>
     );

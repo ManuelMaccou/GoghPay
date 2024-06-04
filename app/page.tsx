@@ -1,95 +1,126 @@
+"use client"
+
+import React, { useEffect, useState } from 'react';
 import Image from "next/image";
-import styles from "./page.module.css";
+import { usePrivy, useLogin } from '@privy-io/react-auth';
+import axios, { AxiosError } from 'axios';
+import { Button, Flex } from "@radix-ui/themes";
+import { User } from './types/types';
+import styles from './components/styles.module.css'
 
 export default function Home() {
+  const [currentUser, setCurrentUser] = useState<User>();
+  const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
+
+  const { login } = useLogin({
+
+    onComplete: async (user, isNewUser) => {
+      console.log('login successful')
+      const accessToken = await getAccessToken();
+      const userPayload = {
+        privyId: user.id,
+        walletAddress: user.wallet?.address,
+      };
+      if (isNewUser) {
+        try {
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          console.log('New user created:', response.data);
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+              console.error('Error fetching user details:', error.response?.data?.message || error.message);
+          } else {
+              console.error('Unexpected error:', error);
+          }
+        }
+          
+      } 
+    },
+    onError: (error) => {
+        console.error("Privy login error:", error);
+    },
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!user) return;
+      try {
+        const response = await fetch(`/api/user/me/${user.id}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user');
+        }
+        const userData = await response.json();
+        setCurrentUser(userData.user);
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+  
+    if (ready && authenticated) {
+      fetchUser();
+    }
+  }, [authenticated, ready, user]);
+
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
+    <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
+      <Image
+        src="/bg_m.jpg"
+        alt="background image"
+        priority
+        className={styles.fullBackgroundImage}
+        fill
+        sizes="100vw"
+        style={{
+          objectFit: "cover"
+        }} />
+   
+      <Flex direction={'column'} justify={'center'} align={'center'}>
         <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+          src="/logos/gogh_logo_white.png"
+          alt="Gogh"
+          width={960}
+          height={540}
+          sizes="100vw"
+          style={{
+            width: "100%",
+            height: "auto",
+            marginBottom: "50px",
+            maxWidth: "100%",
+          }} />
+        {authenticated ? (
+        
+          <Flex direction={'column'} justify={'between'}>
+          <Flex direction={'column'} gap={'5'}>
+            {currentUser?.merchant ? (
+              <>
+                <Button size={'4'}>Sales</Button>
+                <Button size={'4'} style={{width: "300px"}}>Purchases</Button>
+              </>
+            ) : (
+              <Button size={'4'} style={{width: "300px"}}>
+                Purchases
+              </Button>
+            )}
+          </Flex>
+          </Flex>
+        ) : null}
+      </Flex>
+      <Flex direction={'column'} justify={'center'} align={'center'} position={'absolute'} bottom={'9'} width={'100%'}>
+        {authenticated ? (
+          <Button highContrast size={'4'}
+            onClick={logout}>
+              Log out
+          </Button>
+          ) : (
+          <Button highContrast size={'4'} style={{width: "300px"}}
+            onClick={login}>
+            Log in
+          </Button>
+        )}
+      </Flex>
+    </Flex>
   );
-}
+};

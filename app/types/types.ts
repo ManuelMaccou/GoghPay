@@ -1,0 +1,23 @@
+export interface User {
+  _id: string;
+  privyId: string;
+  walletAddress: string;
+  name?: string;
+  email?: string;
+  merchant?: boolean;
+}
+
+export interface Merchant {
+  _id: string;
+  walletAddress?: string;
+  storeImage?: string;
+}
+
+export interface Transaction {
+  _id: string;
+  merchant: Merchant;
+  buyer: User;
+  productName: string;
+  productPrice: number;
+  transactionHash: string;
+}

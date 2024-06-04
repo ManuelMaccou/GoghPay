@@ -5,9 +5,10 @@ const userSchema = new mongoose.Schema({
   walletAddress: { type: String },
   name: { type: String },
   email: { type: String },
+  merchant: { type: Boolean },
 
 });
 
-const User = mongoose.models.Merchant || mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 export default User;
