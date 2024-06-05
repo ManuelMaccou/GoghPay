@@ -13,6 +13,13 @@ import Image from "next/image";
 import NotificationMessage from "./components/Notification";
 import { User } from "../types/types";
 
+import {Chain, createWalletClient, custom} from 'viem';
+import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V06, walletClientToSmartAccountSigner} from 'permissionless';
+import {signerToSimpleSmartAccount} from 'permissionless/accounts';
+import {createPimlicoPaymasterClient} from 'permissionless/clients/pimlico';
+import {createPublicClient, http} from 'viem';
+import { base, baseSepolia } from "viem/chains";
+
 interface PurchaseParams {
   merchantId: string | null;
   product: string | null;
@@ -170,26 +177,31 @@ export default function Buy() {
     const amountInUSDC = BigInt(price * 1_000_000);
     console.log('amount in USDC:', amountInUSDC)
 
+    setIsLoading(true);
+
     try {
-      setIsLoading(true);
+      const smartAccountClient = await setupSmartAccountClient(activeWalletAddress);
+      
       const data = encodeFunctionData({
         abi: erc20Abi,
         functionName: 'transfer',
         args: [merchantWalletAddress, amountInUSDC]
       })
 
-      const transactionRequest = {
-        from: activeWalletAddress,
-        to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS!,
-        data: data,
-        value: 0x0,
-      };
+      console.log("amount to send:", amountInUSDC);
+      console.log('data object:', data);
 
-      const provider = await wallet.getEthereumProvider();
-      const transactionHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [transactionRequest],
+      const transactionHash = await smartAccountClient.sendTransaction({
+        account: smartAccountClient.account,
+        to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+        data: data,
+        value: BigInt(0),
+        maxFeePerGas: BigInt(20000000),
+        maxPriorityFeePerGas: BigInt(10000000),
       });
+
+      
+  
 
       setSuccess('Transaction sent successfully!');
       console.log('Transaction sent! Hash:', transactionHash);
@@ -216,6 +228,60 @@ export default function Buy() {
     }
   }
 
+  // Setup smart account client
+  async function setupSmartAccountClient(activeWalletAddress: `0x${string}`) {
+    const eip1193provider = await wallet.getEthereumProvider();
+    console.log("eip1193provider:", eip1193provider)
+
+    // Create a viem WalletClient from the embedded wallet's EIP1193 provider
+    // This will be used as the signer for the user's smart account
+    const privyClient = createWalletClient({
+      account: activeWalletAddress,
+      chain: baseSepolia,
+      transport: custom(eip1193provider)
+    });
+
+    console.log("privyClient:", privyClient)
+
+    // Create a viem public client for RPC calls
+    const publicClient = createPublicClient({
+      chain: baseSepolia,
+      transport: http(),
+    });
+
+    console.log("publicClient:", publicClient)
+
+    // Initialize the smart account for the user
+    const customSigner = walletClientToSmartAccountSigner(privyClient);
+    const simpleSmartAccount = await signerToSimpleSmartAccount(publicClient, {
+      entryPoint: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
+      signer: customSigner,
+      factoryAddress: '0x9406Cc6185a346906296840746125a0E44976454',
+    });
+
+    console.log("customSigner:", customSigner)
+
+    // Create the Paymaster for gas sponsorship 
+    const rpcUrl = process.env.NEXT_PUBLIC_PAYMASTER_COINBASE_RPC
+    const cloudPaymaster = createPimlicoPaymasterClient({
+      chain: baseSepolia,
+      transport: http("https://api.developer.coinbase.com/rpc/v1/base-sepolia/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
+      entryPoint: ENTRYPOINT_ADDRESS_V06,
+    });
+
+    // Create the SmartAccountClient for requesting signatures and transactions (RPCs)
+    return createSmartAccountClient({
+      account: simpleSmartAccount,
+      chain: baseSepolia,
+      bundlerTransport: http("https://api.developer.coinbase.com/rpc/v1/base-sepolia/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
+      middleware: {
+        sponsorUserOperation: cloudPaymaster.sponsorUserOperation,
+      },
+    });
+  }
+
+
+  // Save transaction
   async function saveTransaction(transactionData: any) {
     const accessToken = await getAccessToken();
     try {
@@ -383,8 +449,11 @@ export default function Buy() {
             <NotificationMessage message={success} type="success" />
           </Box>
         }
-        <Text mt={'2'}>Current balance: ${balance}</Text>
 
+        {isEmbeddedWallet && (
+          <Text mt={'2'}>Current balance: ${balance}</Text>
+        )}
+        
         {/* REMOVE FOR PROD */}
         <Button variant='outline' mt={'9'} onClick={logout}>
           Log out
