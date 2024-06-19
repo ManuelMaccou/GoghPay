@@ -56,6 +56,9 @@ dependencies:
   next:
     specifier: latest
     version: 14.2.3(@babel/core@7.24.5)(react-dom@18.3.1)(react@18.3.1)
+  permissionless:
+    specifier: ^0.1.30
+    version: 0.1.30(viem@2.12.0)
   pnpm:
     specifier: ^8.15.4
     version: 8.15.8
@@ -6250,6 +6253,14 @@ packages:
 
   /pathe@1.1.2:
     resolution: {integrity: sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ==}
+    dev: false
+
+  /permissionless@0.1.30(viem@2.12.0):
+    resolution: {integrity: sha512-q2ZaKGiOElfy9IEFRbS8jS5f3V/gNUtWBALGtwSB16aAeWvK583oNaLizUS85pgnc1DCJ8yiKG7hm2IOvjuSBg==}
+    peerDependencies:
+      viem: ^2.9.17
+    dependencies:
+      viem: 2.12.0(typescript@5.4.5)(zod@3.23.8)
     dev: false
 
   /picocolors@1.0.1:
