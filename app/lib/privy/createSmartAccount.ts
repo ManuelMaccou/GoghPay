@@ -1,3 +1,4 @@
+/*
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import {Chain, createWalletClient, custom} from 'viem';
 import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V06, walletClientToSmartAccountSigner} from 'permissionless';
@@ -61,3 +62,4 @@ async function setupSmartAccount() {
       // Handle or propagate the error appropriately
     }
   }
+*/
