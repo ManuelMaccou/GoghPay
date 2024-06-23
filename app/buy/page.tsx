@@ -240,7 +240,7 @@ export default function Buy() {
     // This will be used as the signer for the user's smart account
     const privyClient = createWalletClient({
       account: activeWalletAddress,
-      chain: baseSepolia,
+      chain: base,
       transport: custom(eip1193provider)
     });
 
@@ -248,7 +248,7 @@ export default function Buy() {
 
     // Create a viem public client for RPC calls
     const publicClient = createPublicClient({
-      chain: baseSepolia,
+      chain: base,
       transport: http(),
     });
 
@@ -267,16 +267,16 @@ export default function Buy() {
     // Create the Paymaster for gas sponsorship 
     const rpcUrl = process.env.NEXT_PUBLIC_PAYMASTER_COINBASE_RPC
     const cloudPaymaster = createPimlicoPaymasterClient({
-      chain: baseSepolia,
-      transport: http("https://api.developer.coinbase.com/rpc/v1/base-sepolia/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
+      chain: base,
+      transport: http("https://api.developer.coinbase.com/rpc/v1/base/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
       entryPoint: ENTRYPOINT_ADDRESS_V06,
     });
 
     // Create the SmartAccountClient for requesting signatures and transactions (RPCs)
     return createSmartAccountClient({
       account: simpleSmartAccount,
-      chain: baseSepolia,
-      bundlerTransport: http("https://api.developer.coinbase.com/rpc/v1/base-sepolia/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
+      chain: base,
+      bundlerTransport: http("https://api.developer.coinbase.com/rpc/v1/base/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
       middleware: {
         sponsorUserOperation: cloudPaymaster.sponsorUserOperation,
       },

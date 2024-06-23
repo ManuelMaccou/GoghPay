@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
-import { usePrivy, useLogin } from '@privy-io/react-auth';
+import { usePrivy, useLogin, useWallets } from '@privy-io/react-auth';
 import axios from 'axios';
 import { Button, Flex, Spinner } from "@radix-ui/themes";
 import { User } from './types/types';
@@ -19,7 +19,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
+  const {wallets} = useWallets();
   const router = useRouter();
+
+  const wallet = wallets[0];
+  const chainId = wallet?.chainId;
+  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
@@ -45,6 +50,25 @@ export default function Home() {
           }
         }
       } 
+      if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+        try {
+          await wallet.switchChain(chainIdNum);
+        } catch (error: unknown) {
+          console.error('Error switching chain:', error);
+      
+          if (typeof error === 'object' && error !== null && 'code' in error) {
+            const errorCode = (error as { code: number }).code;
+            if (errorCode === 4001) {
+                alert('You need to switch networks to proceed.');
+            } else {
+                alert('Failed to switch the network. Please try again.');
+            }
+          } else {
+              alert('An unexpected error occurred.');
+          }
+          return;
+        }
+      };
     },
     onError: (error) => {
         console.error("Privy login error:", error);
