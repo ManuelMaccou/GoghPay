@@ -5,7 +5,7 @@ import QRCode from 'qrcode.react';
 import Login from '../components/Login';
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
-import { Box, Card, Flex, Text } from '@radix-ui/themes';
+import { Box, Card, Flex, Spinner, Text } from '@radix-ui/themes';
 import Image from "next/image";
 import styles from './styles.module.css';
 
@@ -19,6 +19,7 @@ export default function Sell() {
   const { ready, authenticated, user, logout } = usePrivy();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [message, setMessage] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState('');
 
 
@@ -27,12 +28,17 @@ export default function Sell() {
   };
 
   useEffect(() => {
+    if (!ready || !authenticated) {
+      setIsLoading(false);
+      return;
+    }
     
     if (!user) {
+      setIsLoading(false);
       return
     }
-    console.log('verifying merchant from sell page')
 
+    console.log('verifying merchant from sell page')
     const userId = user.id
 
     async function verifyMerchantStatus() {
@@ -48,6 +54,7 @@ export default function Sell() {
 
         if (response.status === 404) {
           setMerchantVerified(false);
+          setIsLoading(false);
           return;
         }
 
@@ -58,12 +65,15 @@ export default function Sell() {
         const data = await response.json();
         console.log('data:', data);
         setMerchantVerified(true);
+
       } catch (err) {
         if (isError(err)) {
           setError(`Error fetching merchant: ${err.message}`);
         } else {
           setError('Error fetching merchant');
         }
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -71,13 +81,24 @@ export default function Sell() {
   }, [user, ready, authenticated]);
 
 
+  /*
   useEffect(() => {
     console.log("Authentication state changed");
   }, [ready, authenticated]);
+  */
+
+  // Spinner shown during loading state
+  if (isLoading) {
+    return (
+      <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
+        <Spinner />
+      </Flex>
+    );
+  }
 
 
   // Create a better experience for logged in users who are curious about the sell page, but are unauthorized
-  if (!merchantVerified) {
+  if (!authenticated || !merchantVerified) {
     return <Login />;
   }
   

@@ -5,7 +5,6 @@ import { PrivyClient } from '@privy-io/server-auth';
 const privy = new PrivyClient(process.env.NEXT_PUBLIC_PRIVY_APP_ID!, process.env.NEXT_PUBLIC_PRIVY_SECRET!);
 
 export async function middleware(req: NextRequest) {
-  console.log("entering middleware")
   try {
     // Extract the Authorization header from the request
     const authHeader = req.headers.get('authorization');
@@ -24,8 +23,6 @@ export async function middleware(req: NextRequest) {
     // Clone the request headers and set a new header with the user ID
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-user-id', verifiedClaims.userId);
-
-    console.log("middleware request headers:", requestHeaders)
 
     // Proceed with the request, adding the modified headers
     return NextResponse.next({

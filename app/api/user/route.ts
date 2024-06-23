@@ -28,19 +28,8 @@ export async function POST(req: NextRequest) {
   try {
     const userData = await req.json();
 
-    if (!userData) {
-      console.error('Missing user data from the request body.')
-      return
-    }
-    const userIdFromToken = req.headers.get('x-user-id');
-    console.log('userIdFromToken:', userIdFromToken);
-
-    if (!userIdFromToken) {
-      return NextResponse.json({ message: "Unauthorized" }, {status: 401});
-    }
-
     await connectToDatabase();
-    let user = await User.findOne({ privyId: userIdFromToken });
+    let user = await User.findOne({ privyId: userData.privyId });
     if (!user) {
       try {
         user = new User({

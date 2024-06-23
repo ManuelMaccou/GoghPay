@@ -6,7 +6,7 @@ import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
 import Login from '../components/Login';
-import { Box, Button, Flex, Heading, Strong, Text } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Strong, Text, Spinner } from "@radix-ui/themes";
 import { erc20Abi } from "viem";
 import { encodeFunctionData } from "viem";
 import Image from "next/image";
@@ -53,6 +53,8 @@ export default function Buy() {
   const [isEmbeddedWallet, setIsEmbeddedWallet] = useState(false);
   const [redirectURL, setRedirectURL] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(true);
 
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
@@ -83,6 +85,7 @@ export default function Buy() {
     }
 
     async function verify() {
+      setIsVerifying(true);
       try {
         const accessToken = await getAccessToken();
         const response = await fetch('/api/verifySignature', {
@@ -99,6 +102,8 @@ export default function Buy() {
         });
 
         const data = await response.json();
+        setIsVerifying(false);
+
         if (data.isValid) {
           setIsValid(true);
           setPurchaseParams({ merchantId, product, price, walletAddress });
@@ -119,11 +124,13 @@ export default function Buy() {
 
           fetchMerchant();
         } else {
+          setIsVerifying(false);
           setIsValid(false);
           setPrettyAlert('Please scan a valid QR code to make a purchase.');
         }
       } catch (error) {
         console.error('Error verifying signature:', error);
+        setIsVerifying(false);
         setIsValid(false);
         setPrettyAlert('Please scan a valid QR code to make a purchase.');
       }
@@ -163,7 +170,6 @@ export default function Buy() {
       fetchUser();
     }
   }, [authenticated, ready, user]);
-  
 
   async function sendUSDC(activeWalletAddress: `0x${string}`, merchantWalletAddress: `0x${string}`, price: number) {
     console.log('current chain:', wallet.chainId);
@@ -199,9 +205,6 @@ export default function Buy() {
         maxFeePerGas: BigInt(20000000),
         maxPriorityFeePerGas: BigInt(10000000),
       });
-
-      
-  
 
       setSuccess('Transaction sent successfully!');
       console.log('Transaction sent! Hash:', transactionHash);
@@ -310,40 +313,38 @@ export default function Buy() {
 // Make sure to change the chainID.
   useEffect(() => {
     if(ready && authenticated && isValid && activeWalletAddress) {
-      if (isEmbeddedWallet) { // Eventually this will change when magic spend supports USDC. Then you wont need to check balance and magic spend will handle it if balance is low.
-        const fetchBalance = async () => {
-          try {
-            const response = await fetch(`/api/crypto/get-usdc-balance?address=${activeWalletAddress}`);
-            if (!response.ok) {
-              throw new Error('Failed to fetch balance');
-            }
-            const data = await response.json();
-            if (data.error) {
-              throw new Error(data.error);
-            } else {
-              setBalance(parseFloat(data.balance));
-            }
-          } catch (error) {
-            if (isError(error)) {
-              console.error('Error checking balance:', error.message);
-              setError(`Balance check failed: ${error.message}`);
-            } else {
-              console.error('An unexpected error occurred:', error);
-              setError('An unexpected error occurred');
-            }
+      const fetchBalance = async () => {
+        setIsBalanceLoading(true);
+        try {
+          const response = await fetch(`/api/crypto/get-usdc-balance?address=${activeWalletAddress}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch balance');
           }
-        };
-        fetchBalance();
-
-        const isSufficientBalance = balance >= price + 1;
-
-        if (!isSufficientBalance){
-          setShowCoinbaseOnramp(true);
-          setShowPayButton(false);
-        } else {
-          setShowPayButton(true);
-          setShowCoinbaseOnramp(false);
+          const data = await response.json();
+          if (data.error) {
+            throw new Error(data.error);
+          } else {
+            setBalance(parseFloat(data.balance));
+          }
+        } catch (error) {
+          if (isError(error)) {
+            console.error('Error checking balance:', error.message);
+            setError(`Balance check failed: ${error.message}`);
+          } else {
+            console.error('An unexpected error occurred:', error);
+            setError('An unexpected error occurred');
+          }
+        } finally {
+          setIsBalanceLoading(false);
         }
+      };
+      fetchBalance();
+
+      const isSufficientBalance = balance >= price + 1;
+
+      if (!isSufficientBalance){
+        setShowPayButton(false);
+        setShowCoinbaseOnramp(true);
       } else {
         setShowPayButton(true);
         setShowCoinbaseOnramp(false);
@@ -352,12 +353,24 @@ export default function Buy() {
     
   },[ready, authenticated, activeWalletAddress, isEmbeddedWallet, isValid, balance, price]);
 
-  if (!authenticated) {
+  if (ready && !authenticated) {
     return <Login />;
   }
 
-  if (!isValid) {
-    return <p>Invalid or tampered link.</p>;
+  if (ready && !isValid && !isVerifying) {
+    return (
+      <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
+        <Text m={'100'}>Invalid or tampered link.</Text>
+      </Flex>
+    );
+  }
+
+  if (isBalanceLoading || !ready) {
+    return (
+      <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
+        <Spinner />
+      </Flex>
+    );
   }
 
   return (
@@ -394,8 +407,17 @@ export default function Buy() {
         {showCoinbaseOnramp && (
           <>
           <Flex direction={'column'} align={'center'} mx={'4'}>
-            <Text align={'center'}>You don&apos;t have enough in your account to cover this item plus fees.</Text>
-            <Text mb={'4'} align={'center'}>Continue with Coinbase to transfer funds.</Text>
+            {isEmbeddedWallet ? (
+              <>
+                <Text align={'center'}>You don&apos;t have enough in your account to cover this item plus fees.</Text>
+                <Text mb={'4'} align={'center'}>Continue with Coinbase to transfer funds.</Text>
+              </>
+            ) : (
+              <>
+                <Text align={'center'}>You don&apos;t have enough funds in your wallet to complete this purchase.</Text>
+                <Text mb={'4'} align={'center'}>Transfer funds from your Coinbase account or perform a swap.</Text>
+              </>
+            )}
           <CoinbaseButton
             destinationWalletAddress={activeWalletAddress || ""}
             price={purchaseParams.price || 0}
@@ -449,10 +471,8 @@ export default function Buy() {
             <NotificationMessage message={success} type="success" />
           </Box>
         }
-
-        {isEmbeddedWallet && (
-          <Text mt={'2'}>Current balance: ${balance}</Text>
-        )}
+        
+        <Text mt={'2'}>Current balance: ${balance}</Text>
         
         {/* REMOVE FOR PROD */}
         <Button variant='outline' mt={'9'} onClick={logout}>

@@ -15,7 +15,8 @@ function isError(error: any): error is Error {
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isFetchingUser, setIsFetchingUser] = useState<boolean>(false);
+  const [isFetchingUser, setIsFetchingUser] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
   const router = useRouter();
@@ -55,9 +56,12 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (!ready) return;
+  
     const fetchUser = async () => {
       if (!user) return;
-      setIsFetchingUser(true);
+      setIsFetchingUser(true)
+
       try {
         const response = await fetch(`/api/user/me/${user.id}`);
         if (!response.ok) {
@@ -74,11 +78,14 @@ export default function Home() {
         setError('Error fetching user');
       } finally {
         setIsFetchingUser(false);
+        setIsLoading(false);
       }
     };
 
-    if (ready && authenticated) {
+    if (ready && authenticated && user) {
       fetchUser();
+    } else {
+      setIsLoading(false);
     }
   }, [authenticated, ready, user]);
 
@@ -108,7 +115,14 @@ export default function Home() {
             maxWidth: "100%",
           }} 
         />
-        {ready && authenticated ? (
+
+        {isLoading || (!ready && (
+          <Flex direction={'column'} justify={'center'} align={'center'}>
+            <Spinner />
+          </Flex>
+        ))}
+
+        {!isLoading && ready && authenticated ? (
           isFetchingUser ? (
             <Flex direction={'column'} justify={'center'} align={'center'}>
               <Spinner />
@@ -131,14 +145,16 @@ export default function Home() {
             </Flex>
           )
         ) : (
-          <Flex direction={'column'} justify={'center'} align={'center'}>
-            <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
-              Log in
-            </Button>
-          </Flex>
+          !isLoading && (
+            <Flex direction={'column'} justify={'center'} align={'center'}>
+              <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
+                Log in
+              </Button>
+            </Flex>
+          )
         )}
       </Flex>
-      {ready && authenticated && !isFetchingUser && (
+      {ready && authenticated && !isFetchingUser && !isLoading && (
         <Flex direction={'column'} justify={'center'} align={'center'} position={'absolute'} bottom={'9'} width={'100%'}>
           <Button highContrast size={'4'} onClick={logout}>
             Log out
