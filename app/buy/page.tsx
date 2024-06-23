@@ -76,7 +76,7 @@ export default function Buy() {
     setRedirectURL(currentURL);
   }, []);
   
-  // Verify URL and get merchant details
+  // Verify URL and get merchant details.
   useEffect(() => {
     if (!merchantId || !product || !walletAddress || !price) {
       setIsValid(false);
