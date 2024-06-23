@@ -59,12 +59,12 @@ export default function Home() {
           if (typeof error === 'object' && error !== null && 'code' in error) {
             const errorCode = (error as { code: number }).code;
             if (errorCode === 4001) {
-                alert('You need to switch networks to proceed.');
+              alert('You need to switch networks to proceed.');
             } else {
-                alert('Failed to switch the network. Please try again.');
+              alert('Failed to switch the network. Please try again.');
             }
           } else {
-              alert('An unexpected error occurred.');
+            console.log('An unexpected error occurred.');
           }
           return;
         }
