@@ -27,29 +27,29 @@ export default function Home() {
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
   const { login } = useLogin({
-    onComplete: async (user, isNewUser) => {
+    onComplete: async (user) => {
       console.log('login successful');
       const accessToken = await getAccessToken();
       const userPayload = {
         privyId: user.id,
         walletAddress: user.wallet?.address,
       };
-      if (isNewUser) {
-        try {
-          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
-              headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          console.log('New user created:', response.data);
-        } catch (error: unknown) {
-          if (axios.isAxiosError(error)) {
-              console.error('Error fetching user details:', error.response?.data?.message || error.message);
-          } else if (isError(error)) {
-              console.error('Unexpected error:', error.message);
-          } else {
-              console.error('Unknown error:', error);
-          }
+
+      try {
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        console.log('New user created:', response.data);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+            console.error('Error fetching user details:', error.response?.data?.message || error.message);
+        } else if (isError(error)) {
+            console.error('Unexpected error:', error.message);
+        } else {
+            console.error('Unknown error:', error);
         }
-      } 
+      }
+
       if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
         try {
           await wallet.switchChain(chainIdNum);
@@ -127,7 +127,7 @@ export default function Home() {
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
         <Image
-          src="/logos/gogh_logo_white.png"
+          src="/logos/gogh_logo_white.svg"
           alt="Gogh"
           width={960}
           height={540}

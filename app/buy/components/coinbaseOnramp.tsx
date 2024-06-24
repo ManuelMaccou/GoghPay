@@ -70,8 +70,8 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
         onEvent: (event) => {
             console.log('event', event);
         },
-        experienceLoggedIn: 'embedded',
-        experienceLoggedOut: 'popup',
+        // experienceLoggedIn: 'embedded',
+        // experienceLoggedOut: 'popup',
         closeOnExit: true,
         closeOnSuccess: true,
 

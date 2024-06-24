@@ -40,6 +40,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/merchant/:verifyMerchantStatus*', '/api/transaction']
+  matcher: ['/api/merchant/verifyMerchantStatus/:path*', '/api/transaction']
 };
 

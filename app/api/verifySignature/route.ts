@@ -9,11 +9,19 @@ if (!secretKey) {
 
 function verifySignature(params: Record<string, string | undefined>, signature: string): boolean {
   const relevantParams = ['merchantId', 'product', 'price', 'walletAddress'];
+  console.log('relevant params:', relevantParams)
+
   const filteredEntries = Object.entries(params).filter(([key, value]) => relevantParams.includes(key) && value !== undefined) as [string, string][];
+  console.log('filteredEntries:', filteredEntries)
+
   const sortedFilteredEntries = filteredEntries.sort((a, b) => a[0].localeCompare(b[0]));
+  console.log('sortedFilteredEntries:', sortedFilteredEntries)
+
   const sortedQueryString = new URLSearchParams(sortedFilteredEntries).toString();
 
   const computedSignature = createHmac('sha256', secretKey).update(sortedQueryString).digest('hex');
+  console.log('computedSignature:', computedSignature)
+
   return signature === computedSignature;
 }
 

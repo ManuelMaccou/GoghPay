@@ -11,6 +11,7 @@ function isError(error: any): error is Error {
 }
 
 export default function Login() {
+  console.log('starting login')
   const {wallets} = useWallets();
   const wallet = wallets[0];
   const chainId = wallet?.chainId;
@@ -18,19 +19,19 @@ export default function Login() {
 
   const { getAccessToken, authenticated, logout } = usePrivy();
   const { login } = useLogin({
-    onComplete: async (user, isNewUser) => {
+    onComplete: async (user) => {
       console.log('login successful');
       const accessToken = await getAccessToken();
       const userPayload = {
         privyId: user.id,
         walletAddress: user.wallet?.address,
       };
-      if (isNewUser) {
+  
         try {
+          console.log('fetching/adding user')
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
               headers: { Authorization: `Bearer ${accessToken}` },
           });
-          console.log('New user created:', response.data);
         } catch (error: unknown) {
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
@@ -40,7 +41,7 @@ export default function Login() {
               console.error('Unknown error:', error);
           }
         }
-      } 
+      
       if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
         try {
           await wallet.switchChain(chainIdNum);
@@ -50,12 +51,12 @@ export default function Login() {
           if (typeof error === 'object' && error !== null && 'code' in error) {
             const errorCode = (error as { code: number }).code;
             if (errorCode === 4001) {
-                alert('You need to switch networks to proceed.');
+              alert('You need to switch networks to proceed.');
             } else {
-                alert('Failed to switch the network. Please try again.');
+              alert('Failed to switch the network. Please try again.');
             }
           } else {
-              alert('An unexpected error occurred.');
+            console.log('An unexpected error occurred.');
           }
           return;
         }
@@ -80,7 +81,7 @@ export default function Login() {
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
         <Image
-          src="/logos/gogh_logo_white.png"
+          src="/logos/gogh_logo_white.svg"
           alt="Gogh"
           width={960}
           height={540}
@@ -110,34 +111,3 @@ export default function Login() {
     </Flex>
   );
 };
-
-// Styling for the login component
-const loginStyles = {
-    container: {
-      display: 'flex' as 'flex',
-      flexDirection: 'column' as 'column',
-      alignItems: 'center' as 'center',
-      justifyContent: 'center' as 'center',
-      height: '100vh',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      backgroundColor: '#fff',
-      borderRadius: '8px',
-      padding: '20px',
-      maxWidth: '300px',
-      margin: 'auto',
-      boxSizing: 'border-box' as 'border-box'
-    },
-    message: {
-      marginBottom: '20px'
-    },
-    button: {
-      padding: '10px 20px',
-      fontSize: '16px',
-      borderRadius: '5px',
-      border: 'none',
-      cursor: 'pointer',
-      backgroundColor: '#007BFF',
-      color: 'white',
-      outline: 'none'
-    }
-  };

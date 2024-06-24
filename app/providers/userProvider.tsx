@@ -13,7 +13,7 @@ export default function UserProvider({children}: {children: React.ReactNode}) {
         appearance: {
           theme: 'light',
           accentColor: '#676FFF',
-          logo: '/logos/gogh_logo_black.png',
+          logo: '/logos/gogh_logo_black.svg',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',

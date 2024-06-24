@@ -6,18 +6,14 @@ import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
 import Login from '../components/Login';
-import { Box, Button, Flex, Heading, Strong, Text, Spinner } from "@radix-ui/themes";
-import { erc20Abi } from "viem";
-import { encodeFunctionData } from "viem";
+import { Box, Button, Flex, Heading, Strong, Text, Spinner, DataList } from "@radix-ui/themes";
 import Image from "next/image";
 import NotificationMessage from "./components/Notification";
 import { User } from "../types/types";
-
-import {Chain, createWalletClient, custom} from 'viem';
+import {createWalletClient, custom, encodeFunctionData, erc20Abi, createPublicClient, http} from 'viem';
 import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V06, walletClientToSmartAccountSigner} from 'permissionless';
 import {signerToSimpleSmartAccount} from 'permissionless/accounts';
 import {createPimlicoPaymasterClient} from 'permissionless/clients/pimlico';
-import {createPublicClient, http} from 'viem';
 import { base, baseSepolia } from "viem/chains";
 
 interface PurchaseParams {
@@ -56,16 +52,19 @@ export default function Buy() {
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(true);
 
+
+  const {user} = usePrivy();
+  const {getAccessToken} = usePrivy();
+
+  // Get params to verify signed URL
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
-  const product = searchParams.get('product');    
-  const walletAddress = searchParams.get('walletAddress');
   const priceString = searchParams.get('price');
   const price = parseFloat(priceString || "0");
   const priceBigInt = !isNaN(price) ? BigInt(Math.round(price)) : null;
-  const {user} = usePrivy();
-
-  const {getAccessToken} = usePrivy();
+  const product = searchParams.get('product');    
+  const walletAddress = searchParams.get('walletAddress');
+  
 
   const wallet = wallets[0]
   const activeWalletAddress = wallet?.address
@@ -93,7 +92,6 @@ export default function Buy() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`, 
-  
           },
           body: JSON.stringify({
             params: { merchantId, product, price, walletAddress },
@@ -102,27 +100,12 @@ export default function Buy() {
         });
 
         const data = await response.json();
+        console.log('data:', data)
         setIsVerifying(false);
 
         if (data.isValid) {
           setIsValid(true);
           setPurchaseParams({ merchantId, product, price, walletAddress });
-
-          const fetchMerchant = async () => {
-            try {
-              const response = await fetch(`/api/merchant/${merchantId}`);
-              const data = await response.json();
-              setMerchant(data);
-            } catch (err) {
-              if (isError(err)) {
-                setError(`Error fetching merchant: ${err.message}`);
-              } else {
-                setError('Error fetching merchant');
-              }
-            }
-          };
-
-          fetchMerchant();
         } else {
           setIsVerifying(false);
           setIsValid(false);
@@ -138,6 +121,26 @@ export default function Buy() {
 
     verify();
   }, [merchantId, product, walletAddress, price, getAccessToken, searchParams]);
+
+  useEffect(() => {
+    if (isValid && merchantId) {
+      const fetchMerchant = async () => {
+        try {
+          const response = await fetch(`/api/merchant/${merchantId}`);
+          const data = await response.json();
+          setMerchant(data);
+        } catch (err) {
+          if (isError(err)) {
+            setError(`Error fetching merchant: ${err.message}`);
+          } else {
+            setError('Error fetching merchant');
+          }
+        }
+      };
+
+      fetchMerchant();
+    }
+  }, [isValid, merchantId]);
 
   // Determine if the user has an embedded wallet
   useEffect(() => {
@@ -340,9 +343,9 @@ export default function Buy() {
       };
       fetchBalance();
 
-      const isSufficientBalance = balance >= price + 1;
+      // const isSufficientBalance = balance >= price + 1;
 
-      if (!isSufficientBalance){
+      if (balance < price){
         setShowPayButton(false);
         setShowCoinbaseOnramp(true);
       } else {
@@ -353,10 +356,6 @@ export default function Buy() {
     
   },[ready, authenticated, activeWalletAddress, isEmbeddedWallet, isValid, balance, price]);
 
-  if (ready && !authenticated) {
-    return <Login />;
-  }
-
   if (ready && !isValid && !isVerifying) {
     return (
       <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
@@ -365,7 +364,7 @@ export default function Buy() {
     );
   }
 
-  if (isBalanceLoading || !ready) {
+  if (!ready) {
     return (
       <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
         <Spinner />
@@ -375,25 +374,46 @@ export default function Buy() {
 
   return (
     <Flex direction={'column'} my={'6'} minHeight={'100vh'} align={'center'} justify={'center'}>
-    {authenticated && (
+    {authenticated ? (
       <>
       <Box maxWidth={'70%'} my={'5'}>
         <Heading size={'7'} align={'center'}>Confirm payment details</Heading>
         </Box>
         <Image
-          src={merchant?.storeImage || "/logos/gogh_logo_black.png" }
+          src={merchant?.storeImage || "/logos/gogh_logo_black.svg" }
           alt="Gogh"
           width={960}
           height={540}
           priority
+          placeholder = 'empty'
           sizes="100vw"
           style={{
-            width: "100%",
+            width: "40%",
             height: "auto",
             marginBottom: "50px",
             maxWidth: "100%",
           }} /> 
-        <Flex direction={'column'} width={'80%'} m={'6'}>
+
+        <DataList.Root size={'3'}>
+          <DataList.Item>
+            <DataList.Label minWidth="130px">
+              <Text weight={'bold'} size={'6'}>Product</Text>
+            </DataList.Label>
+            <DataList.Value>
+              <Text size={'6'}>{product}</Text>
+            </DataList.Value>
+          </DataList.Item>
+          <DataList.Item>
+          <DataList.Label minWidth="130px">
+              <Text weight={'bold'} size={'6'}>Price</Text>
+            </DataList.Label>
+            <DataList.Value>
+              <Text size={'6'}>${price}</Text>
+            </DataList.Value>
+          </DataList.Item>
+        </DataList.Root>
+
+        <Flex direction={'column'} width={'50%'} m={'6'}>
           <Flex direction={'row'} width={'100%'} justify={'between'}>
           <Text size={'6'}><Strong>Product: </Strong></Text>
           <Text size={'6'}>{product}</Text>
@@ -415,7 +435,7 @@ export default function Buy() {
             ) : (
               <>
                 <Text align={'center'}>You don&apos;t have enough funds in your wallet to complete this purchase.</Text>
-                <Text mb={'4'} align={'center'}>Transfer funds from your Coinbase account or perform a swap.</Text>
+                <Text mb={'4'} align={'center'}>Transfer funds from your Coinbase account or obtain USDC on Base.</Text>
               </>
             )}
           <CoinbaseButton
@@ -479,6 +499,8 @@ export default function Buy() {
           Log out
         </Button>
       </>
+    ) : (
+      <Login />
     )}
     </Flex>
   );

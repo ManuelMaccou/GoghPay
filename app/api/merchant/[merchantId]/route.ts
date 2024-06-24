@@ -7,6 +7,7 @@ type Params = {
 }
 
 export async function GET(request: Request, context: { params: Params }) {
+  console.log('fetching merchant')
   await connectToDatabase();
   const merchantId = context.params.merchantId
   const merchant = await Merchant.findOne({ _id: merchantId });
