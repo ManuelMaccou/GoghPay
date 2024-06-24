@@ -53,6 +53,7 @@ export default function Buy() {
   const [isLoading, setIsLoading] = useState(false);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(true);
+  const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
 
 
   const {user} = usePrivy();
@@ -179,6 +180,7 @@ export default function Buy() {
 
   useEffect(() => {
     if (isValid && merchantId) {
+      setIsFetchingMerchant(true);
       const fetchMerchant = async () => {
         try {
           const response = await fetch(`/api/merchant/${merchantId}`);
@@ -192,7 +194,7 @@ export default function Buy() {
           }
         }
       };
-
+      setIsFetchingMerchant(false);
       fetchMerchant();
     }
   }, [isValid, merchantId]);
@@ -492,34 +494,38 @@ export default function Buy() {
         </Flex>
         <Heading size={'7'} align={'center'}>Confirm details</Heading>
       </Box>
-      <Box width={'100%'}>
-        <Flex justify={'center'}>
-          <Image
-            src={merchant?.storeImage || "/logos/gogh_logo_black.svg" }
-            alt="Gogh"
-            width={960}
-            height={540}
-            priority
-            placeholder = 'empty'
-            sizes="100vw"
-            style={{
-              width: "40%",
-              height: "auto",
-              marginBottom: "50px",
-              maxWidth: "100%",
-            }} 
-          /> 
-          </Flex>
-        <Flex direction={'column'} align={'center'}>
-          <Text size={'9'} my={'4'}>
-            ${price}
-          </Text>
-          <Text size={'8'}>
-            {product}
-          </Text>
-        </Flex>
-      </Box>
-      
+      {!isFetchingMerchant ? (
+        <Box width={'100%'}>
+          <Flex justify={'center'}>
+            <Image
+              src={merchant?.storeImage || "" }
+              alt="merchant logo"
+              width={960}
+              height={540}
+              priority
+              placeholder='empty'
+              sizes="100vw"
+              style={{
+                width: "40%",
+                height: "auto",
+                marginBottom: "50px",
+                maxWidth: "100%",
+              }} 
+            /> 
+            </Flex>
+            <Flex direction={'column'} align={'center'} mb={'2'}>
+              <Text size={'9'} my={'4'}>
+                ${price}
+              </Text>
+              <Text size={'8'}>
+                {product}
+              </Text>
+            </Flex>
+          </Box>
+        ) : (
+          <Spinner />
+        )}
+  
         {authenticated ? (
        <>
        {pendingMessage && 
