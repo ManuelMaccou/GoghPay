@@ -451,7 +451,7 @@ export default function Buy() {
   }
 
   return (
-    <Flex direction={'column'} height={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
+    <Flex direction={'column'} height={'100%'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
       <Box width={'100%'}>
         {isEmbeddedWallet && authenticated ? (
           <Card variant="ghost" mb={'3'}>
@@ -464,7 +464,7 @@ export default function Buy() {
               </Box>
             </Flex>
           </Card>
-        ) : (
+        ) : (!isEmbeddedWallet && authenticated ? (
           <Card variant="ghost" mb={'3'}>
           <Flex gap="3" align="center" justify={'end'}>
             <AvatarIcon />
@@ -475,21 +475,22 @@ export default function Buy() {
             </Box>
           </Flex>
         </Card>
-        )}
+        ): null)}
         <Flex justify={'between'} direction={'row'} pb={'9'}>
-          {!isBalanceLoading ? (
-            <Badge size={'3'}>Balance: ${balance}</Badge>
-          ) : (
-            <Badge size={'3'}>
-              Balance: 
-              <Spinner loading />
-            </Badge>
-          )}
-          
           {authenticated && (
-            <Button variant='outline' onClick={logout}>
-            Log out
-          </Button>
+            <>
+              {!isBalanceLoading ? (
+                <Badge size={'3'}>Balance: ${balance}</Badge>
+              ) : (
+                <Badge size={'3'}>
+                  Balance: 
+                  <Spinner loading />
+                </Badge>
+              )}
+              <Button variant='outline' onClick={logout}>
+                Log out
+              </Button>
+            </>
           )}
         </Flex>
         <Heading size={'7'} align={'center'}>Confirm details</Heading>
