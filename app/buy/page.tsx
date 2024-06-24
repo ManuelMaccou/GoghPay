@@ -453,7 +453,7 @@ export default function Buy() {
   return (
     <Flex direction={'column'} height={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
       <Box width={'100%'}>
-        {isEmbeddedWallet ? (
+        {isEmbeddedWallet && authenticated ? (
           <Card variant="ghost" mb={'3'}>
             <Flex gap="3" align="center" justify={'end'}>
               <AvatarIcon />
