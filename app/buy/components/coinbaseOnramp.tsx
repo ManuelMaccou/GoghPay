@@ -51,7 +51,6 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
         widgetParameters: {
             destinationWallets: [{
                address: destinationWalletAddress,
-               blockchains: ['ethereum'],
                assets: ['USDC'],
                supportedNetworks: ['base']
             }],

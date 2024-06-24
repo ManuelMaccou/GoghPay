@@ -3,10 +3,9 @@
 import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
-import Login from '../components/Login';
-import { Box, Button, Flex, Heading, Strong, Text, Spinner, DataList } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card } from "@radix-ui/themes";
 import Image from "next/image";
 import NotificationMessage from "./components/Notification";
 import { User } from "../types/types";
@@ -15,6 +14,8 @@ import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V06, walletClientToSmartAcc
 import {signerToSimpleSmartAccount} from 'permissionless/accounts';
 import {createPimlicoPaymasterClient} from 'permissionless/clients/pimlico';
 import { base, baseSepolia } from "viem/chains";
+import axios from "axios";
+import { InfoCircledIcon, AvatarIcon } from "@radix-ui/react-icons";
 
 interface PurchaseParams {
   merchantId: string | null;
@@ -42,6 +43,7 @@ export default function Buy() {
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
   const [showCoinbaseOnramp, setShowCoinbaseOnramp] = useState(false);
   const [showPayButton, setShowPayButton] = useState(false);
@@ -65,10 +67,63 @@ export default function Buy() {
   const product = searchParams.get('product');    
   const walletAddress = searchParams.get('walletAddress');
   
-
   const wallet = wallets[0]
   const activeWalletAddress = wallet?.address
   const merchantWalletAddress = walletAddress  
+
+  const chainId = wallet?.chainId;
+  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
+
+
+  const disableLogin = !ready || (ready && authenticated);
+  const { login } = useLogin({
+    onComplete: async (user) => {
+      console.log('login successful');
+      const accessToken = await getAccessToken();
+      const userPayload = {
+        privyId: user.id,
+        walletAddress: user.wallet?.address,
+      };
+
+      try {
+        console.log('fetching/adding user');
+        await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          console.error('Error fetching user details:', error.response?.data?.message || error.message);
+        } else if (isError(error)) {
+          console.error('Unexpected error:', error.message);
+        } else {
+          console.error('Unknown error:', error);
+        }
+      }
+
+      if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+        try {
+          await wallet.switchChain(chainIdNum);
+        } catch (error: unknown) {
+          console.error('Error switching chain:', error);
+      
+          if (typeof error === 'object' && error !== null && 'code' in error) {
+            const errorCode = (error as { code: number }).code;
+            if (errorCode === 4001) {
+              alert('You need to switch networks to proceed.');
+            } else {
+              alert('Failed to switch the network. Please try again.');
+            }
+          } else {
+            console.log('An unexpected error occurred.');
+          }
+          return;
+        }
+      };
+    },
+    onError: (error) => {
+      console.error("Privy login error:", error);
+    },
+  });
 
   useEffect(() => {
     const currentURL = window.location.href;
@@ -175,6 +230,26 @@ export default function Buy() {
   }, [authenticated, ready, user]);
 
   async function sendUSDC(activeWalletAddress: `0x${string}`, merchantWalletAddress: `0x${string}`, price: number) {
+    if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+      try {
+        await wallet.switchChain(chainIdNum);
+      } catch (error: unknown) {
+        console.error('Error switching chain:', error);
+    
+        if (typeof error === 'object' && error !== null && 'code' in error) {
+          const errorCode = (error as { code: number }).code;
+          if (errorCode === 4001) {
+            alert('You need to switch networks to proceed.');
+          } else {
+            alert('Failed to switch the network. Please try again.');
+          }
+        } else {
+          console.log('An unexpected error occurred.');
+        }
+        return;
+      }
+    };
+
     console.log('current chain:', wallet.chainId);
     console.log('active wallet address', activeWalletAddress);
     if (!activeWalletAddress) {
@@ -187,6 +262,7 @@ export default function Buy() {
     console.log('amount in USDC:', amountInUSDC)
 
     setIsLoading(true);
+    setPendingMessage('Please wait...');
 
     try {
       const smartAccountClient = await setupSmartAccountClient(activeWalletAddress);
@@ -208,8 +284,8 @@ export default function Buy() {
         maxFeePerGas: BigInt(20000000),
         maxPriorityFeePerGas: BigInt(10000000),
       });
-
-      setSuccess('Transaction sent successfully!');
+      setPendingMessage(null);
+      setSuccess('Purchase successful!');
       console.log('Transaction sent! Hash:', transactionHash);
 
       await saveTransaction({
@@ -373,134 +449,183 @@ export default function Buy() {
   }
 
   return (
-    <Flex direction={'column'} my={'6'} minHeight={'100vh'} align={'center'} justify={'center'}>
-    {authenticated ? (
-      <>
-      <Box maxWidth={'70%'} my={'5'}>
-        <Heading size={'7'} align={'center'}>Confirm payment details</Heading>
-        </Box>
-        <Image
-          src={merchant?.storeImage || "/logos/gogh_logo_black.svg" }
-          alt="Gogh"
-          width={960}
-          height={540}
-          priority
-          placeholder = 'empty'
-          sizes="100vw"
-          style={{
-            width: "40%",
-            height: "auto",
-            marginBottom: "50px",
-            maxWidth: "100%",
-          }} /> 
-
-        <DataList.Root size={'3'}>
-          <DataList.Item>
-            <DataList.Label minWidth="130px">
-              <Text weight={'bold'} size={'6'}>Product</Text>
-            </DataList.Label>
-            <DataList.Value>
-              <Text size={'6'}>{product}</Text>
-            </DataList.Value>
-          </DataList.Item>
-          <DataList.Item>
-          <DataList.Label minWidth="130px">
-              <Text weight={'bold'} size={'6'}>Price</Text>
-            </DataList.Label>
-            <DataList.Value>
-              <Text size={'6'}>${price}</Text>
-            </DataList.Value>
-          </DataList.Item>
-        </DataList.Root>
-
-        <Flex direction={'column'} width={'50%'} m={'6'}>
-          <Flex direction={'row'} width={'100%'} justify={'between'}>
-          <Text size={'6'}><Strong>Product: </Strong></Text>
-          <Text size={'6'}>{product}</Text>
-          </Flex>
-          <Flex direction={'row'} width={'100%'} justify={'between'}>
-          <Text size={'6'}><Strong>Price: </Strong></Text>
-          <Text size={'6'}>${price}</Text>
-          </Flex>
-        </Flex>
-
-        {showCoinbaseOnramp && (
-          <>
-          <Flex direction={'column'} align={'center'} mx={'4'}>
-            {isEmbeddedWallet ? (
-              <>
-                <Text align={'center'}>You don&apos;t have enough in your account to cover this item plus fees.</Text>
-                <Text mb={'4'} align={'center'}>Continue with Coinbase to transfer funds.</Text>
-              </>
-            ) : (
-              <>
-                <Text align={'center'}>You don&apos;t have enough funds in your wallet to complete this purchase.</Text>
-                <Text mb={'4'} align={'center'}>Transfer funds from your Coinbase account or obtain USDC on Base.</Text>
-              </>
-            )}
-          <CoinbaseButton
-            destinationWalletAddress={activeWalletAddress || ""}
-            price={purchaseParams.price || 0}
-            redirectURL={redirectURL}/>
-            <div id="cbpay-container"></div>
+    <Flex direction={'column'} height={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
+      <Box width={'100%'}>
+        {isEmbeddedWallet ? (
+          <Card variant="ghost" mb={'3'}>
+            <Flex gap="3" align="center" justify={'end'}>
+              <AvatarIcon />
+              <Box>
+                <Text as="div" size="2" color="gray">
+                  {user?.email?.address || user?.google?.name}
+                </Text>
+              </Box>
             </Flex>
-          </>
+          </Card>
+        ) : (
+          <Card variant="ghost" mb={'3'}>
+          <Flex gap="3" align="center" justify={'end'}>
+            <AvatarIcon />
+            <Box>
+              <Text as="div" size="2" color="gray">
+                {activeWalletAddress?.slice(0, 6)}
+              </Text>
+            </Box>
+          </Flex>
+        </Card>
         )}
-        {showPayButton && (
-          <Button size={'4'} loading={isLoading} disabled={!!success} onClick={() => {
-            setShowConfirmButton(true);
-            setShowPayButton(false);
-            setError(null);
-            setSuccess(null);
-          }}>
-            Purchase
+        <Flex justify={'between'} direction={'row'} pb={'9'}>
+          {!isBalanceLoading ? (
+            <Badge size={'3'}>Balance: ${balance}</Badge>
+          ) : (
+            <Badge size={'3'}>
+              Balance: 
+              <Spinner loading />
+            </Badge>
+          )}
+          
+          {authenticated && (
+            <Button variant='outline' onClick={logout}>
+            Log out
           </Button>
-        )}
+          )}
+        </Flex>
+        <Heading size={'7'} align={'center'}>Confirm details</Heading>
+      </Box>
+      <Box width={'100%'}>
+        <Flex justify={'center'}>
+          <Image
+            src={merchant?.storeImage || "/logos/gogh_logo_black.svg" }
+            alt="Gogh"
+            width={960}
+            height={540}
+            priority
+            placeholder = 'empty'
+            sizes="100vw"
+            style={{
+              width: "40%",
+              height: "auto",
+              marginBottom: "50px",
+              maxWidth: "100%",
+            }} 
+          /> 
+          </Flex>
+        <Flex direction={'column'} align={'center'}>
+          <Text size={'9'} my={'4'}>
+            ${price}
+          </Text>
+          <Text size={'8'}>
+            {product}
+          </Text>
+        </Flex>
+      </Box>
+      
+        {authenticated ? (
+       <>
+       {pendingMessage && 
+            <Box mx={'3'}>
+              <NotificationMessage message={pendingMessage} type="pending" />
+            </Box>
+          }
+        {error && 
+            <Box mx={'3'}>
+              <NotificationMessage message={error} type="error" />
+            </Box>
+          }
+          {success && 
+            <Box mx={'3'}>
+              <NotificationMessage message={success} type="success" />
+            </Box>
+          }
+          {showCoinbaseOnramp && (
+            <Flex direction={'column'} align={'center'} mx={'4'}>
+              {isEmbeddedWallet ? (
+                <>
+                {!isBalanceLoading && (
+                  <Callout.Root color="red" mb={'4'}>
+                    <Callout.Icon>
+                      <InfoCircledIcon />
+                    </Callout.Icon>
+                    <Callout.Text>
+                      You don&apos;t have enough funds in your account to complete this purchase. Continue with Coinbase to transfer funds or use mobile pay.
+                    </Callout.Text>
+                  </Callout.Root>
+                )}
+                </>
+              ) : (
+                <>
+                {!isBalanceLoading && (
+                  <Callout.Root color="red" mb={'4'}>
+                    <Callout.Icon>
+                      <InfoCircledIcon />
+                    </Callout.Icon>
+                    <Callout.Text>
+                      You don&apos;t have enough funds in your wallet to complete this purchase. Transfer funds from your Coinbase account or obtain USDC on Base.
+                    </Callout.Text>
+                  </Callout.Root>
+                )}
+                </>
+              )}
+              <CoinbaseButton
+                destinationWalletAddress={activeWalletAddress || ""}
+                price={purchaseParams.price || 0}
+                redirectURL={redirectURL}
+              />
+              <div id="cbpay-container"></div>
+            </Flex>
+          )}
 
-        {showConfirmButton && (
-          <Flex direction={'row'} gap={'3'}>
-          <Button size={'4'} loading={isLoading} disabled={!!success} onClick={() => {
-            if (price !== null && activeWalletAddress) {
-              sendUSDC(activeWalletAddress as `0x${string}`, merchantWalletAddress as `0x${string}`, price);
+          {showPayButton && (
+            <Button size={'4'} loading={isLoading} disabled={!!success} style={{
+              width: '200px'
+              }} 
+              onClick={() => {
+              setShowConfirmButton(true);
+              setShowPayButton(false);
               setError(null);
               setSuccess(null);
-            } else {
-              console.error("Invalid price or wallet address.");
-              setError("Invalid price or wallet address. Unable to process the transaction.");
-            }
-          }}>Confirm</Button>
-          <Button size={'4'} variant="surface" onClick={() => {
-            setShowConfirmButton(false);
-            setShowPayButton(true);
-            setError(null);
-            setSuccess(null);
-          }}>
-            Cancel
-          </Button>
+            }}>
+              Purchase
+            </Button>
+          )}
 
-          </Flex>
-        )}
-
-        {error && 
-          <Box mx={'3'}>
-            <NotificationMessage message={error} type="error" />
-          </Box>
-        }
-        {success && 
-          <Box mx={'3'}>
-            <NotificationMessage message={success} type="success" />
-          </Box>
-        }
-        
-        <Text mt={'2'}>Current balance: ${balance}</Text>
-        
-        {/* REMOVE FOR PROD */}
-        <Button variant='outline' mt={'9'} onClick={logout}>
-          Log out
-        </Button>
-      </>
+          {showConfirmButton && (
+            <Flex direction={'row'} gap={'3'}>
+              <Button size={'4'} loading={isLoading} disabled={!!success} style={{
+                width: '150px'
+                }} 
+                onClick={() => {
+                if (price !== null && activeWalletAddress) {
+                  sendUSDC(activeWalletAddress as `0x${string}`, merchantWalletAddress as `0x${string}`, price);
+                  setError(null);
+                  setSuccess(null);
+                } else {
+                  console.error("Invalid price or wallet address.");
+                  setError("Invalid price or wallet address. Unable to process the transaction.");
+                }
+                }}>
+                  Confirm
+              </Button>
+              <Button size={'4'} variant="surface" style={{
+                width: '150px'
+                }} 
+                onClick={() => {
+                setShowConfirmButton(false);
+                setShowPayButton(true);
+                setError(null);
+                setSuccess(null);
+              }}>
+                Cancel
+              </Button>
+            </Flex>
+          )}
+        </>
     ) : (
-      <Login />
+      <Button mt={'9'} disabled={disableLogin} style={{
+          width: '200px'
+        }} onClick={login}>
+        Log in to buy
+      </Button>
     )}
     </Flex>
   );

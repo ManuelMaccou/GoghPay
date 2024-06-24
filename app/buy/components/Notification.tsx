@@ -4,7 +4,7 @@ import { css } from '@stitches/react';
 
 interface NotificationMessageProps {
   message: string;
-  type: 'error' | 'success';
+  type: 'pending' | 'error' | 'success';
 }
 
 const notificationBoxStyles = css({
@@ -14,6 +14,11 @@ const notificationBoxStyles = css({
   textAlign: 'center',
   variants: {
     type: {
+      pending: {
+        backgroundColor: 'rgba(29, 132, 226, 0.1)',
+        border: '1px solid #1D84E2',
+        color: '#1D84E2',
+      },
       error: {
         backgroundColor: 'rgba(255, 0, 0, 0.1)',
         border: '1px solid red',

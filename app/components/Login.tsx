@@ -11,7 +11,6 @@ function isError(error: any): error is Error {
 }
 
 export default function Login() {
-  console.log('starting login')
   const {wallets} = useWallets();
   const wallet = wallets[0];
   const chainId = wallet?.chainId;

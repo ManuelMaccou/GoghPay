@@ -7,7 +7,7 @@ const transactionSchema = new mongoose.Schema({
   productName: { type: String, required: true },
   productPrice: { type: String, required: true },
   transactionHash: { type: String },
-});
+}, { timestamps: true });
 
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
