@@ -59,7 +59,8 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
         onSuccess: () => {
             console.log('success');
             console.log('redirectURL in child component:', redirectURL)
-            router.push(redirectURL); // Change this to router.refresh when tested
+            // router.push(redirectURL); // Change this to router.refresh when tested
+            router.refresh
         },
         onExit: () => {
             console.log('exit');
