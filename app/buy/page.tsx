@@ -673,27 +673,29 @@ export default function Buy() {
 
           {showPayButton && (
             <>
-            <Button size={'4'} loading={isLoading} disabled={!!success} style={{
-                width: '200px'
-              }}
-              onClick={() => {
-                setShowConfirmButton(true);
-                setShowPayButton(false);
-                setError(null);
-                setSuccess(null);
-              } }>
-              Pay with crypto
-            </Button>
-            <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
-                width: '200px'
-              }}
-              onClick={() => {
-                setError(null);
-                setSuccess(null);
-                handleMobilePay();
-              }}>
-                Mobile pay
-            </Button>
+            <Flex direction={'column'} gap={'4'}>
+              <Button size={'4'} loading={isLoading} disabled={!!success} style={{
+                  width: '200px'
+                }}
+                onClick={() => {
+                  setShowConfirmButton(true);
+                  setShowPayButton(false);
+                  setError(null);
+                  setSuccess(null);
+                } }>
+                Pay with crypto
+              </Button>
+              <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
+                  width: '200px'
+                }}
+                onClick={() => {
+                  setError(null);
+                  setSuccess(null);
+                  handleMobilePay();
+                }}>
+                  Mobile pay
+              </Button>
+            </Flex>
             </>
           )}
 
