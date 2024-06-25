@@ -20,8 +20,6 @@ type BuyWithCoinbaseButtonProps = {
 };
 
 export function BuyWithCoinbaseButton({ onPress, isLoading }: BuyWithCoinbaseButtonProps) {
-    
-
     return (
         <Reset>
         <Button variant='ghost' loading={isLoading} className={styles.cbButton} onClick={onPress}>
@@ -47,14 +45,14 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
    useEffect(() => {
     const options: InitOnRampOptions = {
         appId: process.env.NEXT_PUBLIC_COINBASE_APP_ID!,
-        target: '#cbpay-container',
+        // target: '#cbpay-container',
         widgetParameters: {
             destinationWallets: [{
                address: destinationWalletAddress,
                assets: ['USDC'],
                supportedNetworks: ['base']
             }],
-            presetCryptoAmount: price + 1,
+            presetCryptoAmount: price,
             defaultNetwork: 'base',
             defaultExperience: 'buy',
         },
@@ -71,8 +69,8 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
         },
         // experienceLoggedIn: 'embedded',
         // experienceLoggedOut: 'popup',
-        closeOnExit: true,
-        closeOnSuccess: true,
+        closeOnExit: false,
+        closeOnSuccess: false,
 
     };
     // instance.destroy() should be called before initOnramp if there is already an instance.

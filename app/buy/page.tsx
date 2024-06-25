@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
-import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog } from "@radix-ui/themes";
 import Image from "next/image";
 import NotificationMessage from "./components/Notification";
 import { User } from "../types/types";
@@ -558,7 +558,7 @@ export default function Buy() {
                       <InfoCircledIcon />
                     </Callout.Icon>
                     <Callout.Text>
-                      You don&apos;t have enough funds in your account to complete this purchase. Continue with Coinbase to transfer funds or use mobile pay.
+                      You don&apos;t have enough funds in your account to complete this purchase. Continue with crypto or use mobile pay.
                     </Callout.Text>
                   </Callout.Root>
                 )}
@@ -577,12 +577,42 @@ export default function Buy() {
                 )}
                 </>
               )}
-              <CoinbaseButton
-                destinationWalletAddress={activeWalletAddress || ""}
-                price={purchaseParams.price || 0}
-                redirectURL={redirectURL}
-              />
-              <div id="cbpay-container"></div>
+
+
+              <AlertDialog.Root>
+                <AlertDialog.Trigger>
+                  <Button style={{
+                    backgroundColor: '#0051FD',
+                    width: '200px'
+                  }}>Pay with crypto</Button>
+                </AlertDialog.Trigger>
+                <AlertDialog.Content maxWidth="450px">
+                  <AlertDialog.Title>Pay with crypto</AlertDialog.Title>
+                  <AlertDialog.Description size="2">
+                    Paying in crypto supports local merchants by saving them money and eliminating bank fees.
+                    If you have a Coinbase account, you can sign in and transfer money to your Gogh account.
+                    If you don&apos;t, we recommend using mobile pay for now, and signing up later. 
+                    It takes about 5 minutes.
+                  </AlertDialog.Description>
+
+                  <Flex gap="3" mt="4" justify="end">
+                    <AlertDialog.Cancel>
+                      <Button variant="soft" color="gray">
+                        Cancel
+                      </Button>
+                    </AlertDialog.Cancel>
+                    <AlertDialog.Action>
+                      <CoinbaseButton
+                        destinationWalletAddress={activeWalletAddress || ""}
+                        price={purchaseParams.price || 0}
+                        redirectURL={redirectURL}
+                      />
+                    </AlertDialog.Action>
+                  </Flex>
+                </AlertDialog.Content>
+              </AlertDialog.Root>
+
+              {/*<div id="cbpay-container"></div>*/}
             </Flex>
           )}
 

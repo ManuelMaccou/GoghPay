@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@coinbase/cbpay-js": "^2.1.0",
-    "@privy-io/react-auth": "^1.68.0",
+    "@privy-io/react-auth": "^1.72.0",
     "@privy-io/server-auth": "^1.7.3",
     "@radix-ui/colors": "^3.0.0",
     "@radix-ui/react-icons": "^1.3.0",
