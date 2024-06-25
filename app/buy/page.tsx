@@ -73,7 +73,8 @@ export default function Buy() {
   const merchantWalletAddress = walletAddress  
 
   const chainId = wallet?.chainId;
-  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
+  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
+  console.log('chainIdNum:', chainIdNum);
 
 
   const disableLogin = !ready || (ready && authenticated);
@@ -284,7 +285,7 @@ export default function Buy() {
         data: data,
         value: BigInt(0),
         maxFeePerGas: BigInt(20000000),
-        maxPriorityFeePerGas: BigInt(10000000),
+        maxPriorityFeePerGas: BigInt(12000000),
       });
       setPendingMessage(null);
       setSuccess('Purchase successful!');
@@ -309,6 +310,7 @@ export default function Buy() {
       }
     } finally {
       setIsLoading(false); // Set loading state to false
+      setPendingMessage(null);
     }
   }
 
@@ -451,7 +453,7 @@ export default function Buy() {
   }
 
   return (
-    <Flex direction={'column'} height={'100%'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
+    <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
       <Box width={'100%'}>
         {isEmbeddedWallet && authenticated ? (
           <Card variant="ghost" mb={'3'}>
@@ -526,15 +528,17 @@ export default function Buy() {
         ) : (
           <Spinner />
         )}
-  
+
+        <Box width={'100%'}>
+        <Flex direction={'column'} align={'center'}>
         {authenticated ? (
-       <>
-       {pendingMessage && 
+          <>
+          {pendingMessage && 
             <Box mx={'3'}>
               <NotificationMessage message={pendingMessage} type="pending" />
             </Box>
           }
-        {error && 
+          {error && 
             <Box mx={'3'}>
               <NotificationMessage message={error} type="error" />
             </Box>
@@ -626,14 +630,16 @@ export default function Buy() {
               </Button>
             </Flex>
           )}
-        </>
-    ) : (
-      <Button mt={'9'} disabled={disableLogin} style={{
-          width: '200px'
-        }} onClick={login}>
-        Log in to buy
-      </Button>
-    )}
-    </Flex>
-  );
+          </>
+        ) : (
+          <Button mt={'9'} disabled={disableLogin} style={{
+              width: '200px'
+            }} onClick={login}>
+            Log in to buy
+          </Button>
+        )}
+        </Flex>
+        </Box>
+      </Flex>
+    );
 }
