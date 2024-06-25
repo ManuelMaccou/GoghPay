@@ -74,13 +74,10 @@ export default function Buy() {
 
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
-  console.log('chainIdNum:', chainIdNum);
-
 
   const disableLogin = !ready || (ready && authenticated);
   const { login } = useLogin({
     onComplete: async (user) => {
-      console.log('login successful');
       const accessToken = await getAccessToken();
       const userPayload = {
         privyId: user.id,
@@ -88,7 +85,6 @@ export default function Buy() {
       };
 
       try {
-        console.log('fetching/adding user');
         await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -157,7 +153,6 @@ export default function Buy() {
         });
 
         const data = await response.json();
-        console.log('data:', data)
         setIsVerifying(false);
 
         if (data.isValid) {
@@ -253,8 +248,6 @@ export default function Buy() {
       }
     };
 
-    console.log('current chain:', wallet.chainId);
-    console.log('active wallet address', activeWalletAddress);
     if (!activeWalletAddress) {
       console.error('Error: Users wallet address is missing.');
       setError('There was an error. Please log in again.');
@@ -262,14 +255,16 @@ export default function Buy() {
     }
     
     const amountInUSDC = BigInt(price * 1_000_000);
-    console.log('amount in USDC:', amountInUSDC)
 
     setIsLoading(true);
     setPendingMessage('Please wait...');
 
     try {
       const smartAccountClient = await setupSmartAccountClient(activeWalletAddress);
-      
+      console.log('active wallet address:', activeWalletAddress);
+      console.log('merchant wallet address:', merchantWalletAddress);
+      console.log('smart account client:', smartAccountClient);
+
       const data = encodeFunctionData({
         abi: erc20Abi,
         functionName: 'transfer',
@@ -277,7 +272,6 @@ export default function Buy() {
       })
 
       console.log("amount to send:", amountInUSDC);
-      console.log('data object:', data);
 
       const transactionHash = await smartAccountClient.sendTransaction({
         account: smartAccountClient.account,
