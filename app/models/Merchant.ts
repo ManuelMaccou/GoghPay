@@ -7,6 +7,7 @@ const merchantSchema = new mongoose.Schema({
   walletAddress: { type: String, required: true },
   storeImage: { type: String },
   privyId: { type: String },
+  stripeConnectedAccountId: { type: String }
 }, { timestamps: true });
 
 const Merchant = mongoose.models.Merchant || mongoose.model('Merchant', merchantSchema);

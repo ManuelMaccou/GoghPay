@@ -1,6 +1,6 @@
 'use client';
 
-import { useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams, useRouter, redirect } from "next/navigation"
 import { useState, useEffect } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
@@ -64,6 +64,11 @@ export default function Buy() {
   const merchantId = searchParams.get('merchantId');
   const priceString = searchParams.get('price');
   const price = parseFloat(priceString || "0");
+  if (isNaN(price)) {
+    console.error('Price is not a valid number');
+    setError('Provided price is invalid');
+  }
+
   const priceBigInt = !isNaN(price) ? BigInt(Math.round(price)) : null;
   const product = searchParams.get('product');    
   const walletAddress = searchParams.get('walletAddress');
@@ -226,6 +231,50 @@ export default function Buy() {
       fetchUser();
     }
   }, [authenticated, ready, user]);
+
+  // Handle mobile pay
+  const handleMobilePay = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const requestData = {
+      ...purchaseParams,
+      stripeConnectedAccountId: merchant?.stripeConnectedAccountId,
+      redirectURL: window.location.href
+    };
+    console.log("Sending request data:", requestData);
+
+    try {
+      const response = await fetch('/api/stripe/checkout/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process checkout');
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No URL provided for redirect');
+      }
+    } catch (error) {
+      if (isError(error)) {
+        console.error('Error initiating mobile pay checkout:', error.message);
+        setError(`Creating mobile pay checkout failed: ${error.message}`);
+      } else {
+        console.error('An unexpected error occurred:', error);
+        setError('An unexpected error occurred');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   async function sendUSDC(activeWalletAddress: `0x${string}`, merchantWalletAddress: `0x${string}`, price: number) {
     if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
@@ -572,56 +621,80 @@ export default function Buy() {
                 </>
               )}
 
+              <Flex direction={'column'} gap={'4'}>
+                <AlertDialog.Root>
+                  <AlertDialog.Trigger>
+                    <Button size={'4'} style={{
+                      backgroundColor: '#0051FD',
+                      width: '250px'
+                    }}>Pay with crypto</Button>
+                  </AlertDialog.Trigger>
+                  <AlertDialog.Content maxWidth="450px">
+                    <AlertDialog.Title>Pay with crypto</AlertDialog.Title>
+                    <AlertDialog.Description size="2">
+                      Paying in crypto supports local merchants by saving them money and eliminating bank fees.
+                      If you have a Coinbase account, you can sign in and transfer money to your Gogh account.
+                      If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com" size="2" target="_blank" rel="noopener noreferrer">
+                      signing up later</Link>. It takes about 5 minutes.
+                    </AlertDialog.Description>
 
-              <AlertDialog.Root>
-                <AlertDialog.Trigger>
-                  <Button style={{
-                    backgroundColor: '#0051FD',
-                    width: '200px'
-                  }}>Pay with crypto</Button>
-                </AlertDialog.Trigger>
-                <AlertDialog.Content maxWidth="450px">
-                  <AlertDialog.Title>Pay with crypto</AlertDialog.Title>
-                  <AlertDialog.Description size="2">
-                    Paying in crypto supports local merchants by saving them money and eliminating bank fees.
-                    If you have a Coinbase account, you can sign in and transfer money to your Gogh account.
-                    If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com" size="2" target="_blank" rel="noopener noreferrer">
-                    signing up later</Link>. It takes about 5 minutes.
-                  </AlertDialog.Description>
+                    <Flex gap="3" mt="4" justify="end">
+                      <AlertDialog.Cancel>
+                        <Button variant="soft" color="gray">
+                          Cancel
+                        </Button>
+                      </AlertDialog.Cancel>
+                      <AlertDialog.Action>
+                        <CoinbaseButton
+                          destinationWalletAddress={activeWalletAddress || ""}
+                          price={purchaseParams.price || 0}
+                          redirectURL={redirectURL}
+                        />
+                      </AlertDialog.Action>
+                    </Flex>
+                  </AlertDialog.Content>
+                </AlertDialog.Root>
 
-                  <Flex gap="3" mt="4" justify="end">
-                    <AlertDialog.Cancel>
-                      <Button variant="soft" color="gray">
-                        Cancel
-                      </Button>
-                    </AlertDialog.Cancel>
-                    <AlertDialog.Action>
-                      <CoinbaseButton
-                        destinationWalletAddress={activeWalletAddress || ""}
-                        price={purchaseParams.price || 0}
-                        redirectURL={redirectURL}
-                      />
-                    </AlertDialog.Action>
-                  </Flex>
-                </AlertDialog.Content>
-              </AlertDialog.Root>
+                <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
+                    width: '250px'
+                  }}
+                  onClick={() => {
+                    setError(null);
+                    setSuccess(null);
+                    handleMobilePay();
+                  }}>
+                    Mobile pay
+                </Button>
 
-              {/*<div id="cbpay-container"></div>*/}
+                {/*<div id="cbpay-container"></div>*/}
+              </Flex>
             </Flex>
           )}
 
           {showPayButton && (
+            <>
             <Button size={'4'} loading={isLoading} disabled={!!success} style={{
-              width: '200px'
-              }} 
+                width: '200px'
+              }}
               onClick={() => {
-              setShowConfirmButton(true);
-              setShowPayButton(false);
-              setError(null);
-              setSuccess(null);
-            }}>
-              Purchase
+                setShowConfirmButton(true);
+                setShowPayButton(false);
+                setError(null);
+                setSuccess(null);
+              } }>
+              Pay with crypto
             </Button>
+            <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
+                width: '200px'
+              }}
+              onClick={() => {
+                setError(null);
+                setSuccess(null);
+                handleMobilePay();
+              }}>
+                Mobile pay
+            </Button>
+            </>
           )}
 
           {showConfirmButton && (
