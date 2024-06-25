@@ -94,7 +94,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
           mb={'5'}
           mt={'1'}
           style={{width:'100%'}}
-          type="text"
+          type="number"
           size={'2'}
           name="price"
           value={formData.price}

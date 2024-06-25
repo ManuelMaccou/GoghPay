@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
-import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog, Link } from "@radix-ui/themes";
 import Image from "next/image";
 import NotificationMessage from "./components/Notification";
 import { User } from "../types/types";
@@ -296,7 +296,7 @@ export default function Buy() {
 
     } catch (error) {
       if (isError(error)) {
-        console.error('Error sending USDC:', error.message);
+        console.error('Error sending USDC:', error.message); // REMOVE THIS FOR PRODUCTION. IT LOGS SENSITIVE INFO
         setError(`Transaction failed: ${error.message}`);
       } else {
         console.error('An unexpected error occurred:', error);
@@ -585,8 +585,8 @@ export default function Buy() {
                   <AlertDialog.Description size="2">
                     Paying in crypto supports local merchants by saving them money and eliminating bank fees.
                     If you have a Coinbase account, you can sign in and transfer money to your Gogh account.
-                    If you don&apos;t, we recommend using mobile pay for now, and signing up later. 
-                    It takes about 5 minutes.
+                    If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com" size="2" target="_blank" rel="noopener noreferrer">
+                    signing up later</Link>. It takes about 5 minutes.
                   </AlertDialog.Description>
 
                   <Flex gap="3" mt="4" justify="end">
