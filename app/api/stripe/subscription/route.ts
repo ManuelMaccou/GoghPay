@@ -2,13 +2,14 @@ import Subscription from "@/app/models/Subscription";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { checkoutUser, merchantId } = await req.json();
+  const { checkoutUser, merchantId, subscriberStatus } = await req.json();
   console.log('checkoutUser:', checkoutUser);
 
   try {
     const subscription = new Subscription({
       merchantId: merchantId,
-      buyerId: checkoutUser.user._id,
+      buyerId: checkoutUser._id,
+      subscriberStatus: subscriberStatus,
     });
     await subscription.save();
 

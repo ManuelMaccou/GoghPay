@@ -4,7 +4,7 @@ const subscriptionSchema = new mongoose.Schema({
   merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Merchant', index: true },
   buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   subscribedOn: { type: Date, default: Date.now },
-  active: { type: Boolean, required: true, default: true }
+  subscriberStatus: { type: String, required: true } // active, unsubscribed, denied
 }, { timestamps: true });
 
 const Subscription = mongoose.models.Subscription || mongoose.model('Subscription', subscriptionSchema);

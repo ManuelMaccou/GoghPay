@@ -1,10 +1,11 @@
 export interface User {
   _id: string;
-  privyId: string;
-  walletAddress: string;
+  privyId?: string;
+  walletAddress?: string;
   name?: string;
   email?: string;
   merchant?: boolean;
+  creationType: string;
 }
 
 export interface Merchant {

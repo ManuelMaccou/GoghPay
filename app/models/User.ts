@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String },
   email: { type: String },
   merchant: { type: Boolean },
+  creationType: { type: String },
 }, { timestamps: true });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);

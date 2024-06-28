@@ -346,6 +346,7 @@ export default function Buy() {
         merchantId: merchant?._id ?? '',
         price: price.toString(),
         transactionHash: transactionHash.toString(),
+        checkout_method: "wallet",
       });
   
       router.push(`/success-page?${params.toString()}`);
