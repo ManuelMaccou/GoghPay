@@ -42,7 +42,6 @@ export default function Buy() {
   const [currentUser, setCurrentUser] = useState<User>();
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
   const [showCoinbaseOnramp, setShowCoinbaseOnramp] = useState(false);
@@ -55,6 +54,7 @@ export default function Buy() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
 
+  const router = useRouter();
 
   const {user} = usePrivy();
   const {getAccessToken} = usePrivy();
@@ -331,7 +331,6 @@ export default function Buy() {
         maxPriorityFeePerGas: BigInt(12000000),
       });
       setPendingMessage(null);
-      setSuccess('Purchase successful!');
       console.log('Transaction sent! Hash:', transactionHash);
 
       await saveTransaction({
@@ -342,6 +341,14 @@ export default function Buy() {
         productPrice: price,
         transactionHash: transactionHash,
       });
+
+      const params = new URLSearchParams({
+        merchantId: merchant?._id ?? '',
+        price: price.toString(),
+        transactionHash: transactionHash.toString(),
+      });
+  
+      router.push(`/success-page?${params.toString()}`);
 
     } catch (error) {
       if (isError(error)) {
@@ -408,7 +415,6 @@ export default function Buy() {
       },
     });
   }
-
 
   // Save transaction
   async function saveTransaction(transactionData: any) {
@@ -586,11 +592,6 @@ export default function Buy() {
               <NotificationMessage message={error} type="error" />
             </Box>
           }
-          {success && 
-            <Box mx={'3'}>
-              <NotificationMessage message={success} type="success" />
-            </Box>
-          }
           {showCoinbaseOnramp && (
             <Flex direction={'column'} align={'center'} mx={'4'}>
               {isEmbeddedWallet ? (
@@ -655,12 +656,11 @@ export default function Buy() {
                   </AlertDialog.Content>
                 </AlertDialog.Root>
 
-                <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
+                <Button size={'4'} variant="surface" loading={isLoading} style={{
                     width: '250px'
                   }}
                   onClick={() => {
                     setError(null);
-                    setSuccess(null);
                     handleMobilePay();
                   }}>
                     Mobile pay
@@ -674,23 +674,21 @@ export default function Buy() {
           {showPayButton && (
             <>
             <Flex direction={'column'} gap={'4'}>
-              <Button size={'4'} loading={isLoading} disabled={!!success} style={{
+              <Button size={'4'} loading={isLoading} style={{
                   width: '200px'
                 }}
                 onClick={() => {
                   setShowConfirmButton(true);
                   setShowPayButton(false);
                   setError(null);
-                  setSuccess(null);
-                } }>
+                }}>
                 Pay with crypto
               </Button>
-              <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
+              <Button size={'4'} variant="surface" loading={isLoading} style={{
                   width: '200px'
                 }}
                 onClick={() => {
                   setError(null);
-                  setSuccess(null);
                   handleMobilePay();
                 }}>
                   Mobile pay
@@ -701,14 +699,13 @@ export default function Buy() {
 
           {showConfirmButton && (
             <Flex direction={'row'} gap={'3'}>
-              <Button size={'4'} loading={isLoading} disabled={!!success} style={{
+              <Button size={'4'} loading={isLoading} style={{
                 width: '150px'
                 }} 
                 onClick={() => {
                 if (price !== null && activeWalletAddress) {
                   sendUSDC(activeWalletAddress as `0x${string}`, merchantWalletAddress as `0x${string}`, price);
                   setError(null);
-                  setSuccess(null);
                 } else {
                   console.error("Invalid price or wallet address.");
                   setError("Invalid price or wallet address. Unable to process the transaction.");
@@ -723,7 +720,6 @@ export default function Buy() {
                 setShowConfirmButton(false);
                 setShowPayButton(true);
                 setError(null);
-                setSuccess(null);
               }}>
                 Cancel
               </Button>

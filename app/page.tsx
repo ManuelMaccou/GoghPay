@@ -27,26 +27,26 @@ export default function Home() {
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
   const { login } = useLogin({
-    onComplete: async (user) => {
+    onComplete: async (user, isNewUser) => {
       console.log('login successful');
-      const accessToken = await getAccessToken();
+
       const userPayload = {
         privyId: user.id,
         walletAddress: user.wallet?.address,
       };
 
-      try {
-        const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        console.log('New user created:', response.data);
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-            console.error('Error fetching user details:', error.response?.data?.message || error.message);
-        } else if (isError(error)) {
-            console.error('Unexpected error:', error.message);
-        } else {
-            console.error('Unknown error:', error);
+      if (isNewUser) {
+        try {
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
+          console.log('New user created:', response.data);
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error)) {
+              console.error('Error fetching user details:', error.response?.data?.message || error.message);
+          } else if (isError(error)) {
+              console.error('Unexpected error:', error.message);
+          } else {
+              console.error('Unknown error:', error);
+          }
         }
       }
 

@@ -5,9 +5,8 @@ import QRCode from 'qrcode.react';
 import Login from '../components/Login';
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
-import { Box, Card, Flex, Spinner, Text } from '@radix-ui/themes';
-import Image from "next/image";
-import styles from './styles.module.css';
+import { Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Text } from '@radix-ui/themes';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -16,8 +15,9 @@ function isError(error: any): error is Error {
 
 export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
-  const { ready, authenticated, user, logout } = usePrivy();
+  const { ready, authenticated, user, login, logout } = usePrivy();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
+  const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [message, setMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState('');
@@ -37,11 +37,10 @@ export default function Sell() {
       setIsLoading(false);
       return
     }
-
-    console.log('verifying merchant from sell page')
     const userId = user.id
 
     async function verifyMerchantStatus() {
+      setIsDeterminingMerchantStatus(true);
       const accessToken = await getAccessToken();
       try {
         const response = await fetch(`/api/merchant/verifyMerchantStatus/${userId}`, {
@@ -74,18 +73,12 @@ export default function Sell() {
         }
       } finally {
         setIsLoading(false);
+        setIsDeterminingMerchantStatus(false);
       }
     }
 
     verifyMerchantStatus();
   }, [user, ready, authenticated]);
-
-
-  /*
-  useEffect(() => {
-    console.log("Authentication state changed");
-  }, [ready, authenticated]);
-  */
 
   // Spinner shown during loading state
   if (isLoading) {
@@ -95,54 +88,89 @@ export default function Sell() {
       </Flex>
     );
   }
-
-
-  // Create a better experience for logged in users who are curious about the sell page, but are unauthorized
-  if (!authenticated || !merchantVerified) {
-    return <Login />;
-  }
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
   };
 
+
   return (
-    <Box className={styles.boxTest} height={'100vh'}>
-      <Image
-        src="/bg_m.jpg"
-        alt="background image"
-        priority
-        className={styles.fullBackgroundImage}
-        fill
-        sizes="100vw"
-        style={{
-          objectFit: "cover"
-        }} />
-      <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
-      {authenticated && user && merchantVerified ? (
-        <>
-          {signedUrl ? (
-              <Card variant='classic'>
-              <Flex direction={'column'} align={'center'} gap={'6'}>
-              <QRCode value={signedUrl} size={256} level={"M"} includeMargin={true} />
-              <Text size={'6'} weight={'bold'} align={'center'} aria-live="polite" role="status">
-                {message}
-                </Text>
-                </Flex>
-              </Card>
-          ) : (
-              <NewSaleForm 
-                onQrCodeGenerated={handleQrCodeGenerated} 
-                onMessageUpdate={handleMessageUpdate} 
-                userId={user.id} 
-              />
-            )
-          }
-        </>
-      ) : (
-        <Login />
-      )}
+    <Flex
+      direction='column'
+      position='relative'
+      minHeight='100vh'
+      width='100%'
+      style={{
+        background: 'linear-gradient(to bottom, rgba(30,87,153,1) 0%,rgba(125,185,232,1) 100%)'
+      }}
+    >
+      <Flex direction='column' height={'40vh'} justify='center' align='center' width='100%' gap={'4'}>
+        <Heading style={{ color: 'white' }} size={'9'}>
+          New sale
+        </Heading>
       </Flex>
-    </Box>
+      <Flex
+        flexGrow={'1'}
+        py={'7'}
+        direction={'column'}
+        justify={'between'}
+        align={'center'}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '20px 20px 0px 0px',
+          boxShadow: 'var(--shadow-6)'
+        }}
+      >
+       {authenticated ? (
+          user ? (
+            isDeterminingMerchantStatus ? (
+              <Spinner />
+            ) : merchantVerified ? (
+              signedUrl ? (
+                <Card variant='classic'>
+                  <Flex direction={'column'} align={'center'} gap={'6'}>
+                    <QRCode value={signedUrl} size={256} level={'M'} includeMargin={true} />
+                    <Text size={'6'} weight={'bold'} align={'center'} aria-live='polite' role='status'>
+                      {message}
+                    </Text>
+                  </Flex>
+                </Card>
+              ) : (
+                <NewSaleForm
+                  onQrCodeGenerated={handleQrCodeGenerated}
+                  onMessageUpdate={handleMessageUpdate}
+                  userId={user.id}
+                />
+              )
+            ) : (
+              <Flex direction={'column'} flexGrow={'1'} px={'5'} justify={'center'} align={'center'} gap={'9'}>
+                <Callout.Root color='red' role='alert'>
+                  <Callout.Icon>
+                    <ExclamationTriangleIcon />
+                  </Callout.Icon>
+                  <Callout.Text>
+                    <Strong>Unauthorized.</Strong> This page is for merchants only. You can{' '}
+                    <Link href='https://www.ongogh.com' target='_blank' rel='noopener noreferrer'>
+                      request access here.
+                    </Link>
+                    If you think this is a mistake, please{' '}
+                    <Link href='mailto: hello@ongogh.com' target='_blank' rel='noopener noreferrer'>
+                      contact us.
+                    </Link>
+                  </Callout.Text>
+                </Callout.Root>
+                <Button onClick={logout} style={{ width: '250px' }} size={'4'}>
+                  Log out
+                </Button>
+              </Flex>
+            )
+          ) : null
+        ) : (
+          <Button size={'4'} style={{ width: '250px' }} onClick={login}>
+            Log in
+          </Button>
+        )}
+      </Flex>
+    </Flex>
   );
 }

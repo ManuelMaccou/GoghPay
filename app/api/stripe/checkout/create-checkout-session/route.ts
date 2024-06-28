@@ -1,9 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { NextRequest, NextResponse } from 'next/server';
 import { redirect } from 'next/navigation'
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET!)
+import { stripe } from '@/app/lib/stripe';
 
 export async function POST(req: NextRequest, res: NextApiResponse) {
   try {
@@ -32,13 +30,15 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
       }],
       payment_intent_data: {
         application_fee_amount: applicationFee,
+        transfer_data: {
+          destination: 'acct_1PW1xk2MUQAQ5FGs',
+        },
       },
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/stripe/checkout/success?session_id={CHECKOUT_SESSION_ID}&merchantId=${merchantId}&merchantWalletAddress=${merchantWalletAddress}`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}&merchantId=${merchantId}&merchantWalletAddress=${merchantWalletAddress}&price=${price}`,
       cancel_url: redirectURL,
-    }, {
-      stripeAccount: stripeConnectedAccountId,
-    });
+    }
+  );
     if (session.url) {
       console.log("session url:", session.url)
       return NextResponse.json({ url:session.url }, { status: 200 });
