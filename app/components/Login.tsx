@@ -18,14 +18,17 @@ export default function Login() {
 
   const { getAccessToken, authenticated, logout } = usePrivy();
   const { login } = useLogin({
-    onComplete: async (user) => {
+    onComplete: async (user, isNewUser) => {
       console.log('login successful');
       const accessToken = await getAccessToken();
       const userPayload = {
         privyId: user.id,
         walletAddress: user.wallet?.address,
+        email: user.email?.address || user.google?.email,
+        creationType: 'privy',
       };
   
+      if (isNewUser) {
         try {
           console.log('fetching/adding user')
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
@@ -40,6 +43,7 @@ export default function Login() {
               console.error('Unknown error:', error);
           }
         }
+      }
       
       if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
         try {

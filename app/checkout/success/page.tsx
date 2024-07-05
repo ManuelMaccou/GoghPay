@@ -118,7 +118,7 @@ export default function Success() {
                 },
                 body: JSON.stringify({ 
                   email: sessionData.buyerDetails.email,
-                  creationType: 'stripe '
+                  creationType: 'stripe'
                 }),
               });
               if (!response.ok) {
@@ -311,7 +311,7 @@ export default function Success() {
                       <Callout.Icon>
                         <CheckIcon />
                       </Callout.Icon>
-                      <Callout.Text align={"center"}>Done!</Callout.Text>
+                      <Callout.Text align={"center"}>Got it!</Callout.Text>
                     </Callout.Root>
                   </Flex>
                 )}

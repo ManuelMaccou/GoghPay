@@ -29,6 +29,7 @@ export async function GET(req: NextRequest, res: NextResponse) {
 export async function POST(req: NextRequest) {
   try {
     const userData = await req.json();
+    console.log("user data:", userData);
 
     if (!userData) {
       console.error('Missing user data from the request body.')
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
         privyId: userData?.privyId,
         walletAddress: userData?.walletAddress,
         email: userData?.email,
-        creationMethod: userData?.signInMethod,
+        smartAccountAddress: userData?.smartAccountAddress,
       });
       await user.save();
 

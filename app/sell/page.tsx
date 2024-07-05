@@ -153,7 +153,7 @@ export default function Sell() {
                     <Link href='https://www.ongogh.com' target='_blank' rel='noopener noreferrer'>
                       request access here.
                     </Link>
-                    If you think this is a mistake, please{' '}
+                      If you think this is a mistake, please{' '}
                     <Link href='mailto: hello@ongogh.com' target='_blank' rel='noopener noreferrer'>
                       contact us.
                     </Link>

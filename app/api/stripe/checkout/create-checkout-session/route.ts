@@ -2,10 +2,11 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { NextRequest, NextResponse } from 'next/server';
 import { redirect } from 'next/navigation'
 import { stripe } from '@/app/lib/stripe';
+import { Merchant } from '@/app/types/types';
 
 export async function POST(req: NextRequest, res: NextApiResponse) {
   try {
-    const { stripeConnectedAccountId, merchantId, product, price, walletAddress, redirectURL } = await req.json();
+    const { stripeConnectedAccountId, merchantId, merchantObject, product, price, walletAddress, redirectURL } = await req.json();
 
     console.log("Received price:", price);
 
@@ -13,9 +14,16 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
       console.error('Received price is not a valid number:', price);
     }
 
-    const priceInCents = price * 100;
-    const applicationFee = priceInCents / 100;
+    const priceInCents = 100 * 100;
     const merchantWalletAddress = walletAddress;
+
+    let applicationFee;
+
+    if (merchantObject.promo) {
+      applicationFee = Math.round(priceInCents * .01);
+    } else {
+      applicationFee = Math.round(priceInCents * 0.029 + 30);
+    }
 
     const session = await stripe.checkout.sessions.create({
       line_items: [{
@@ -29,6 +37,7 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
         quantity: 1,
       }],
       payment_intent_data: {
+        description: `${merchantObject.name}: ${product}`,
         application_fee_amount: applicationFee,
         transfer_data: {
           destination: 'acct_1PW1xk2MUQAQ5FGs',

@@ -6,14 +6,17 @@ export interface User {
   email?: string;
   merchant?: boolean;
   creationType: string;
+  smartAccountAddress: string;
 }
 
 export interface Merchant {
   _id: string;
+  name: string;
   walletAddress?: string;
   storeImage?: string;
   privyId?: string;
   stripeConnectedAccountId?: string;
+  promo?: boolean;
 }
 
 export interface Transaction {
@@ -23,4 +26,5 @@ export interface Transaction {
   productName: string;
   productPrice: number;
   transactionHash: string;
+  createdAt: Date;
 }

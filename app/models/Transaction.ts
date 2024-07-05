@@ -6,7 +6,7 @@ const transactionSchema = new mongoose.Schema({
   merchant: { type: Schema.Types.ObjectId, ref: 'Merchant', required: true },
   buyer: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   productName: { type: String, required: true },
-  productPrice: { type: String, required: true },
+  productPrice: { type: Number, required: true },
   transactionHash: { type: String },
 }, { timestamps: true });
 
