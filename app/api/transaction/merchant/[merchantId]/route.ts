@@ -1,27 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/app/utils/mongodb';
 import Transaction from '@/app/models/Transaction';
+import { startOfDay, addMinutes } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
 
 type Params = {
-  merchantId: string
-}
+  merchantId: string;
+};
 
 export async function GET(req: NextRequest, context: { params: Params }) {
-  const merchantId = context.params.merchantId
+  const merchantId = context.params.merchantId;
   await connectToDatabase();
 
-  const privyId = req.headers.get('x-user-id');
-  if (!privyId) {
-    return NextResponse.json({ error: 'User ID not provided during auth middleware' }, { status: 401 });
-  }
+  const now = new Date();
+  const pstTimeZone = 'America/Los_Angeles';
+  const startOfTodayPST = fromZonedTime(addMinutes(startOfDay(now), 1), pstTimeZone);
 
-  const allMerchantTransactions = await Transaction.find({ merchant: merchantId });
+  const totalTransactions = await Transaction.find({ merchant: merchantId });
+  const todaysTransactions = await Transaction.find({
+    merchant: merchantId,
+    createdAt: { $gte: startOfTodayPST },
+  });
 
-  if (!allMerchantTransactions.length) {
-    console.log("No transactions returned for merchant ID:", merchantId);
+  if (!totalTransactions.length && !todaysTransactions.length) {
+    console.log(`No transactions returned for merchant ID: ${merchantId}`);
     return NextResponse.json({ message: "No transactions found." }, { status: 404 });
   }
-  
-  console.log("Transactions found:");
-  return NextResponse.json(allMerchantTransactions, { status: 200 });
+
+  console.log("Merchant transactions found:");
+  return NextResponse.json({ totalTransactions, todaysTransactions }, { status: 200 });
 }

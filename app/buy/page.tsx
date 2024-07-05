@@ -3,19 +3,22 @@
 import { useSearchParams, useRouter, redirect } from "next/navigation"
 import { useState, useEffect } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
-import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
+import { ConnectedWallet, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
 import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog, Link } from "@radix-ui/themes";
+import * as Avatar from '@radix-ui/react-avatar';
 import Image from "next/image";
-import NotificationMessage from "./components/Notification";
+import NotificationMessage from "../components/Notification";
 import { User } from "../types/types";
-import {createWalletClient, custom, encodeFunctionData, erc20Abi, createPublicClient, http} from 'viem';
-import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V06, walletClientToSmartAccountSigner} from 'permissionless';
-import {signerToSimpleSmartAccount} from 'permissionless/accounts';
-import {createPimlicoPaymasterClient} from 'permissionless/clients/pimlico';
+import {createWalletClient, custom, encodeFunctionData, erc20Abi, createPublicClient, http, parseAbiItem} from 'viem';
+import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V06, ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner} from 'permissionless';
+import {signerToSafeSmartAccount, signerToSimpleSmartAccount} from 'permissionless/accounts';
+import {createPimlicoBundlerClient, createPimlicoPaymasterClient} from 'permissionless/clients/pimlico';
 import { base, baseSepolia } from "viem/chains";
 import axios from "axios";
 import { InfoCircledIcon, AvatarIcon } from "@radix-ui/react-icons";
+import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
+const { ethers } = require("ethers");
 
 interface PurchaseParams {
   merchantId: string | null;
@@ -40,12 +43,13 @@ export default function Buy() {
   });
   const [merchant, setMerchant] = useState<Merchant>();
   const [currentUser, setCurrentUser] = useState<User>();
+  const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
   const [showCoinbaseOnramp, setShowCoinbaseOnramp] = useState(false);
+  const [guestCheckout, setGuestCheckout] = useState(false);
   const [showPayButton, setShowPayButton] = useState(false);
   const [showConfirmButton, setShowConfirmButton] = useState(false);
   const [isEmbeddedWallet, setIsEmbeddedWallet] = useState(false);
@@ -55,6 +59,7 @@ export default function Buy() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
 
+  const router = useRouter();
 
   const {user} = usePrivy();
   const {getAccessToken} = usePrivy();
@@ -75,31 +80,88 @@ export default function Buy() {
   
   const wallet = wallets[0]
   const activeWalletAddress = wallet?.address
-  const merchantWalletAddress = walletAddress  
+  const merchantWalletAddress = walletAddress
+  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
 
   const disableLogin = !ready || (ready && authenticated);
   const { login } = useLogin({
-    onComplete: async (user) => {
-      const accessToken = await getAccessToken();
-      const userPayload = {
-        privyId: user.id,
-        walletAddress: user.wallet?.address,
-      };
+    onComplete: async (user, isNewUser) => {
 
-      try {
-        await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          console.error('Error fetching user details:', error.response?.data?.message || error.message);
-        } else if (isError(error)) {
-          console.error('Unexpected error:', error.message);
-        } else {
-          console.error('Unknown error:', error);
+      if (isNewUser) {
+        let smartAccountAddress;
+        
+        if (embeddedWallet) {
+          const eip1193provider = await wallet.getEthereumProvider();
+          const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+
+          const privyClient = createWalletClient({
+            account: embeddedWallet.address as `0x${string}`,
+            chain: baseSepolia,
+            transport: custom(eip1193provider)
+          });
+
+          const customSigner = walletClientToSmartAccountSigner(privyClient);
+
+          const publicClient = createPublicClient({
+            chain: baseSepolia,
+            transport: http(),
+          });
+    
+          const bundlerClient = createPimlicoBundlerClient({
+            transport: http(
+              "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
+            ),
+            entryPoint: ENTRYPOINT_ADDRESS_V07
+          }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
+
+          const account = await signerToSafeSmartAccount(publicClient, {
+            signer: customSigner,
+            entryPoint: ENTRYPOINT_ADDRESS_V07,
+            safeVersion: "1.4.1",
+            setupTransactions: [
+              {
+                to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+                value: 0n,
+                data: encodeFunctionData({
+                  abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+                  args: [
+                    erc20PaymasterAddress,
+                    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+                  ],
+                }),
+              },
+            ],
+          })
+          console.log('account address:', account.address);
+          
+          if (account && account.address) {
+            smartAccountAddress = account.address
+          };
+     
+        };
+        try {
+          console.log('smart account address:', smartAccountAddress);
+          const userPayload = {
+            privyId: user.id,
+            walletAddress: user.wallet?.address,
+            email: user.email?.address || user.google?.email,
+            creationType: 'privy',
+            smartAccountAddress: smartAccountAddress,
+          };
+
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
+          console.log('New user created:', response.data);
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error)) {
+              console.error('Error fetching user details:', error.response?.data?.message || error.message);
+          } else if (isError(error)) {
+              console.error('Unexpected error:', error.message);
+          } else {
+              console.error('Unknown error:', error);
+          }
         }
       }
 
@@ -200,16 +262,6 @@ export default function Buy() {
     }
   }, [isValid, merchantId]);
 
-  // Determine if the user has an embedded wallet
-  useEffect(() => {
-    if (wallet && wallet.walletClientType === 'privy') {
-      setIsEmbeddedWallet(true);
-    } else {
-      setIsEmbeddedWallet(false);
-    }
-  }, [wallet]);
-
-
   // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
@@ -218,19 +270,30 @@ export default function Buy() {
         const response = await fetch(`/api/user/me/${user.id}`);
 
         if (!response.ok) {
+          if (response.status === 404) {
+            console.log('user doesnt exist')
+          }
           throw new Error('Failed to fetch user');
         }
         const userData = await response.json();
+        console.log('userData:', userData);
+
         setCurrentUser(userData.user);
+        if (userData && userData.user.smartAccountAddress) {
+          setWalletForPurchase(userData.user.smartAccountAddress);
+        } else if (userData && !userData.user.smartAccountAddress) {
+          setWalletForPurchase(userData.user.walletAddress);
+        }
       } catch (error) {
         console.error('Error fetching user:', error);
       }
     };
+    console.log("wallet for purchase in fetch user useEffect:", walletForPurchase)
   
     if (ready && authenticated) {
       fetchUser();
     }
-  }, [authenticated, ready, user]);
+  }, [activeWalletAddress, authenticated, ready, user, walletForPurchase]);
 
   // Handle mobile pay
   const handleMobilePay = async () => {
@@ -240,7 +303,8 @@ export default function Buy() {
     const requestData = {
       ...purchaseParams,
       stripeConnectedAccountId: merchant?.stripeConnectedAccountId,
-      redirectURL: window.location.href
+      redirectURL: window.location.href,
+      merchantObject: merchant
     };
     console.log("Sending request data:", requestData);
 
@@ -276,10 +340,11 @@ export default function Buy() {
     }
   };
 
-  async function sendUSDC(activeWalletAddress: `0x${string}`, merchantWalletAddress: `0x${string}`, price: number) {
-    if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+  async function sendUSDC(merchantWalletAddress: `0x${string}`, price: number) {
+    // if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+      if (chainIdNum !== null && chainId !== 'eip155:84532') {
       try {
-        await wallet.switchChain(chainIdNum);
+        await wallet.switchChain(84532);
       } catch (error: unknown) {
         console.error('Error switching chain:', error);
     
@@ -297,7 +362,7 @@ export default function Buy() {
       }
     };
 
-    if (!activeWalletAddress) {
+    if (!walletForPurchase) {
       console.error('Error: Users wallet address is missing.');
       setError('There was an error. Please log in again.');
       return;
@@ -308,11 +373,77 @@ export default function Buy() {
     setIsLoading(true);
     setPendingMessage('Please wait...');
 
+    // Old Code using Privy and Pimlico docs
+
     try {
-      const smartAccountClient = await setupSmartAccountClient(activeWalletAddress);
-      console.log('active wallet address:', activeWalletAddress);
-      console.log('merchant wallet address:', merchantWalletAddress);
-      console.log('smart account client:', smartAccountClient);
+      const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+      const rpcUrl = process.env.RPC_URL
+      const eip1193provider = await wallet.getEthereumProvider();
+
+      const privyClient = createWalletClient({
+        account: wallet.address as `0x${string}`,
+        chain: baseSepolia,
+        transport: custom(eip1193provider)
+      });
+
+      const customSigner = walletClientToSmartAccountSigner(privyClient);
+
+      const publicClient = createPublicClient({
+        chain: baseSepolia,
+        transport: http(),
+      });
+
+      const bundlerClient = createPimlicoBundlerClient({
+        transport: http(
+          "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
+        ),
+        entryPoint: ENTRYPOINT_ADDRESS_V07
+      }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
+
+      const account = await signerToSafeSmartAccount(publicClient, {
+        signer: customSigner,
+        entryPoint: ENTRYPOINT_ADDRESS_V07,
+        safeVersion: "1.4.1",
+        setupTransactions: [
+          {
+            to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+              args: [
+                erc20PaymasterAddress,
+                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+              ],
+            }),
+          },
+        ],
+      })
+      console.log('account address:', account.address);
+
+      const smartAccountClient = createSmartAccountClient({
+        account,
+        entryPoint: ENTRYPOINT_ADDRESS_V07,
+        chain: baseSepolia,
+        bundlerTransport: http('https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7'),
+        middleware: {
+          gasPrice: async () => {
+            return (await bundlerClient.getUserOperationGasPrice()).fast
+          },
+          sponsorUserOperation: async (args) => {
+            const gasEstimates = await bundlerClient.estimateUserOperationGas({
+              userOperation: {
+                ...args.userOperation,
+                paymaster: erc20PaymasterAddress,
+              },
+            })
+       
+            return {
+              ...gasEstimates,
+              paymaster: erc20PaymasterAddress,
+            };
+          },
+        },
+      })
 
       const data = encodeFunctionData({
         abi: erc20Abi,
@@ -327,11 +458,12 @@ export default function Buy() {
         to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
         data: data,
         value: BigInt(0),
-        maxFeePerGas: BigInt(20000000),
-        maxPriorityFeePerGas: BigInt(12000000),
+        maxFeePerGas: BigInt(1000000000), // 1 Gwei
+        maxPriorityFeePerGas: BigInt(1000000000), // 1 Gwei
+        gas: BigInt(1000000000),
+
       });
       setPendingMessage(null);
-      setSuccess('Purchase successful!');
       console.log('Transaction sent! Hash:', transactionHash);
 
       await saveTransaction({
@@ -342,6 +474,15 @@ export default function Buy() {
         productPrice: price,
         transactionHash: transactionHash,
       });
+
+      const params = new URLSearchParams({
+        merchantId: merchant?._id ?? '',
+        price: price.toString(),
+        transactionHash: transactionHash.toString(),
+        checkout_method: "wallet",
+      });
+  
+      router.push(`/checkout/success?${params.toString()}`);
 
     } catch (error) {
       if (isError(error)) {
@@ -356,59 +497,6 @@ export default function Buy() {
       setPendingMessage(null);
     }
   }
-
-  // Setup smart account client
-  async function setupSmartAccountClient(activeWalletAddress: `0x${string}`) {
-    const eip1193provider = await wallet.getEthereumProvider();
-    console.log("eip1193provider:", eip1193provider)
-
-    // Create a viem WalletClient from the embedded wallet's EIP1193 provider
-    // This will be used as the signer for the user's smart account
-    const privyClient = createWalletClient({
-      account: activeWalletAddress,
-      chain: base,
-      transport: custom(eip1193provider)
-    });
-
-    console.log("privyClient:", privyClient)
-
-    // Create a viem public client for RPC calls
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(),
-    });
-
-    console.log("publicClient:", publicClient)
-
-    // Initialize the smart account for the user
-    const customSigner = walletClientToSmartAccountSigner(privyClient);
-    const simpleSmartAccount = await signerToSimpleSmartAccount(publicClient, {
-      entryPoint: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
-      signer: customSigner,
-      factoryAddress: '0x9406Cc6185a346906296840746125a0E44976454',
-    });
-
-    console.log("customSigner:", customSigner)
-
-    // Create the Paymaster for gas sponsorship 
-    const rpcUrl = process.env.NEXT_PUBLIC_PAYMASTER_COINBASE_RPC
-    const cloudPaymaster = createPimlicoPaymasterClient({
-      chain: base,
-      transport: http("https://api.developer.coinbase.com/rpc/v1/base/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
-      entryPoint: ENTRYPOINT_ADDRESS_V06,
-    });
-
-    // Create the SmartAccountClient for requesting signatures and transactions (RPCs)
-    return createSmartAccountClient({
-      account: simpleSmartAccount,
-      chain: base,
-      bundlerTransport: http("https://api.developer.coinbase.com/rpc/v1/base/G5DZoWOhz4SitN8faJSQvTSyllBnh3YE"),
-      middleware: {
-        sponsorUserOperation: cloudPaymaster.sponsorUserOperation,
-      },
-    });
-  }
-
 
   // Save transaction
   async function saveTransaction(transactionData: any) {
@@ -438,11 +526,13 @@ export default function Buy() {
 // check the experience for non embedded wallets. Is it good?
 // Make sure to change the chainID.
   useEffect(() => {
-    if(ready && authenticated && isValid && activeWalletAddress) {
+    if(ready && authenticated && isValid && walletForPurchase) {
+      console.log("wallet for purchase in balance useEffect:", walletForPurchase);
+
       const fetchBalance = async () => {
         setIsBalanceLoading(true);
         try {
-          const response = await fetch(`/api/crypto/get-usdc-balance?address=${activeWalletAddress}`);
+          const response = await fetch(`/api/crypto/get-usdc-balance?address=${walletForPurchase}`);
           if (!response.ok) {
             throw new Error('Failed to fetch balance');
           }
@@ -468,7 +558,7 @@ export default function Buy() {
 
       // const isSufficientBalance = balance >= price + 1;
 
-      if (balance < price){
+      if (balance < (price + 1)){
         setShowPayButton(false);
         setShowCoinbaseOnramp(true);
       } else {
@@ -477,7 +567,7 @@ export default function Buy() {
       }
     };
     
-  },[ready, authenticated, activeWalletAddress, isEmbeddedWallet, isValid, balance, price]);
+  },[ready, authenticated, walletForPurchase, isValid, balance, price]);
 
   if (ready && !isValid && !isVerifying) {
     return (
@@ -498,7 +588,7 @@ export default function Buy() {
   return (
     <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
       <Box width={'100%'}>
-        {isEmbeddedWallet && authenticated ? (
+        {embeddedWallet && authenticated ? (
           <Card variant="ghost" mb={'3'}>
             <Flex gap="3" align="center" justify={'end'}>
               <AvatarIcon />
@@ -509,18 +599,21 @@ export default function Buy() {
               </Box>
             </Flex>
           </Card>
-        ) : (!isEmbeddedWallet && authenticated ? (
-          <Card variant="ghost" mb={'3'}>
-          <Flex gap="3" align="center" justify={'end'}>
-            <AvatarIcon />
-            <Box>
-              <Text as="div" size="2" color="gray">
-                {activeWalletAddress?.slice(0, 6)}
-              </Text>
-            </Box>
-          </Flex>
-        </Card>
-        ): null)}
+        ) : (
+          !embeddedWallet && 
+          authenticated && (
+            <Card variant="ghost" mb={'3'}>
+              <Flex gap="3" align="center" justify={'end'}>
+                <AvatarIcon />
+                <Box>
+                  <Text as="div" size="2" color="gray">
+                    {walletForPurchase?.slice(0, 6)}
+                  </Text>
+                </Box>
+              </Flex>
+            </Card>
+          )
+        )}
         <Flex justify={'between'} direction={'row'} pb={'9'}>
           {authenticated && (
             <>
@@ -543,21 +636,18 @@ export default function Buy() {
       {!isFetchingMerchant ? (
         <Box width={'100%'}>
           <Flex justify={'center'}>
-            <Image
-              src={merchant?.storeImage || "" }
-              alt="merchant logo"
-              width={960}
-              height={540}
-              priority
-              placeholder='empty'
-              sizes="100vw"
-              style={{
-                width: "40%",
-                height: "auto",
-                marginBottom: "50px",
-                maxWidth: "100%",
-              }} 
-            /> 
+
+            <Avatar.Root>
+              <Avatar.Image 
+              className="MerchantLogo"
+              src={merchant?.storeImage }
+              alt="Merchant Logo"
+              style={{objectFit: "contain", maxWidth: '200px'}}
+              />
+              
+            </Avatar.Root>
+
+           
             </Flex>
             <Flex direction={'column'} align={'center'} mb={'2'}>
               <Text size={'9'} my={'4'}>
@@ -576,26 +666,26 @@ export default function Buy() {
         <Flex direction={'column'} align={'center'}>
         {authenticated ? (
           <>
-          {pendingMessage && 
+          {pendingMessage && (
             <Box mx={'3'}>
               <NotificationMessage message={pendingMessage} type="pending" />
             </Box>
-          }
-          {error && 
+          )}
+          {error && (
             <Box mx={'3'}>
               <NotificationMessage message={error} type="error" />
             </Box>
-          }
-          {success && 
-            <Box mx={'3'}>
-              <NotificationMessage message={success} type="success" />
-            </Box>
-          }
+          )}
           {showCoinbaseOnramp && (
-            <Flex direction={'column'} align={'center'} mx={'4'}>
-              {isEmbeddedWallet ? (
-                <>
-                {!isBalanceLoading && (
+            isBalanceLoading ? (
+              <>
+                <Text>Fetching balance...</Text>
+                <Spinner />
+              </>
+            ) : (
+              <Flex direction={'column'} align={'center'} mx={'4'}>
+              {embeddedWallet ? (
+                !isBalanceLoading && (
                   <Callout.Root color="red" mb={'4'}>
                     <Callout.Icon>
                       <InfoCircledIcon />
@@ -604,11 +694,9 @@ export default function Buy() {
                       You don&apos;t have enough funds in your account to complete this purchase. Continue with crypto or use mobile pay.
                     </Callout.Text>
                   </Callout.Root>
-                )}
-                </>
+                )
               ) : (
-                <>
-                {!isBalanceLoading && (
+                !isBalanceLoading && (
                   <Callout.Root color="red" mb={'4'}>
                     <Callout.Icon>
                       <InfoCircledIcon />
@@ -617,8 +705,7 @@ export default function Buy() {
                       You don&apos;t have enough funds in your wallet to complete this purchase. Transfer funds from your Coinbase account or obtain USDC on Base.
                     </Callout.Text>
                   </Callout.Root>
-                )}
-                </>
+                )
               )}
 
               <Flex direction={'column'} gap={'4'}>
@@ -646,7 +733,7 @@ export default function Buy() {
                       </AlertDialog.Cancel>
                       <AlertDialog.Action>
                         <CoinbaseButton
-                          destinationWalletAddress={activeWalletAddress || ""}
+                          destinationWalletAddress={walletForPurchase || ""}
                           price={purchaseParams.price || 0}
                           redirectURL={redirectURL}
                         />
@@ -655,12 +742,11 @@ export default function Buy() {
                   </AlertDialog.Content>
                 </AlertDialog.Root>
 
-                <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
+                <Button size={'4'} variant="surface" loading={isLoading} style={{
                     width: '250px'
                   }}
                   onClick={() => {
                     setError(null);
-                    setSuccess(null);
                     handleMobilePay();
                   }}>
                     Mobile pay
@@ -669,76 +755,128 @@ export default function Buy() {
                 {/*<div id="cbpay-container"></div>*/}
               </Flex>
             </Flex>
+            )
+            
           )}
 
           {showPayButton && (
-            <>
-            <Flex direction={'column'} gap={'4'}>
-              <Button size={'4'} loading={isLoading} disabled={!!success} style={{
-                  width: '200px'
+            isBalanceLoading ? (
+              <>
+                <Text>Fetching balance...</Text>
+                <Spinner />
+              </>
+            ) : (
+              <Flex direction={'column'} gap={'4'}>
+              <Button size={'4'} loading={isLoading} style={{
+                  width: '250px',
+                  backgroundColor: '#0051FD'
                 }}
                 onClick={() => {
                   setShowConfirmButton(true);
                   setShowPayButton(false);
                   setError(null);
-                  setSuccess(null);
-                } }>
+                }}>
                 Pay with crypto
               </Button>
-              <Button size={'4'} variant="surface" loading={isLoading} disabled={!!success} style={{
-                  width: '200px'
+              <Button size={'4'} variant="surface" loading={isLoading} style={{
+                  width: '250px'
                 }}
                 onClick={() => {
                   setError(null);
-                  setSuccess(null);
                   handleMobilePay();
                 }}>
                   Mobile pay
               </Button>
             </Flex>
-            </>
+            )
           )}
 
           {showConfirmButton && (
-            <Flex direction={'row'} gap={'3'}>
-              <Button size={'4'} loading={isLoading} disabled={!!success} style={{
-                width: '150px'
-                }} 
-                onClick={() => {
-                if (price !== null && activeWalletAddress) {
-                  sendUSDC(activeWalletAddress as `0x${string}`, merchantWalletAddress as `0x${string}`, price);
+            <Flex direction={'column'} gap={'3'}>
+              <Callout.Root color="orange">
+                <Callout.Icon>
+                  <InfoCircledIcon />
+                </Callout.Icon>
+                <Callout.Text>
+                  Crypto transactions are not eligible for refunds.
+                </Callout.Text>
+              </Callout.Root>
+              <Flex direction={'row'} gap={'3'}>
+                <Button size={'4'} loading={isLoading} style={{
+                  width: '150px'
+                  }} 
+                  onClick={() => {
+                  if (price !== null && walletForPurchase) {
+                    sendUSDC(merchantWalletAddress as `0x${string}`, price);
+                    setError(null);
+                  } else {
+                    console.error("Invalid price or wallet address.");
+                    setError("Invalid price or wallet address. Unable to process the transaction.");
+                  }
+                  }}>
+                    Confirm
+                </Button>
+                <Button size={'4'} variant="surface" style={{
+                  width: '150px'
+                  }} 
+                  onClick={() => {
+                  setShowConfirmButton(false);
+                  setShowPayButton(true);
                   setError(null);
-                  setSuccess(null);
-                } else {
-                  console.error("Invalid price or wallet address.");
-                  setError("Invalid price or wallet address. Unable to process the transaction.");
-                }
-                }}>
-                  Confirm
-              </Button>
-              <Button size={'4'} variant="surface" style={{
-                width: '150px'
-                }} 
-                onClick={() => {
-                setShowConfirmButton(false);
-                setShowPayButton(true);
-                setError(null);
-                setSuccess(null);
-              }}>
-                Cancel
-              </Button>
+                  }}>
+                  Cancel
+                </Button>
+              </Flex>
             </Flex>
           )}
           </>
+        ) : guestCheckout ? (
+          <>
+           <Flex direction={'column'} gap={'4'} align={'center'} justify={'center'}>
+            <Button size={'4'} disabled={disableLogin}
+              style={{
+                width: 'max-content',
+                backgroundColor: '#0051FD'
+              }}
+              onClick={login}>
+              Log in to pay with crypto
+            </Button>
+
+            <Button size={'4'} variant="surface" loading={isLoading} style={{
+              width: '250px'
+              }}
+              onClick={() => {
+                setError(null);
+                handleMobilePay();
+              }}>
+              Mobile pay
+            </Button>
+            </Flex>
+          </>
         ) : (
-          <Button mt={'9'} disabled={disableLogin} style={{
-              width: '200px'
-            }} onClick={login}>
-            Log in to buy
+          <>
+          <Flex direction={'column'} gap={'4'} align={'center'} justify={'center'}>
+          <Button size={'4'} variant="surface" loading={isLoading} style={{
+            width: '200px'
+            }}
+            onClick={login}>
+            Login
           </Button>
+
+          <Button size={'4'} variant="ghost" disabled={disableLogin}
+            style={{
+              width: '200px'
+            }}
+            onClick={() => {
+              setGuestCheckout(true);
+            }}>
+            Continue as guest
+          </Button>
+          </Flex>
+          </>
         )}
-        </Flex>
-        </Box>
       </Flex>
-    );
+    </Box>
+  </Flex>
+  );
 }

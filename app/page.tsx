@@ -3,11 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
-import { usePrivy, useLogin, useWallets } from '@privy-io/react-auth';
+import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import axios from 'axios';
 import { Button, Flex, Spinner } from "@radix-ui/themes";
 import { User } from './types/types';
 import styles from './components/styles.module.css';
+import { createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { walletClientToSmartAccountSigner,ENTRYPOINT_ADDRESS_V07 } from 'permissionless';
+import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
+import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
+import { signerToSafeSmartAccount } from 'permissionless/accounts';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -27,26 +33,83 @@ export default function Home() {
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
   const { login } = useLogin({
-    onComplete: async (user) => {
+    onComplete: async (user, isNewUser) => {
       console.log('login successful');
-      const accessToken = await getAccessToken();
-      const userPayload = {
-        privyId: user.id,
-        walletAddress: user.wallet?.address,
-      };
 
-      try {
-        const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        console.log('New user created:', response.data);
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-            console.error('Error fetching user details:', error.response?.data?.message || error.message);
-        } else if (isError(error)) {
-            console.error('Unexpected error:', error.message);
-        } else {
-            console.error('Unknown error:', error);
+      const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+
+      if (isNewUser) {
+        let smartAccountAddress;
+        
+        if (embeddedWallet) {
+          const eip1193provider = await wallet.getEthereumProvider();
+          const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+
+          const privyClient = createWalletClient({
+            account: embeddedWallet.address as `0x${string}`,
+            chain: baseSepolia,
+            transport: custom(eip1193provider)
+          });
+
+          const customSigner = walletClientToSmartAccountSigner(privyClient);
+
+          const publicClient = createPublicClient({
+            chain: baseSepolia,
+            transport: http(),
+          });
+    
+          const bundlerClient = createPimlicoBundlerClient({
+            transport: http(
+              "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
+            ),
+            entryPoint: ENTRYPOINT_ADDRESS_V07
+          }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
+
+          const account = await signerToSafeSmartAccount(publicClient, {
+            signer: customSigner,
+            entryPoint: ENTRYPOINT_ADDRESS_V07,
+            safeVersion: "1.4.1",
+            setupTransactions: [
+              {
+                to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+                value: 0n,
+                data: encodeFunctionData({
+                  abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+                  args: [
+                    erc20PaymasterAddress,
+                    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+                  ],
+                }),
+              },
+            ],
+          })
+          console.log('account address:', account.address);
+          
+          if (account && account.address) {
+            smartAccountAddress = account.address
+          };
+     
+        };
+        try {
+          console.log('smart account address:', smartAccountAddress);
+          const userPayload = {
+            privyId: user.id,
+            walletAddress: user.wallet?.address,
+            email: user.email?.address || user.google?.email,
+            creationType: 'privy',
+            smartAccountAddress: smartAccountAddress,
+          };
+
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
+          console.log('New user created:', response.data);
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error)) {
+              console.error('Error fetching user details:', error.response?.data?.message || error.message);
+          } else if (isError(error)) {
+              console.error('Unexpected error:', error.message);
+          } else {
+              console.error('Unknown error:', error);
+          }
         }
       }
 
@@ -159,11 +222,20 @@ export default function Home() {
                     <Button size={'4'} style={{height: '100px'}} onClick={handleNewSaleClick}>
                       New Sale
                     </Button>
-                    <Button size={'4'}>Sales</Button>
-                    <Button size={'4'} style={{width: "300px"}}>Purchases</Button>
+                    <Button size={'4'}
+                      onClick={() => router.push(`/account/sales`)}>
+                        Sales
+                      </Button>
+                    <Button size={'4'} style={{width: "300px"}}
+                      onClick={() => router.push(`/account/purchases`)}>
+                        Purchases
+                    </Button>
                   </>
                 ) : (
-                  <Button size={'4'} style={{width: "300px"}}>Purchases</Button>
+                  <Button size={'4'} style={{width: "300px"}}
+                    onClick={() => router.push(`/account/purchases`)}>
+                      Purchases
+                  </Button>
                 )}
               </Flex>
             </Flex>

@@ -7,7 +7,6 @@ type Params = {
 }
 
 export async function GET(request: Request, context: { params: Params }) {
-  console.log('fetching merchant')
   await connectToDatabase();
   const merchantId = context.params.merchantId
   const merchant = await Merchant.findOne({ _id: merchantId });
@@ -16,7 +15,6 @@ export async function GET(request: Request, context: { params: Params }) {
     console.log("merchant not found");
     return NextResponse.json({ message: "Merchant not found." }, {status:404});
   }
-  console.log("merchant:", merchant);
 
   return NextResponse.json(merchant);
 }
