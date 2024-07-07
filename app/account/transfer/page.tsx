@@ -4,14 +4,25 @@ import { User } from "@/app/types/types";
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
-import { Avatar, Badge, Box, Button, Callout, Card, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField } from '@radix-ui/themes';
-import { AvatarIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, Pencil2Icon } from "@radix-ui/react-icons";
+import { Avatar, Badge, Box, Button, Callout, Card, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
+import { AvatarIcon, ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { CoinbaseButton } from "@/app/buy/components/coinbaseOnramp";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Chain, createPublicClient, createWalletClient, custom, encodeFunctionData, erc20Abi, http, parseAbiItem } from "viem";
+import { base, baseSepolia } from "viem/chains";
+import { ENTRYPOINT_ADDRESS_V07, createSmartAccountClient, walletClientToSmartAccountSigner } from "permissionless";
+import { createPimlicoBundlerClient } from "permissionless/clients/pimlico";
+import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
+import { signerToSafeSmartAccount } from "permissionless/accounts";
+import NotificationMessage from "@/app/components/Notification";
 
 export default function Transfer() {
   const [error, setError] = useState<string | null>(null);
+  const [criticalError, setCriticalError] = useState<string | null>(null);
+  const [transferErrorMessage, setTransferErrorMessage] = useState<string | null>(null);
+  const [tranferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
@@ -20,17 +31,42 @@ export default function Transfer() {
   const [isValidAddress, setIsValidAddress] = useState(false);
   const [editAddressMode, setEditAddressMode] = useState(false);
   const [walletUpdateMessage, setWalletUpdateMessage] = useState<string | null>(null);
-  const [transferInputValue, setTransferInputValue] = useState<number>();
-  const [transferErrorMessage, setTransferErrorMessage] = useState<string | null>(null);
+  const [transferInputValue, setTransferInputValue] = useState('');
   const [transferValueIsValid, setTransferValueIsValid] = useState(false);
+  const [transferStarted, setTransferStarted] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [redirectURL, setRedirectURL] = useState('');
 
   const { user, ready, authenticated, logout, login } = usePrivy();
   const { wallets } = useWallets();
-  const privyId = user?.id;
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
-  const router = useRouter();
+  const wallet = wallets[0]
+  const chainId = wallet?.chainId;
+  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
+
+  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+
+  // Define your chain mapping
+  const chainMapping: { [key: string]: Chain } = {
+    'baseSepolia': baseSepolia,
+    'base': base,
+  };
+
+ // Utility function to get Chain object from environment variable
+  const getChainFromEnv = (envVar: string | undefined): Chain => {
+    if (!envVar) {
+      throw new Error('Environment variable for chain is not defined');
+    }
+    
+    const chain = chainMapping[envVar];
+    
+    if (!chain) {
+      throw new Error(`No chain found for environment variable: ${envVar}`);
+    }
+
+    return chain;
+  };
 
   const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
 
@@ -68,8 +104,190 @@ export default function Transfer() {
     setTransferInputValue(value);
   };
 
+  async function sendUSDC(coinbaseAddress: `0x${string}`, amount: number) {
+    setTransferStarted(true)
+    if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+      try {
+        await wallet.switchChain(chainIdNum);
+      } catch (error: unknown) {
+        console.error('Error switching chain:', error);
+        setTransferStarted(false)
+    
+        if (typeof error === 'object' && error !== null && 'code' in error) {
+          const errorCode = (error as { code: number }).code;
+          if (errorCode === 4001) {
+            alert('You need to switch networks to proceed.');
+          } else {
+            alert('Failed to switch the network. Please try again.');
+          }
+        } else {
+          console.log('An unexpected error occurred.');
+        }
+        setTransferStarted(false)
+        return;
+      }
+    };
+
+    if (!walletForPurchase) {
+      console.error('Error: Users wallet address is missing.');
+      setTransferErrorMessage('There was an error. Please log in again.');
+      setTransferStarted(false)
+      return;
+    }
+    
+    const amountInUSDC = BigInt(amount * 1_000_000);
+
+    setIsLoading(true);
+    setPendingMessage('Please wait...');
+
+    // Old Code using Privy and Pimlico docs
+
+    try {
+      const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+      const eip1193provider = await wallet.getEthereumProvider();
+
+      console.log('Creating privy client...');
+      const privyClient = createWalletClient({
+        account: wallet.address as `0x${string}`,
+        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
+        transport: custom(eip1193provider)
+      });
+
+      console.log('Creating custom signer...');
+      const customSigner = walletClientToSmartAccountSigner(privyClient);
+
+      console.log('Creating public client...');
+      const publicClient = createPublicClient({
+        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
+        transport: http(),
+      });
+
+      console.log('Creating bundler client...');
+      const bundlerClient = createPimlicoBundlerClient({
+        transport: http(rpcUrl),
+        entryPoint: ENTRYPOINT_ADDRESS_V07
+      }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
+
+      console.log('Creating smart account...');
+      const account = await signerToSafeSmartAccount(publicClient, {
+        signer: customSigner,
+        entryPoint: ENTRYPOINT_ADDRESS_V07,
+        safeVersion: "1.4.1",
+        setupTransactions: [
+          {
+            to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+              args: [
+                erc20PaymasterAddress,
+                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+              ],
+            }),
+          },
+        ],
+      })
+
+      const smartAccountClient = createSmartAccountClient({
+        account,
+        entryPoint: ENTRYPOINT_ADDRESS_V07,
+        chain: baseSepolia,
+        bundlerTransport: http(rpcUrl),
+        middleware: {
+          gasPrice: async () => {
+            return (await bundlerClient.getUserOperationGasPrice()).fast
+          },
+          sponsorUserOperation: async (args) => {
+            const gasEstimates = await bundlerClient.estimateUserOperationGas({
+              userOperation: {
+                ...args.userOperation,
+                paymaster: erc20PaymasterAddress,
+              },
+            })
+       
+            return {
+              ...gasEstimates,
+              paymaster: erc20PaymasterAddress,
+            };
+          },
+        },
+      })
+
+      const data = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'transfer',
+        args: [coinbaseAddress, amountInUSDC]
+      })
+
+      const transactionHash = await smartAccountClient.sendTransaction({
+        account: smartAccountClient.account,
+        to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+        data: data,
+        value: BigInt(0),
+        maxFeePerGas: BigInt(1000000000), // 1 Gwei
+        maxPriorityFeePerGas: BigInt(1000000000), // 1 Gwei
+        gas: BigInt(1000000000),
+
+      });
+      setPendingMessage(null);
+      setTransferSuccessMessage('Transfer complete')
+      setTransferStarted(false)
+      console.log('Transaction sent! Hash:', transactionHash);
+
+      await saveTransfer({
+        privyId: user?.id,
+        user: currentUser?._id,
+        amount: transferInputValue,
+        fromGoghAddress: walletForPurchase,
+        toCoinbaseAddress: currentUser?.coinbaseAddress,
+        transactionHash: transactionHash,
+      });
+
+
+    } catch (error) {
+      if (isError(error)) {
+        console.error('Error sending sponsored USDC transfer:', error.message); // REMOVE THIS FOR PRODUCTION. IT LOGS SENSITIVE INFO
+        setTransferErrorMessage(`Sponsored USDC transfer failed: ${error.message}`);
+        setTransferStarted(false)
+      } else {
+        console.error('An unexpected error occurred:', error);
+        setTransferErrorMessage('An unexpected error occurred');
+        setTransferStarted(false)
+      }
+    } finally {
+      setIsLoading(false);
+      setPendingMessage(null);
+      setTransferStarted(false)
+    }
+  }
+
+  async function saveTransfer(transferData: any) {
+    const accessToken = await getAccessToken();
+    try {
+      const response = await fetch('/api/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+
+        },
+        body: JSON.stringify(transferData),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to save transfer');
+      }
+  
+      const data = await response.json();
+      console.log('Transfer saved:', data);
+    } catch (error) {
+      console.error('Error saving Transfer:', error);
+    }
+  }
+
   useEffect(() => {
-    if (transferInputValue && transferInputValue > 0) {
+    const numericTransferInputValue = Number(transferInputValue);
+    if (transferInputValue && numericTransferInputValue > 0) {
       setTransferValueIsValid(true);
     } else {
       setTransferValueIsValid(false);
@@ -193,7 +411,7 @@ export default function Transfer() {
 
 
   return (
-    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} align={'center'} pb={'9'} pt={'6'} px={'5'}>
+    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} align={'center'} pb={'9'} pt={'6'} px={'5'}>      
       <Box width={'100%'}>
         {embeddedWallet && authenticated ? (
           <Card variant="ghost" mb={'3'}>
@@ -240,76 +458,79 @@ export default function Transfer() {
         </Flex>
       </Box>
       <Flex direction={'column'} justify={'center'} gap={'4'}>
-      <Text>
-        We integrate with Coinbase to offer quick, safe transfers to your bank.
-      </Text>
-      <TextField.Root value={address} onChange={handleAddressChange} disabled={isValidAddress} placeholder="Enter Base USDC address from Coinbase">
-      <TextField.Slot side="right">
-        <IconButton size="1" variant="ghost" onClick={handleEditAddress}>
-          <Pencil2Icon height="14" width="14" />
-        </IconButton>
-      </TextField.Slot>
-      </TextField.Root>
-      {address && !isValidAddress && (
-        <Text color="red" mt={'-3'}>Enter a valid address</Text>
-      )}
-      {walletUpdateMessage && isValidAddress && (
-        <Text mt={'-3'}>{walletUpdateMessage}</Text>
-      )}
-      {!currentUser?.coinbaseAddress && (
-        <Callout.Root color="orange">
-          <Callout.Icon>
-            <ExclamationTriangleIcon />
-          </Callout.Icon>
-          <Callout.Text>
-            <Link href='https://www.ongogh.com/onboard' target='_blank' rel='noopener noreferrer'>
-              Read this to get your address.
-            </Link> 
-          </Callout.Text>
-        </Callout.Root>
-      )}
-    </Flex>
-    <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'center'} gap={'4'}>
-      <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
-          boxShadow: 'var(--shadow-2)',
-          borderRadius: '10px'
-        }}>
-        <Heading>Transfer from bank</Heading>
         <Text>
-          Move funds for free from your bank to Gogh and make purchases at your favorite vendors
+          We integrate with Coinbase to offer quick, safe transfers to your bank.
         </Text>
-        <CoinbaseButton
-          destinationWalletAddress={walletForPurchase || ""}
-          price={0}
-          redirectURL={redirectURL}
-        />
-
-
-       
+        <TextField.Root value={address} onChange={handleAddressChange} disabled={isValidAddress} placeholder="Enter Base USDC address from Coinbase">
+        <TextField.Slot side="right">
+          <IconButton size="1" variant="ghost" onClick={handleEditAddress}>
+            <Pencil2Icon height="14" width="14" />
+          </IconButton>
+        </TextField.Slot>
+        </TextField.Root>
+        {address && !isValidAddress && (
+          <Text color="red" mt={'-3'}>Enter a valid address</Text>
+        )}
+        {walletUpdateMessage && isValidAddress && (
+          <Text mt={'-3'}>{walletUpdateMessage}</Text>
+        )}
+        {!currentUser?.coinbaseAddress && (
+          <Callout.Root color="orange">
+            <Callout.Icon>
+              <ExclamationTriangleIcon />
+            </Callout.Icon>
+            <Callout.Text>
+              <Link href='https://www.ongogh.com/onboard' target='_blank' rel='noopener noreferrer'>
+                Read this to get your address.
+              </Link> 
+            </Callout.Text>
+          </Callout.Root>
+        )}
       </Flex>
-      <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
-          boxShadow: 'var(--shadow-2)',
-          borderRadius: '10px'
-        }}>
-        <Heading>Deposit to Coinbase</Heading>
-        <Text mt={'-3'}>Enter amount</Text>
-        <Flex direction={'row'} align={'center'} style={{boxShadow: 'var(--shadow-2)'}} p={'3'}>
-          <TextField.Root variant="soft" size="2" placeholder="0" value={transferInputValue} onChange={handleTransferInputChange} style={{backgroundColor: "white", fontSize: '30px', fontWeight: 'bold'}} />
-          <Badge size={'3'} variant="soft">USDC</Badge>
+      <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'center'} gap={'4'}>
+        <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+            boxShadow: 'var(--shadow-2)',
+            borderRadius: '10px'
+          }}>
+          <Heading>Transfer from bank</Heading>
+          <Text>
+            Move funds for free from your bank to Gogh and make purchases at your favorite vendors
+          </Text>
+          <CoinbaseButton
+            destinationWalletAddress={walletForPurchase || ""}
+            price={0}
+            redirectURL={redirectURL}
+          />
+        
         </Flex>
-        {transferErrorMessage && (
-        <Text color="red">{transferErrorMessage}</Text>
-      )}
-        <Flex direction={'column'} align={'center'} gap={'4'}>
-          <Text size={'2'} align={'center'}>If this is your first deposit, we recommend making a test transaction of 1 USDC.</Text>
-          {currentUser?.coinbaseAddress ? (
-            <Dialog.Root>
-            <Dialog.Trigger>
-              <Button highContrast style={{width: '200px'}} disabled={!transferValueIsValid}>Review transaction</Button>
-            </Dialog.Trigger>
-            <Dialog.Content width={'90vw'}>
-              <Flex direction={'column'} width={'100%'}>
-                <Text align={'center'}>Confirm details</Text>
+        <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+            boxShadow: 'var(--shadow-2)',
+            borderRadius: '10px'
+          }}>
+          <Heading>Deposit to Coinbase</Heading>
+          <Text mt={'-3'}>Enter amount</Text>
+          <Flex direction={'row'} align={'center'} style={{boxShadow: 'var(--shadow-1)'}} p={'3'}>
+            <TextField.Root variant="soft" size="2" placeholder="0" value={transferInputValue} onChange={handleTransferInputChange} style={{backgroundColor: "white", fontSize: '30px', fontWeight: 'bold'}} />
+            <Badge size={'3'} variant="soft">USDC</Badge>
+          </Flex>
+          {transferErrorMessage && (
+          <Text color="red">{transferErrorMessage}</Text>
+        )}
+          <Flex direction={'column'} align={'center'} gap={'4'}>
+            <Text size={'2'} align={'center'}>If this is your first deposit, we recommend making a test transaction of 1 USDC.</Text>
+            {currentUser?.coinbaseAddress ? (
+              <Dialog.Root>
+              <Dialog.Trigger>
+                <Button highContrast style={{width: '200px'}} disabled={!transferValueIsValid || transferStarted}>Review transaction</Button>
+              </Dialog.Trigger>
+              <Dialog.Content width={'90vw'}>
+                <Flex direction={'column'} width={'100%'}>
+                <Dialog.Title align={'center'}>Confirm transfer</Dialog.Title>
+                <VisuallyHidden asChild>
+                  <Dialog.Description size="2" mb="4">
+                    Confirm transaction details
+                  </Dialog.Description>
+                </VisuallyHidden>
                 <Separator size={'4'} mb={'5'}/>
                 <Text align={'center'} size={'7'} weight={'bold'}>${transferInputValue}.00</Text>
                 <Text size={'2'} align={'center'}>{transferInputValue} USDC @ $1.00</Text>
@@ -337,35 +558,49 @@ export default function Transfer() {
                   </Flex>
                 </Flex>
                 <Flex direction={'column'} align={'center'} gap={'7'} mt={'5'}>
-                 
-                    <Button size={'4'} style={{width: '200px'}}>
+                  <Dialog.Close>
+                    <Button size={'4'} style={{width: '200px'}} 
+                    onClick={() => {
+                      const numericTransferInputValue = Number(transferInputValue);
+                      if (numericTransferInputValue > 0 && walletForPurchase && currentUser.coinbaseAddress) {
+                        sendUSDC(currentUser.coinbaseAddress as `0x${string}`, numericTransferInputValue);
+                        setError(null);
+                      } else {
+                        console.error("Invalid transfer amount or wallet address.");
+                        setError("Invalid transfer amount or wallet address. Unable to process the transaction.");
+                      }
+                    }}>
                       Confirm and send
                     </Button>
-                  
+                  </Dialog.Close>
                   <Dialog.Close>
                     <Button size={'4'} variant="ghost" color="gray" style={{width: '200px'}}>Cancel</Button>
                   </Dialog.Close>
                 </Flex>
-              </Flex>
-            </Dialog.Content>
-          </Dialog.Root>
-          ) : (
-            <Text color="red">Enter USDC address to Deposit.</Text>
-          )}
-          
+                </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
+            ) : (
+              <Text color="red">Enter USDC address to Deposit.</Text>
+            )}
+            {pendingMessage && (
+              <Box mx={'3'}>
+                <NotificationMessage message={pendingMessage} type="pending" />
+              </Box>
+            )}
+            {tranferSuccessMessage && (
+              <Box mx={'3'}>
+                <NotificationMessage message={tranferSuccessMessage} type="success" />
+              </Box>
+            )}
+            {transferErrorMessage && (
+              <Box mx={'3'}>
+                <NotificationMessage message={transferErrorMessage} type="error" />
+              </Box>
+            )}
+          </Flex>
         </Flex>
-
-       
       </Flex>
     </Flex>
-
-
-
-
-      
-    </Flex>
-
-
-
   )
 }

@@ -3,18 +3,17 @@
 import { useSearchParams, useRouter, redirect } from "next/navigation"
 import { useState, useEffect } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
-import { ConnectedWallet, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
+import { getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
 import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog, Link } from "@radix-ui/themes";
 import * as Avatar from '@radix-ui/react-avatar';
-import Image from "next/image";
 import NotificationMessage from "../components/Notification";
 import { User } from "../types/types";
 import {createWalletClient, custom, encodeFunctionData, erc20Abi, createPublicClient, http, parseAbiItem} from 'viem';
-import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V06, ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner} from 'permissionless';
-import {signerToSafeSmartAccount, signerToSimpleSmartAccount} from 'permissionless/accounts';
-import {createPimlicoBundlerClient, createPimlicoPaymasterClient} from 'permissionless/clients/pimlico';
-import { base, baseSepolia } from "viem/chains";
+import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner} from 'permissionless';
+import {signerToSafeSmartAccount} from 'permissionless/accounts';
+import {createPimlicoBundlerClient} from 'permissionless/clients/pimlico';
+import { baseSepolia } from "viem/chains";
 import axios from "axios";
 import { InfoCircledIcon, AvatarIcon } from "@radix-ui/react-icons";
 import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
@@ -86,6 +85,8 @@ export default function Buy() {
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
 
+  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+
   const disableLogin = !ready || (ready && authenticated);
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
@@ -111,9 +112,7 @@ export default function Buy() {
           });
     
           const bundlerClient = createPimlicoBundlerClient({
-            transport: http(
-              "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
-            ),
+            transport: http(rpcUrl),
             entryPoint: ENTRYPOINT_ADDRESS_V07
           }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
 
@@ -341,10 +340,9 @@ export default function Buy() {
   };
 
   async function sendUSDC(merchantWalletAddress: `0x${string}`, price: number) {
-    // if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
-      if (chainIdNum !== null && chainId !== 'eip155:84532') {
+    if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
       try {
-        await wallet.switchChain(84532);
+        await wallet.switchChain(chainIdNum);
       } catch (error: unknown) {
         console.error('Error switching chain:', error);
     
@@ -377,7 +375,6 @@ export default function Buy() {
 
     try {
       const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
-      const rpcUrl = process.env.RPC_URL
       const eip1193provider = await wallet.getEthereumProvider();
 
       const privyClient = createWalletClient({
@@ -394,9 +391,7 @@ export default function Buy() {
       });
 
       const bundlerClient = createPimlicoBundlerClient({
-        transport: http(
-          "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
-        ),
+        transport: http(rpcUrl),
         entryPoint: ENTRYPOINT_ADDRESS_V07
       }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
 
@@ -424,7 +419,7 @@ export default function Buy() {
         account,
         entryPoint: ENTRYPOINT_ADDRESS_V07,
         chain: baseSepolia,
-        bundlerTransport: http('https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7'),
+        bundlerTransport: http(rpcUrl),
         middleware: {
           gasPrice: async () => {
             return (await bundlerClient.getUserOperationGasPrice()).fast

@@ -30,3 +30,13 @@ export interface Transaction {
   paymentType: string;
   createdAt: Date;
 }
+
+export interface Transfer {
+  _id: string;
+  user: User;
+  amount: number;
+  fromGoghAddress: string;
+  toCoinbaseAddress: string;
+  transactionHash: string;
+  createdAt: Date;
+}
