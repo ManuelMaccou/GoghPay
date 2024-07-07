@@ -11,172 +11,148 @@ import { useRouter } from 'next/navigation';
 export default function Success() {
   const [merchant, setMerchant] = useState<Merchant>();
   const [checkoutUser, setCheckoutUser] = useState<User>();
-  const [isSettingCheckoutUser, setIsSettingCheckoutUser] = useState<boolean>(true);
+  const [stripeUserAdded, setStripeUserAdded] = useState<boolean>(false);
+  const [isSettingCheckoutUser, setIsSettingCheckoutUser] = useState<boolean>(false);
   const [subscribedSuccess, setSubscribedSuccess] = useState<boolean>(false);
   const [isCheckingSubscriptionStatus, setIsCheckingSubscriptionStatus] = useState<boolean>(true);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('undefined');
-  const [userChecked, setUserChecked] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const { user } = usePrivy();
+  const { user, ready } = usePrivy();
+  const privyId = user?.id;
   
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
   const price = searchParams.get('price');
-  const stripeCheckoutId = searchParams.get('session_id')
-  const checkoutMethod = searchParams.get('checkout_method')
+  const stripeCheckoutId = searchParams.get('session_id');
+  const checkoutMethod = searchParams.get('checkout_method');
 
-
-  function isError(error: any): error is Error {
-    return error instanceof Error && typeof error.message === "string";
-  }
+  const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
 
   useEffect(() => {
-    const fetchMerchant = async () => {
+    if (!ready) return;
+
+    async function fetchUserFromWallet() {
       try {
-        const response = await fetch(`/api/merchant/${merchantId}`);
-        if (!response.ok) {
-          throw new Error(`Error fetching merchant: ${response.statusText}`);
-        }
-        const data = await response.json();
-        setMerchant(data);
-      } catch (err) {
-        if (isError(err)) {
-          setError(`Error fetching merchant: ${err.message}`);
-        } else {
-          setError('Error fetching merchant');
-        }
-      }
-    };
-    fetchMerchant();
-  }, [merchantId]);
-
-  useEffect(() => {
-    const fetchUserDetails = async () => {
-      if (userChecked) return;
-
-      if (user && checkoutMethod && checkoutMethod === 'wallet') {
-        try {
-        const response = await fetch(`/api/user/me/${user?.id}`);
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch user');
-        }
+        const response = await fetch(`/api/user/me/${privyId}`);
+        if (!response.ok) throw new Error('Failed to fetch user');
 
         const userData: User = await response.json();
         setCheckoutUser(userData);
-        setUserChecked(true);
-        } catch (error) {
-          console.error('Error fetching user:', error);
-        } finally {
-          setIsSettingCheckoutUser(false);
-        }
-        return;
-      }
-
-      if (stripeCheckoutId !== null) {
-        setIsSettingCheckoutUser(true);
-
-        // Grab Stripe checkout session
-        try {
-          const sessionResponse = await fetch('/api/stripe/checkout/retrieve-checkout-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: stripeCheckoutId })
-          });
-          if (!sessionResponse.ok) {
-            throw new Error(`Error retrieving checkout session: ${sessionResponse.statusText}`);
-          }
-
-          const sessionData = await sessionResponse.json();
-          if (!sessionData.buyerDetails) {
-            throw new Error('No session details available');
-          }
-
-          // Search for user with matching email address
-          const accessToken = await getAccessToken();
-          console.log('buyer email address:', sessionData.buyerDetails.email);
-          
-          const userResponse = await fetch(`/api/user/by-email?address=${sessionData.buyerDetails.email}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-          });
-
-          if (!userResponse.ok) {
-            if (userResponse.status === 404) {
-
-              // Stripe user doesn't exist. Add them
-              const response = await fetch('/api/user', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({ 
-                  email: sessionData.buyerDetails.email,
-                  creationType: 'stripe'
-                }),
-              });
-              if (!response.ok) {
-                throw new Error(`Error creating user: ${response.statusText}`);
-              }
-              
-              const newStripeCheckoutUser: User = await response.json();
-              console.log("added new user:", newStripeCheckoutUser )
-
-              setCheckoutUser(newStripeCheckoutUser);
-            } else {
-              throw new Error('Error fetching user data');
-            }
-          } else {
-            const existingUser: User = await userResponse.json();
-            console.log("user exists:", existingUser )
-            setCheckoutUser(existingUser);
-          }
-          setUserChecked(true);
-        } catch (error) {
-          setError(error instanceof Error ? `Error while fetching checkout session and getting user info ${error.message}` : 'Unknown error fetching checkout session');
-        } finally {
-          setIsSettingCheckoutUser(false);
-        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        setError('Failed to fetch user details');
       }
     };
 
+    async function fetchUserFromStripe() {
+      try {
+        const sessionResponse = await fetch('/api/stripe/checkout/retrieve-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: stripeCheckoutId })
+        });
+
+        if (!sessionResponse.ok) throw new Error(`Error retrieving checkout session: ${sessionResponse.statusText}`);
+
+        const sessionData = await sessionResponse.json();
+        if (!sessionData.buyerDetails) throw new Error('No session details available');
+
+        console.log('buyer details email:', sessionData.buyerDetails.email);
+        await handleUserSearch(sessionData.buyerDetails.email);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Unknown error fetching checkout session');
+      }
+    };
+
+    async function handleUserSearch(email: string) {
+      console.log('running handleUserSearch');
+      const accessToken = await getAccessToken();
+      const userResponse = await fetch(`/api/user/by-email?address=${email}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      console.log('user response:', userResponse);
+
+      if (!userResponse.ok) {
+        if (userResponse.status === 404) {
+          console.log('creating a new user');
+          await createUser(email);
+        } else {
+          throw new Error(`Failed to find user: ${userResponse.statusText}`);
+        }
+      } else {
+        const existingUser = await userResponse.json();
+        console.log("existing user:", existingUser);
+        setCheckoutUser(existingUser);
+      }
+    };
+
+    async function createUser(email: string) {
+      const response = await fetch('/api/user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          creationType: 'stripe'
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Error creating user: ${response.statusText}`);
+
+      const newStripeCheckoutUser = await response.json();
+      console.log('newstripeuser:', newStripeCheckoutUser);
+      setCheckoutUser(newStripeCheckoutUser.user);
+    };
+
+    // Decide which function to call based on checkout method
+    async function fetchUserDetails() {
+      if (checkoutMethod === 'wallet') {
+        await fetchUserFromWallet();
+      } else if (stripeCheckoutId) {
+        await fetchUserFromStripe();
+      }
+    }
+
     fetchUserDetails();
-  }, [checkoutMethod, user, stripeCheckoutId, userChecked]);
+  }, [checkoutMethod, privyId, ready, stripeCheckoutId]);
+  
 
   useEffect(() => {
-    const checkSubscriptionStatus = async () => {
-      if (!checkoutUser || !merchantId) return;
-      setIsCheckingSubscriptionStatus(true);
+    if (!checkoutUser || !merchantId || !ready) return;  // Guard to ensure necessary data is available
+
+    async function checkSubscriptionStatus() {
       try {
-        const response = await fetch(`/api/stripe/subscription/status?userId=${checkoutUser._id}&merchantId=${merchantId}`, {
+        const response = await fetch(`/api/stripe/subscription/status?userId=${checkoutUser?._id}&merchantId=${merchantId}`, {
           method: 'GET',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
         });
         const data = await response.json();
+
         if (response.ok) {
           setSubscriptionStatus(data.result);
         } else {
-          setError(data.error || 'Error checking subscription status');
+          throw new Error(data.error || 'Error checking subscription status');
         }
       } catch (error) {
-        setError('Error checking subscription status');
+        setError(error instanceof Error ? error.message : 'Unknown error fetching checkout session');
       } finally {
         setIsCheckingSubscriptionStatus(false);
       }
-    };
-
-    if (checkoutUser) {
-      checkSubscriptionStatus();
     }
-  }, [checkoutUser, merchantId]);
+
+    checkSubscriptionStatus();
+  }, [checkoutUser, merchantId, ready]);
 
   const handleNewSubscription = async (subscriberStatus: String) => {
+    console.log('checkoutuser:', checkoutUser);
+    console.log('merchantId:', merchantId);
     if (!checkoutUser || !merchantId) {
       return;
     }

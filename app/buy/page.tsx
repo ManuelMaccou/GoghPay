@@ -473,6 +473,7 @@ export default function Buy() {
         productName: purchaseParams.product,
         productPrice: price,
         transactionHash: transactionHash,
+        paymentType: 'crypto'
       });
 
       const params = new URLSearchParams({

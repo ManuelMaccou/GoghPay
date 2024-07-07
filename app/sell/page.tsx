@@ -2,7 +2,6 @@
 
 import React, { useState, FormEvent, useEffect } from 'react';
 import QRCode from 'qrcode.react';
-import Login from '../components/Login';
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Text } from '@radix-ui/themes';
