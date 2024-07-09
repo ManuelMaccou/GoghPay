@@ -30,19 +30,11 @@ interface PurchaseParams {
   walletAddress?: string | null;
 }
 
-interface BuyContentProps {
-  merchantId: string | null;
-  priceString: string | null;
-  product: string | null;
-  walletAddress: string | null;
-  signature: string | null;
-}
-
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-function BuyContent({ merchantId, priceString, product, walletAddress, signature }: BuyContentProps) {
+function BuyContent() {
   const { ready, authenticated, logout } = usePrivy();
   const { wallets } = useWallets();
   const [isValid, setIsValid] = useState(false);
@@ -77,7 +69,13 @@ function BuyContent({ merchantId, priceString, product, walletAddress, signature
   const {getAccessToken} = usePrivy();
 
   // Get params to verify signed URL
-  
+  const searchParams = useSearchParams();
+  const merchantId = searchParams.get('merchantId');
+  const product = searchParams.get('product');    
+  const walletAddress = searchParams.get('walletAddress');
+  const signature = searchParams.get('signature')
+
+  const priceString = searchParams.get('price');
   const price = parseFloat(priceString || "0");
   if (isNaN(price)) {
     console.error('Price is not a valid number');
@@ -871,26 +869,9 @@ function BuyContent({ merchantId, priceString, product, walletAddress, signature
 }
 
 export default function Buy() {
-  const searchParams = useSearchParams();
-  const merchantId = searchParams.get('merchantId');
-  const priceString = searchParams.get('price');
-  const product = searchParams.get('product');    
-  const walletAddress = searchParams.get('walletAddress');
-  const signature = searchParams.get('signature')
-
-  const { user } = usePrivy();
-  const privyId = user?.id;
-
   return (
     <Suspense fallback={<Spinner />}>
-      <BuyContent
-        merchantId={merchantId}
-        priceString={priceString}
-        product={product}   
-        walletAddress={walletAddress}
-        signature={signature}
-
-      />
+      <BuyContent />
     </Suspense>
   );
 }
