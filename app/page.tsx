@@ -192,51 +192,6 @@ export default function Home() {
       />
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
-      <MobileMenu>
-        {!isLoading && ready && authenticated && (
-          <Flex direction={'column'} width={'100%'}>
-            {currentUser?.merchant ? (
-              <>
-              <Flex direction={'column'} width={'100%'} align={'start'}>
-                <Flex direction={'row'}>
-                  <FontAwesomeIcon style={{padding: '20px'}} icon={faPlus} />
-                  <Button size={'4'} onClick={handleNewSaleClick}>New Sale</Button>
-                </Flex>
-                <Separator size="4" />
-                <Flex direction={'row'}>
-                  <FontAwesomeIcon style={{padding: '20px'}} icon={faSackDollar} />
-                  <Button size={'4'} onClick={() => router.push(`/account/sales`)}>Sales</Button>
-                </Flex>
-                <Separator size="4" />
-                <Flex direction={'row'}>
-                  <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
-                  <Button size={'4'} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
-                </Flex>
-                <Separator size="4" />
-                <Flex direction={'row'}>
-                  <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                  <Button size={'4'} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
-                </Flex>
-              </Flex>
-              </>
-            ) : (
-              <>
-              <Flex direction={'row'}>
-                <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
-                <Button size={'4'} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
-              </Flex>
-              <Flex direction={'row'}>
-                <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                <Button size={'4'} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
-            </Flex>
-            </>
-            )}
-          </Flex>
-        )}
-        {!authenticated && (
-          <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>Log in</Button>
-        )}
-      </MobileMenu>
         <Image
           src="/logos/gogh_logo_white.svg"
           alt="Gogh"

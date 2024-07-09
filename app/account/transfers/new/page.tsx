@@ -1,11 +1,12 @@
 'use client'
 
 import { User } from "@/app/types/types";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useRouter } from 'next/navigation';
-import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
-import { Avatar, Badge, Box, Button, Callout, Card, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
-import { AvatarIcon, ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
+import { Header } from "@/app/components/Header";
+import { ConnectedWallet, getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
+import { Badge, Box, Button, Callout, Card, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
+import { ArrowLeftIcon, AvatarIcon, ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { CoinbaseButton } from "@/app/buy/components/coinbaseOnramp";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,9 +16,11 @@ import { ENTRYPOINT_ADDRESS_V07, createSmartAccountClient, walletClientToSmartAc
 import { createPimlicoBundlerClient } from "permissionless/clients/pimlico";
 import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { signerToSafeSmartAccount } from "permissionless/accounts";
+import { BalanceProvider, useBalance } from "@/app/contexts/BalanceContext";
 import NotificationMessage from "@/app/components/Notification";
+import { isValid } from "date-fns";
 
-export default function Transfer() {
+export default function NewTransfer() {
   const [error, setError] = useState<string | null>(null);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [transferErrorMessage, setTransferErrorMessage] = useState<string | null>(null);
@@ -30,6 +33,7 @@ export default function Transfer() {
   const [address, setAddress] = useState('');
   const [isValidAddress, setIsValidAddress] = useState(false);
   const [editAddressMode, setEditAddressMode] = useState(false);
+  const [addressUpdated, setAddressUpdated] = useState(false);
   const [walletUpdateMessage, setWalletUpdateMessage] = useState<string | null>(null);
   const [transferInputValue, setTransferInputValue] = useState('');
   const [transferValueIsValid, setTransferValueIsValid] = useState(false);
@@ -45,9 +49,15 @@ export default function Transfer() {
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
 
+  const { fetchBalance } = useBalance();
+
+
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
 
-  // Define your chain mapping
+  const router = useRouter();
+
+  const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
+
   const chainMapping: { [key: string]: Chain } = {
     'baseSepolia': baseSepolia,
     'base': base,
@@ -67,8 +77,6 @@ export default function Transfer() {
 
     return chain;
   };
-
-  const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
 
   const handleAddressChange = (event: any) => {
     const input = event.target.value;
@@ -232,6 +240,7 @@ export default function Transfer() {
       setPendingMessage(null);
       setTransferSuccessMessage('Transfer complete')
       setTransferStarted(false)
+      fetchBalance();
       console.log('Transaction sent! Hash:', transactionHash);
 
       await saveTransfer({
@@ -313,7 +322,9 @@ export default function Transfer() {
         setCurrentUser(userData.user);
         const walletAddress = userData.user.smartAccountAddress || userData.user.walletAddress;
         setWalletForPurchase(walletAddress);
-        setAddress(userData.user.coinbaseAddress);
+        if (userData.user.coinbaseAddress) {
+          setAddress(userData.user.coinbaseAddress);
+        }
       } catch (error) {
         console.error('Error fetching user:', error);
         setError('Failed to fetch user data');
@@ -323,7 +334,7 @@ export default function Transfer() {
     if (ready && authenticated && !editAddressMode) {
       fetchUser();
     }
-  }, [ready, authenticated, user?.id, address, editAddressMode]); 
+  }, [ready, authenticated, user?.id, editAddressMode]); 
 
   useEffect(() => {
     const getDefaultCoinbaseAddress = async () => {
@@ -390,7 +401,8 @@ export default function Transfer() {
 
         const responseData = await response.json();
         console.log('Update successful:', responseData);
-        setWalletUpdateMessage('Address ready')
+        setAddressUpdated(true);
+        setCurrentUser(responseData.user)
    
       } catch (error) {
         if (isError(error)) {
@@ -411,52 +423,19 @@ export default function Transfer() {
 
 
   return (
-    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} align={'center'} pb={'9'} pt={'6'} px={'5'}>      
-      <Box width={'100%'}>
-        {embeddedWallet && authenticated ? (
-          <Card variant="ghost" mb={'3'}>
-            <Flex gap="3" align="center" justify={'end'}>
-              <AvatarIcon />
-              <Box>
-                <Text as="div" size="2" color="gray">
-                  {user?.email?.address || user?.google?.name}
-                </Text>
-              </Box>
-            </Flex>
-          </Card>
-        ) : (
-          !embeddedWallet && 
-          authenticated && (
-            <Card variant="ghost" mb={'3'}>
-              <Flex gap="3" align="center" justify={'end'}>
-                <AvatarIcon />
-                <Box>
-                  <Text as="div" size="2" color="gray">
-                    {walletForPurchase?.slice(0, 6)}
-                  </Text>
-                </Box>
-              </Flex>
-            </Card>
-          )
-        )}
-        <Flex justify={'between'} direction={'row'} pb={'9'}>
-          {authenticated && (
-            <>
-              {!isBalanceLoading ? (
-                <Badge size={'3'}>Balance: ${balance}</Badge>
-              ) : (
-                <Badge size={'3'}>
-                  Balance: 
-                  <Spinner loading />
-                </Badge>
-              )}
-              <Button variant='outline' onClick={logout}>
-                Log out
-              </Button>
-            </>
-          )}
-        </Flex>
-      </Box>
+    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>    
+      <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
+        <ArrowLeftIcon style={{color: 'black'}}/>
+          <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
+      </Button>  
+      <BalanceProvider walletForPurchase={walletForPurchase}>
+        <Header
+          embeddedWallet={embeddedWallet}
+          authenticated={authenticated}
+          walletForPurchase={walletForPurchase}
+          currentUser={currentUser}
+        />
+      </BalanceProvider>
       <Flex direction={'column'} justify={'center'} gap={'4'}>
         <Text>
           We integrate with Coinbase to offer quick, safe transfers to your bank.
@@ -471,8 +450,8 @@ export default function Transfer() {
         {address && !isValidAddress && (
           <Text color="red" mt={'-3'}>Enter a valid address</Text>
         )}
-        {walletUpdateMessage && isValidAddress && (
-          <Text mt={'-3'}>{walletUpdateMessage}</Text>
+        {address && addressUpdated && isValidAddress && (
+          <Text mt={'-3'}>Address ready</Text>
         )}
         {!currentUser?.coinbaseAddress && (
           <Callout.Root color="orange">
@@ -520,63 +499,63 @@ export default function Transfer() {
             <Text size={'2'} align={'center'}>If this is your first deposit, we recommend making a test transaction of 1 USDC.</Text>
             {currentUser?.coinbaseAddress ? (
               <Dialog.Root>
-              <Dialog.Trigger>
-                <Button highContrast style={{width: '200px'}} disabled={!transferValueIsValid || transferStarted}>Review transaction</Button>
-              </Dialog.Trigger>
-              <Dialog.Content width={'90vw'}>
-                <Flex direction={'column'} width={'100%'}>
-                <Dialog.Title align={'center'}>Confirm transfer</Dialog.Title>
-                <VisuallyHidden asChild>
-                  <Dialog.Description size="2" mb="4">
-                    Confirm transaction details
-                  </Dialog.Description>
-                </VisuallyHidden>
-                <Separator size={'4'} mb={'5'}/>
-                <Text align={'center'} size={'7'} weight={'bold'}>${transferInputValue}.00</Text>
-                <Text size={'2'} align={'center'}>{transferInputValue} USDC @ $1.00</Text>
-                <Flex direction={'column'} mt={'3'} p={'3'} style={{border: '1px solid #e0e0e0', borderRadius: '5px'}}>
-                  <Flex direction={'row'} justify={'between'}>
-                    <Text size={'4'} weight={'bold'}>From:</Text>
-                    <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
-                      <Flex direction={'row'} gap={'2'} align={'center'}>
-                        <FontAwesomeIcon icon={faWallet} />
-                        <Text>Gogh</Text>
+                <Dialog.Trigger>
+                  <Button highContrast style={{width: '200px'}} disabled={!transferValueIsValid || transferStarted}>Review transaction</Button>
+                </Dialog.Trigger>
+                <Dialog.Content width={'90vw'}>
+                  <Flex direction={'column'} width={'100%'}>
+                  <Dialog.Title align={'center'}>Confirm transfer</Dialog.Title>
+                  <VisuallyHidden asChild>
+                    <Dialog.Description size="2" mb="4">
+                      Confirm transaction details
+                    </Dialog.Description>
+                  </VisuallyHidden>
+                  <Separator size={'4'} mb={'5'}/>
+                  <Text align={'center'} size={'7'} weight={'bold'}>${transferInputValue}.00</Text>
+                  <Text size={'2'} align={'center'}>{transferInputValue} USDC @ $1.00</Text>
+                  <Flex direction={'column'} mt={'3'} p={'3'} style={{border: '1px solid #e0e0e0', borderRadius: '5px'}}>
+                    <Flex direction={'row'} justify={'between'}>
+                      <Text size={'4'} weight={'bold'}>From:</Text>
+                      <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
+                        <Flex direction={'row'} gap={'2'} align={'center'}>
+                          <FontAwesomeIcon icon={faWallet} />
+                          <Text>Your Gogh account</Text>
+                        </Flex>
+                        <Text size={'2'} align={'right'} wrap={'wrap'}>{walletForPurchase?.slice(0, 6)}...{walletForPurchase?.slice(-4)}</Text>
                       </Flex>
-                      <Text size={'2'} wrap={'wrap'}>{walletForPurchase?.slice(0, 6)}...{walletForPurchase?.slice(-4)}</Text>
+                    </Flex>
+                    <Separator size={'4'} my={'3'} />
+                    <Flex direction={'row'} justify={'between'}>
+                      <Text size={'4'} weight={'bold'}>To:</Text>
+                      <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
+                        <Flex direction={'row'} gap={'2'} align={'center'}>
+                          <FontAwesomeIcon icon={faWallet} />
+                          <Text>Your Coinbase account</Text>
+                        </Flex>
+                        <Text size={'2'} align={'right'} wrap={'wrap'}>{currentUser?.coinbaseAddress.slice(0, 6)}...{currentUser?.coinbaseAddress.slice(-4)}</Text>
+                      </Flex>
                     </Flex>
                   </Flex>
-                  <Separator size={'4'} my={'3'} />
-                  <Flex direction={'row'} justify={'between'}>
-                    <Text size={'4'} weight={'bold'}>To:</Text>
-                    <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
-                      <Flex direction={'row'} gap={'2'} align={'center'}>
-                        <FontAwesomeIcon icon={faWallet} />
-                        <Text>Coinbase</Text>
-                      </Flex>
-                      <Text size={'2'} wrap={'wrap'}>{currentUser?.coinbaseAddress.slice(0, 6)}...{currentUser?.coinbaseAddress.slice(-4)}</Text>
-                    </Flex>
+                  <Flex direction={'column'} align={'center'} gap={'7'} mt={'5'}>
+                    <Dialog.Close>
+                      <Button size={'4'} style={{width: '200px'}} 
+                      onClick={() => {
+                        const numericTransferInputValue = Number(transferInputValue);
+                        if (numericTransferInputValue > 0 && walletForPurchase && currentUser.coinbaseAddress) {
+                          sendUSDC(currentUser.coinbaseAddress as `0x${string}`, numericTransferInputValue);
+                          setError(null);
+                        } else {
+                          console.error("Invalid transfer amount or wallet address.");
+                          setError("Invalid transfer amount or wallet address. Unable to process the transaction.");
+                        }
+                      }}>
+                        Confirm and send
+                      </Button>
+                    </Dialog.Close>
+                    <Dialog.Close>
+                      <Button size={'4'} variant="ghost" color="gray" style={{width: '200px'}}>Cancel</Button>
+                    </Dialog.Close>
                   </Flex>
-                </Flex>
-                <Flex direction={'column'} align={'center'} gap={'7'} mt={'5'}>
-                  <Dialog.Close>
-                    <Button size={'4'} style={{width: '200px'}} 
-                    onClick={() => {
-                      const numericTransferInputValue = Number(transferInputValue);
-                      if (numericTransferInputValue > 0 && walletForPurchase && currentUser.coinbaseAddress) {
-                        sendUSDC(currentUser.coinbaseAddress as `0x${string}`, numericTransferInputValue);
-                        setError(null);
-                      } else {
-                        console.error("Invalid transfer amount or wallet address.");
-                        setError("Invalid transfer amount or wallet address. Unable to process the transaction.");
-                      }
-                    }}>
-                      Confirm and send
-                    </Button>
-                  </Dialog.Close>
-                  <Dialog.Close>
-                    <Button size={'4'} variant="ghost" color="gray" style={{width: '200px'}}>Cancel</Button>
-                  </Dialog.Close>
-                </Flex>
                 </Flex>
               </Dialog.Content>
             </Dialog.Root>

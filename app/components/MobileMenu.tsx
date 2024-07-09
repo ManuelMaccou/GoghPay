@@ -1,35 +1,57 @@
-import * as Dialog from '@radix-ui/react-dialog';
+
 import React, { useState, ReactNode } from 'react';
 import styles from './styles.module.css'
-import { Button, Flex, VisuallyHidden } from '@radix-ui/themes';
+import { Button, Text, DropdownMenu, Flex, IconButton, VisuallyHidden, TextField } from '@radix-ui/themes';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
+import Login from './Login';
 
 interface MobileMenuProps {
-  children: ReactNode;  // This type includes anything that can be rendered: numbers, strings, elements or an array (or fragment) containing these types.
+  walletForPurchase?: string | null;
+  children: ReactNode;
 }
 
 export default function MobileMenu({ children }: MobileMenuProps) {
+
   return (
-      <Dialog.Root>
-          <Dialog.Trigger asChild>
-              <Button className={styles.menuTrigger}>Menu</Button>
-          </Dialog.Trigger>
-          <Dialog.Portal>
-              <Dialog.Overlay className={styles.dialogOverlay} />
-              <Dialog.Content className={`${styles.dialogContent} ${styles.openDialogContent}`}>
-                <VisuallyHidden asChild>
-                  <Dialog.Title>Menu</Dialog.Title>
-                  </VisuallyHidden> 
-                  <VisuallyHidden asChild>
-                  <Dialog.Description>Menu</Dialog.Description>
-                  </VisuallyHidden>
-                  {children}
-                  <Dialog.Close asChild>
-                    <Flex direction={'column'} align={'end'} justify={'center'} height={'50px'}>
-                      <Button size={'4'} variant='ghost'>Close</Button>
-                    </Flex>
-                  </Dialog.Close>
-              </Dialog.Content>
-          </Dialog.Portal>
-      </Dialog.Root>
+      <>
+
+    <Dialog.Root>
+      <Dialog.Trigger asChild>
+        <Button>Menu</Button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay />
+        <Dialog.Content>
+          <Dialog.Title>Menu</Dialog.Title>
+          <Dialog.Description>
+            Menu
+          </Dialog.Description>
+          <Text>Test text</Text>
+          {children}
+          <Flex gap="3" mt="4" justify="end">
+            <Dialog.Close asChild>
+              <Button variant="soft" color="gray">
+                Cancel
+              </Button>
+            </Dialog.Close>
+            <Dialog.Close asChild>
+              <Button>Save</Button>
+            </Dialog.Close>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+
+
+
+
+
+
+
+        
+
+     
+    </>
   );
 }

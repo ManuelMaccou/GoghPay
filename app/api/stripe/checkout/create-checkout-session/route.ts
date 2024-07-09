@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
       console.error('Received price is not a valid number:', price);
     }
 
-    const priceInCents = 100 * 100;
+    const priceInCents = price * 100;
     const merchantWalletAddress = walletAddress;
 
     let applicationFee;
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
         description: `${merchantObject.name}: ${product}`,
         application_fee_amount: applicationFee,
         transfer_data: {
-          destination: 'acct_1PW1xk2MUQAQ5FGs',
+          destination: stripeConnectedAccountId,
         },
       },
       mode: 'payment',

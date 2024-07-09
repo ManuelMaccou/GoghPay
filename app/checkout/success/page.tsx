@@ -1,14 +1,21 @@
-'use client'
+'use client';
 
 import { Merchant, User } from '@/app/types/types';
 import { Button, Callout, Card, Flex, Heading, Spinner, Strong, Text } from '@radix-ui/themes';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { CheckIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/navigation';
 
-export default function Success() {
+interface SuccessContentProps {
+  merchantId: string | null;
+  price: string | null;
+  stripeCheckoutId: string | null;
+  checkoutMethod: string | null;
+}
+
+function SuccessContent({ merchantId, price, stripeCheckoutId, checkoutMethod }: SuccessContentProps) {
   const [merchant, setMerchant] = useState<Merchant>();
   const [checkoutUser, setCheckoutUser] = useState<User>();
   const [stripeUserAdded, setStripeUserAdded] = useState<boolean>(false);
@@ -21,12 +28,6 @@ export default function Success() {
   const router = useRouter();
   const { user, ready } = usePrivy();
   const privyId = user?.id;
-  
-  const searchParams = useSearchParams();
-  const merchantId = searchParams.get('merchantId');
-  const price = searchParams.get('price');
-  const stripeCheckoutId = searchParams.get('session_id');
-  const checkoutMethod = searchParams.get('checkout_method');
 
   const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
 
@@ -38,8 +39,8 @@ export default function Success() {
         const response = await fetch(`/api/user/me/${privyId}`);
         if (!response.ok) throw new Error('Failed to fetch user');
 
-        const userData: User = await response.json();
-        setCheckoutUser(userData);
+        const userData = await response.json();
+        setCheckoutUser(userData.user);
       } catch (error) {
         console.error('Error fetching user:', error);
         setError('Failed to fetch user details');
@@ -122,10 +123,9 @@ export default function Success() {
 
     fetchUserDetails();
   }, [checkoutMethod, privyId, ready, stripeCheckoutId]);
-  
 
   useEffect(() => {
-    if (!checkoutUser || !merchantId || !ready) return;  // Guard to ensure necessary data is available
+    if (!checkoutUser || !merchantId || !ready) return;
 
     async function checkSubscriptionStatus() {
       try {
@@ -147,7 +147,10 @@ export default function Success() {
       }
     }
 
-    checkSubscriptionStatus();
+    if (checkoutUser) {
+      console.log("checkout user:", checkoutUser);
+      checkSubscriptionStatus();
+    }
   }, [checkoutUser, merchantId, ready]);
 
   const handleNewSubscription = async (subscriberStatus: String) => {
@@ -159,20 +162,20 @@ export default function Success() {
     try {
       const response = await fetch('/api/stripe/subscription', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ checkoutUser, merchantId, subscriberStatus}),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkoutUser, merchantId, subscriberStatus }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to add new subscriber: ${response.statusText}`);
       }
-  
+
       const data = await response.json();
       setSubscribedSuccess(true);
       console.log('Subscriber added:', data);
     } catch (err) {
       if (isError(err)) {
-        setError(`Error adding subsriber: ${err.message}`);
+        setError(`Error adding subscriber: ${err.message}`);
       } else {
         setError('Error adding subscriber');
       }
@@ -297,5 +300,24 @@ export default function Success() {
         </Flex>
       </Flex>
     </Flex>
+  );
+}
+
+export default function Success() {
+  const searchParams = useSearchParams();
+  const merchantId = searchParams.get('merchantId');
+  const price = searchParams.get('price');
+  const stripeCheckoutId = searchParams.get('session_id');
+  const checkoutMethod = searchParams.get('checkout_method');
+
+  return (
+    <Suspense fallback={<Spinner />}>
+      <SuccessContent
+        merchantId={merchantId}
+        price={price}
+        stripeCheckoutId={stripeCheckoutId}
+        checkoutMethod={checkoutMethod}
+      />
+    </Suspense>
   );
 }

@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, FormEvent, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode.react';
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
-import { Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Text } from '@radix-ui/themes';
-import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text } from '@radix-ui/themes';
+import { ArrowLeftIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -20,6 +21,8 @@ export default function Sell() {
   const [message, setMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState('');
+
+  const router = useRouter();
 
 
   const handleMessageUpdate = (msg: string) => {
@@ -103,6 +106,11 @@ export default function Sell() {
         background: 'linear-gradient(to bottom, rgba(30,87,153,1) 0%,rgba(125,185,232,1) 100%)'
       }}
     >
+      <Flex direction={'row'} width={'100%'} pl={'6'} pt={'6'}>
+        <IconButton variant='ghost' style={{color: 'white'}} onClick={() => router.push(`/`)}>
+          <ArrowLeftIcon width={'35px'} height={'35px'} />
+        </IconButton>
+      </Flex>
       <Flex direction='column' height={'40vh'} justify='center' align='center' width='100%' gap={'4'}>
         <Heading style={{ color: 'white' }} size={'9'}>
           New sale

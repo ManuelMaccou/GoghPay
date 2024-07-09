@@ -20,34 +20,26 @@
 
 
 
-.dialogOverlay {
-  background: rgba(0, 0, 0, 0.6);
+.overlay {
+  background-color: rgba(0, 0, 0, 0.7);
   position: fixed;
   inset: 0;
 }
 
-.dialogContent {
-  font-size: 22px;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgb(255, 255, 255);
-  border-top-left-radius: 15px;
-  border-top-right-radius: 15px;
+.content {
+  background-color: white;
+  border-radius: 0 0 0 0;
   padding: 20px;
-  transform: translateY(100%);
-  transition: transform 300ms ease-in-out;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 95%;
+  max-width: 100%;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+
 }
 
-.openDialogContent {
-  transform: translateY(0);
-}
-
-.menuTrigger {
-  padding: 10px 20px;
-  font-size: 16px;
-}
 
 
 

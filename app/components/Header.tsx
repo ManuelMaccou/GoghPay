@@ -1,72 +1,39 @@
-// components/Header.tsx
-import React, { useState, useEffect } from 'react';
-import { AvatarIcon } from '@radix-ui/react-icons';
-import { Badge, Box, Button, Card, Flex, Heading, Spinner, Text } from '@radix-ui/themes';
+"use client"
+
+import React, { useState } from 'react';
+import { ConnectedWallet, usePrivy } from "@privy-io/react-auth";
+import { useBalance } from '../contexts/BalanceContext';
+import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden } from '@radix-ui/themes';
+import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
+import Login from './Login';
+import { User } from '../types/types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRightFromBracket, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import { useRouter } from 'next/navigation';
+import styles from './styles.module.css'
+
+
+
 
 interface HeaderProps {
+  embeddedWallet: ConnectedWallet | null;
   authenticated: boolean;
-  embeddedWallet?: boolean;
-  user?: {
-    email?: { address?: string };
-    google?: { name?: string };
-  };
-  walletForPurchase?: string;
-  logout: () => void;
+  currentUser?: User;
+  walletForPurchase?: string | null;
 }
 
-const Header = ({
-  authenticated,
-  embeddedWallet,
-  user,
-  walletForPurchase,
-  logout
-}: HeaderProps) => {
-  const [balance, setBalance] = useState<number>(0);
-  const [isBalanceLoading, setIsBalanceLoading] = useState<boolean>(true);
+export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  
+  const { user, ready, login, logout} = usePrivy();
+  const { balance, isBalanceLoading } = useBalance();
 
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (!walletForPurchase || !authenticated) {
-        return;
-      }
-      setIsBalanceLoading(true);
-      try {
-        const response = await fetch(`/api/crypto/get-usdc-balance?address=${walletForPurchase}`);
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error('Failed to fetch balance');
-        }
-        setBalance(data.balance);
-      } catch (error) {
-        console.error('Error fetching balance:', error);
-      }
-      setIsBalanceLoading(false);
-    };
-
-    fetchBalance();
-  }, [walletForPurchase, authenticated]);
+  const router = useRouter();
 
   return (
     <Box width={'100%'}>
-      {embeddedWallet && authenticated ? (
-        <Card variant="ghost" mb={'3'}>
-          <Flex gap="3" align="center" justify={'end'}>
-            <AvatarIcon />
-            <Text as="div" size="2" color="gray">{user?.email?.address || user?.google?.name}</Text>
-          </Flex>
-        </Card>
-      ) : (
-        !embeddedWallet && authenticated && (
-          <Card variant="ghost" mb={'3'}>
-            <Flex gap="3" align="center" justify={'end'}>
-              <AvatarIcon />
-              <Text as="div" size="2" color="gray">{walletForPurchase?.slice(0, 6)}</Text>
-            </Flex>
-          </Card>
-        )
-      )}
-      <Flex justify={'between'} direction={'row'} pb={'9'}>
-        {authenticated && (
+      <Flex justify={'between'} direction={'row'} pb={'6'}>
+        {authenticated ? (
           <>
             {!isBalanceLoading ? (
               <Badge size={'3'}>Balance: ${balance}</Badge>
@@ -76,15 +43,108 @@ const Header = ({
                 <Spinner />
               </Badge>
             )}
-            <Button variant='outline' onClick={logout}>
-              Log out
-            </Button>
+            <Dialog.Root>
+              <Dialog.Trigger>
+                <IconButton variant='ghost'>
+                  <HamburgerMenuIcon width={'35px'} height={'35px'} style={{color: 'black'}} />
+                </IconButton>
+              </Dialog.Trigger>
+              <Dialog.Content className={styles.content}>
+                
+                  <VisuallyHidden>
+                    <Dialog.Title>Menu</Dialog.Title>
+                  </VisuallyHidden>
+                  <Flex direction={'row'} justify={'between'}>
+                    {embeddedWallet && authenticated ? (
+                      <Card variant="ghost" mb={'3'}>
+                        <Flex gap="3" align="center" justify={'end'}>
+                          <AvatarIcon />
+                          <Box>
+                            <Text as="div" size="2" color="gray">
+                              {user?.email?.address || user?.google?.name}
+                            </Text>
+                          </Box>
+                        </Flex>
+                      </Card>
+                    ) : (
+                      !embeddedWallet && authenticated && (
+                        <Card variant="ghost" mb={'3'}>
+                          <Flex gap="3" align="center" justify={'end'}>
+                            <AvatarIcon />
+                            <Box>
+                              <Text as="div" size="2" color="gray">
+                                {walletForPurchase?.slice(0, 6)}
+                              </Text>
+                            </Box>
+                          </Flex>
+                        </Card>
+                      )
+                    )}
+                    <Dialog.Close>
+                      <IconButton variant='ghost'>
+                        <Cross2Icon width={'35px'} height={'35px'} style={{color: 'black'}} />
+                      </IconButton>
+                    </Dialog.Close>
+                  </Flex>
+                <VisuallyHidden>
+                  <Dialog.Description>
+                    Mobile menu
+                  </Dialog.Description>
+                </VisuallyHidden>
+                
+                {ready && authenticated && (
+                  <Flex direction={'column'} my={'9'}>
+                    {currentUser?.merchant ? (
+                      <>
+                        <Flex direction={'column'} align={'start'}>
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faPlus} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/sell`)}>New Sale</Button>
+                          </Flex>
+                          <Separator size={'4'} />
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faSackDollar} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/sales`)}>Sales</Button>
+                          </Flex>
+                          <Separator size={'4'} />
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
+                          </Flex>
+                          <Separator size={'4'} />
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfers`)}>Transfer funds</Button>
+                          </Flex>
+                        </Flex>
+                      </>
+                    ) : (
+                      <>
+                        <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                          <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
+                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
+                        </Flex>
+                        <Separator size={'4'} />
+                        <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                          <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
+                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
+                        </Flex>
+                      </>
+                    )}
+                  </Flex>
+                  )}
+                  <Flex direction={'row'} justify={'center'}>
+                    <Dialog.Close>
+                      <Login />
+                    </Dialog.Close>
+                  </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
           </>
+        ) : (
+          <Login />
         )}
       </Flex>
-      <Heading size={'7'} align={'center'}>Confirm details</Heading>
     </Box>
   );
 };
-
-export default Header;

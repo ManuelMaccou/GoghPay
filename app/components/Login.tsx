@@ -1,9 +1,11 @@
 import React from 'react';
-import styles from './styles.module.css';
-import Image from "next/image";
-import { usePrivy, useLogin, useWallets } from '@privy-io/react-auth';
+import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import axios, { AxiosError } from 'axios';
-import { Avatar, Box, Button, Container, Flex, Heading, Section } from "@radix-ui/themes";
+import { Button, Flex } from "@radix-ui/themes";
+import { createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner } from 'permissionless';
+import { signerToSafeSmartAccount } from 'permissionless/accounts';
 
 
 function isError(error: any): error is Error {
@@ -13,27 +15,72 @@ function isError(error: any): error is Error {
 export default function Login() {
   const {wallets} = useWallets();
   const wallet = wallets[0];
+  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+  
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
-  const { getAccessToken, authenticated, logout } = usePrivy();
+  const { getAccessToken, authenticated, logout, ready } = usePrivy();
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-      console.log('login successful');
-      const accessToken = await getAccessToken();
-      const userPayload = {
-        privyId: user.id,
-        walletAddress: user.wallet?.address,
-        email: user.email?.address || user.google?.email,
-        creationType: 'privy',
-      };
-  
+
       if (isNewUser) {
-        try {
-          console.log('fetching/adding user')
-          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
-              headers: { Authorization: `Bearer ${accessToken}` },
+        let smartAccountAddress;
+        
+        if (embeddedWallet) {
+          const eip1193provider = await wallet.getEthereumProvider();
+          const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+
+          const privyClient = createWalletClient({
+            account: embeddedWallet.address as `0x${string}`,
+            chain: baseSepolia,
+            transport: custom(eip1193provider)
           });
+
+          const customSigner = walletClientToSmartAccountSigner(privyClient);
+
+          const publicClient = createPublicClient({
+            chain: baseSepolia,
+            transport: http(),
+          });
+
+          const account = await signerToSafeSmartAccount(publicClient, {
+            signer: customSigner,
+            entryPoint: ENTRYPOINT_ADDRESS_V07,
+            safeVersion: "1.4.1",
+            setupTransactions: [
+              {
+                to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+                value: 0n,
+                data: encodeFunctionData({
+                  abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+                  args: [
+                    erc20PaymasterAddress,
+                    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+                  ],
+                }),
+              },
+            ],
+          })
+          console.log('account address:', account.address);
+          
+          if (account && account.address) {
+            smartAccountAddress = account.address
+          };
+     
+        };
+        try {
+          console.log('smart account address:', smartAccountAddress);
+          const userPayload = {
+            privyId: user.id,
+            walletAddress: user.wallet?.address,
+            email: user.email?.address || user.google?.email,
+            creationType: 'privy',
+            smartAccountAddress: smartAccountAddress,
+          };
+
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
+          console.log('New user created:', response.data);
         } catch (error: unknown) {
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
@@ -44,7 +91,7 @@ export default function Login() {
           }
         }
       }
-      
+
       if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
         try {
           await wallet.switchChain(chainIdNum);
@@ -66,51 +113,22 @@ export default function Login() {
       };
     },
     onError: (error) => {
-        console.error("Privy login error:", error);
+      console.error("Privy login error:", error);
     },
   });
   return (
-    <Flex direction={'column'} className={styles.section}>
-      <Image
-        src="/bg_m.jpg"
-        alt="background image"
-        priority
-        className={styles.fullBackgroundImage}
-        fill
-        sizes="100vw"
-        style={{
-          objectFit: "cover"
-        }} />
-   
-      <Flex direction={'column'} justify={'center'} align={'center'}>
-        <Image
-          src="/logos/gogh_logo_white.svg"
-          alt="Gogh"
-          width={960}
-          height={540}
-          sizes="100vw"
-          style={{
-            width: "100%",
-            height: "auto",
-            marginBottom: "50px",
-            maxWidth: "100%",
-          }} />
-        {authenticated && (
-          <Button 
-          highContrast
-          onClick={logout}>
+    <>
+      {authenticated ? (
+        <Button style={{width: '250px'}} onClick={logout}>
           Log out
         </Button>
-        )}
-        {!authenticated && (
-          <Button 
-          highContrast
-          onClick={login}>
-          Log in
-        </Button>
-        )}
-        
-      </Flex>
-    </Flex>
+      ) : (
+        <Flex direction={'row'} justify={'end'} width={'100%'} mx={'4'}>
+          <Button size={'3'} variant='outline' onClick={login}>
+            Log in
+          </Button>
+        </Flex>
+      )}
+    </>
   );
 };
