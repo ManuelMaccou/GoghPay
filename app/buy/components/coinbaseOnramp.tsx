@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { initOnRamp } from '@coinbase/cbpay-js';
+import { initOnRamp, CBPayInstanceType } from '@coinbase/cbpay-js';
 import Image from "next/image"
 import styles from '../styles.module.css'
 import { Button, Reset } from '@radix-ui/themes';
 import { useRouter } from 'next/navigation';
-
 
 type InitOnRampOptions = Parameters<typeof initOnRamp>[0];
 
@@ -39,61 +38,53 @@ export function BuyWithCoinbaseButton({ onPress, isLoading }: BuyWithCoinbaseBut
 
 export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }: CoinbaseButtonProps) {
    const [isReady, setIsReady] = useState(false);
-   const onrampInstance = useRef<any>();
+   const [onrampInstance, setOnrampInstance] = useState<CBPayInstanceType | null>(null);
    const router = useRouter();
+
+   let onrampAmount
+   if (price === 0) {
+    onrampAmount = 0
+   } else {
+    onrampAmount = price + 1
+   }
 
    useEffect(() => {
     const options: InitOnRampOptions = {
         appId: process.env.NEXT_PUBLIC_COINBASE_APP_ID!,
-        // target: '#cbpay-container',
         widgetParameters: {
-            destinationWallets: [{
-               address: destinationWalletAddress,
-               assets: ['USDC'],
-               supportedNetworks: ['base']
-            }],
-            presetCryptoAmount: price,
+            addresses: { [destinationWalletAddress]: ['base'] },
+            assets: ['USDC'],
+            presetCryptoAmount: onrampAmount,
             defaultNetwork: 'base',
             defaultExperience: 'buy',
         },
         onSuccess: () => {
-            console.log('success');
-            console.log('redirectURL in child component:', redirectURL)
-            // router.push(redirectURL); // Change this to router.refresh when tested
-            router.refresh
+            router.push(redirectURL);
         },
-        onExit: () => {
-            console.log('exit');
-        },
-        onEvent: (event) => {
-            console.log('event', event);
-        },
-        experienceLoggedIn: 'popup',
-        // experienceLoggedOut: 'popup',
+        experienceLoggedIn: 'new_tab',
+        experienceLoggedOut: 'new_tab',
         closeOnExit: false,
         closeOnSuccess: false,
-
     };
-    // instance.destroy() should be called before initOnramp if there is already an instance.
-    if (onrampInstance.current) {
-        onrampInstance.current.destroy();
-     }
 
-     initOnRamp(options, (error, instance) => {
+    initOnRamp(options, (error, instance) => {
         if (instance) {
-            onrampInstance.current = instance;
+            setOnrampInstance(instance);
             setIsReady(true);
         }
         if (error) {
             console.error('Error initializing Coinbase Onramp:', error);
         }
      });
- }, [destinationWalletAddress, price, redirectURL, router])
- 
- const handleOnPress = () => {
-     onrampInstance.current.open();
- }
 
+    return () => {
+      onrampInstance?.destroy();
+    };
+ }, [destinationWalletAddress, onrampAmount, redirectURL, router, onrampInstance])
+
+ const handleOnPress = () => {
+     onrampInstance?.open();
+ }
 
  return (
      <BuyWithCoinbaseButton onPress={handleOnPress} isLoading={!isReady} />
