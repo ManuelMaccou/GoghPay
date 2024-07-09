@@ -7,6 +7,7 @@ export interface User {
   merchant?: boolean;
   creationType: string;
   smartAccountAddress: string;
+  coinbaseAddress: string;
 }
 
 export interface Merchant {
@@ -25,6 +26,17 @@ export interface Transaction {
   buyer: User;
   productName: string;
   productPrice: number;
+  transactionHash: string;
+  paymentType: string;
+  createdAt: Date;
+}
+
+export interface Transfer {
+  _id: string;
+  user: User;
+  amount: number;
+  fromGoghAddress: string;
+  toCoinbaseAddress: string;
   transactionHash: string;
   createdAt: Date;
 }

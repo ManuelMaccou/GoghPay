@@ -4,6 +4,7 @@ const userSchema = new mongoose.Schema({
   privyId: { type: String },
   walletAddress: { type: String },
   smartAccountAddress: { type: String },
+  coinbaseAddress: { type: String },
   name: { type: String },
   email: { type: String },
   merchant: { type: Boolean },

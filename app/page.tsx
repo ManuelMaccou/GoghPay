@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from "next/image";
 import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import axios from 'axios';
-import { Button, Flex, Spinner } from "@radix-ui/themes";
+import { Button, Flex, Separator, Spinner } from "@radix-ui/themes";
 import { User } from './types/types';
 import styles from './components/styles.module.css';
 import { createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
@@ -14,6 +14,9 @@ import { walletClientToSmartAccountSigner,ENTRYPOINT_ADDRESS_V07 } from 'permiss
 import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
 import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
 import { signerToSafeSmartAccount } from 'permissionless/accounts';
+import MobileMenu from './components/MobileMenu';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRightFromBracket, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -219,10 +222,10 @@ export default function Home() {
               <Flex direction={'column'} gap={'5'}>
                 {currentUser?.merchant ? (
                   <>
-                    <Button size={'4'} style={{height: '100px'}} onClick={handleNewSaleClick}>
+                    <Button size={'4'} style={{width: "300px"}} onClick={handleNewSaleClick}>
                       New Sale
                     </Button>
-                    <Button size={'4'}
+                    <Button size={'4'} style={{width: "300px"}}
                       onClick={() => router.push(`/account/sales`)}>
                         Sales
                       </Button>
@@ -252,7 +255,7 @@ export default function Home() {
       </Flex>
       {ready && authenticated && !isFetchingUser && !isLoading && (
         <Flex direction={'column'} justify={'center'} align={'center'} position={'absolute'} bottom={'9'} width={'100%'}>
-          <Button highContrast size={'4'} onClick={logout}>
+          <Button highContrast size={'4'} style={{width: "300px"}} onClick={logout}>
             Log out
           </Button>
         </Flex>

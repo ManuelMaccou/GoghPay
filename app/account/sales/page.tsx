@@ -1,7 +1,9 @@
 "use client"
 
+import { Header } from "@/app/components/Header";
+import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, User, Transaction } from "@/app/types/types";
-import { getAccessToken, usePrivy } from "@privy-io/react-auth";
+import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Table, Text, TextField } from "@radix-ui/themes";
 import { format } from 'date-fns';
@@ -18,6 +20,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
+  const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [ merchant, setMerchant ] = useState<Merchant>();
@@ -25,6 +28,10 @@ export default function Sales({ params }: { params: { userId: string } }) {
   const [todaysTransactions, setTodaysTransactions] = useState<Transaction[] | null>(null);
   const [totalSale, setTotalSale] = useState<number>(0);
   const [todaysTotalSale, setTodaysTotalSale] = useState<number>(0);
+
+  const { wallets } = useWallets();
+  const wallet = wallets[0]
+  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   
   const router = useRouter();
   const visitingUser = params.userId
@@ -39,6 +46,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
         }
         const userData = await response.json();
         setCurrentUser(userData.user);
+        const walletAddress = userData.user.smartAccountAddress || userData.user.walletAddress;
+        setWalletForPurchase(walletAddress);
         
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -153,7 +162,15 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   return (
  
-    <Flex direction={'column'} pt={'9'} pb={'4'} px={'4'} gap={'5'} height={'100vh'}>
+    <Flex direction={'column'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'}>
+      <BalanceProvider walletForPurchase={walletForPurchase}>
+        <Header
+          embeddedWallet={embeddedWallet}
+          authenticated={authenticated}
+          walletForPurchase={walletForPurchase}
+          currentUser={currentUser}
+        />
+      </BalanceProvider>
       <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
         <ArrowLeftIcon style={{color: 'black'}}/>
           <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Crypto Sales</Text>
@@ -261,9 +278,11 @@ export default function Sales({ params }: { params: { userId: string } }) {
             </Flex>
           )
         ) : (
-          <Button size={'4'} style={{ width: '250px' }} onClick={login}>
-            Log in
-          </Button>
+          <Flex direction={'column'} height={'200px'} align={'center'} justify={'center'}>
+            <Text align={'center'}>
+              Please log in to view this page
+            </Text>
+          </Flex>
         )
       ) : (
         <Spinner />

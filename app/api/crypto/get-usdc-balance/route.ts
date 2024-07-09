@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fetch, { RequestInit } from 'node-fetch';
 
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
+export async function GET(request: Request) {
+  const url = new URL(request.url);
   const address = url.searchParams.get('address');
   console.log('address:', address);
 
