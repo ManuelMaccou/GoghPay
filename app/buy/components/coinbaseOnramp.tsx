@@ -41,12 +41,7 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
    const [onrampInstance, setOnrampInstance] = useState<CBPayInstanceType | null>(null);
    const router = useRouter();
 
-   let onrampAmount
-   if (price === 0) {
-    onrampAmount = 0
-   } else {
-    onrampAmount = price + 1
-   }
+   const onrampAmount = price === 0 ? 0 : price + 1;
 
    useEffect(() => {
     const options: InitOnRampOptions = {
@@ -62,9 +57,6 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
             router.push(redirectURL);
         },
         experienceLoggedIn: 'new_tab',
-        experienceLoggedOut: 'new_tab',
-        closeOnExit: false,
-        closeOnSuccess: false,
     };
 
     initOnRamp(options, (error, instance) => {
@@ -80,7 +72,7 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
     return () => {
       onrampInstance?.destroy();
     };
- }, [destinationWalletAddress, onrampAmount, redirectURL, router, onrampInstance])
+ }, [destinationWalletAddress, onrampAmount, redirectURL, router])
 
  const handleOnPress = () => {
      onrampInstance?.open();

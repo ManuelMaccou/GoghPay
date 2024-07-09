@@ -1,11 +1,11 @@
 'use client';
 
 import { useSearchParams, useRouter, redirect } from "next/navigation"
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
-import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog, Link, Dialog, VisuallyHidden, Separator } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog, Link, Dialog, VisuallyHidden, Separator, TextField, IconButton } from "@radix-ui/themes";
 import * as Avatar from '@radix-ui/react-avatar';
 import NotificationMessage from "../components/Notification";
 import { User } from "../types/types";
@@ -15,7 +15,7 @@ import {signerToSafeSmartAccount} from 'permissionless/accounts';
 import {createPimlicoBundlerClient} from 'permissionless/clients/pimlico';
 import { baseSepolia } from "viem/chains";
 import axios from "axios";
-import { InfoCircledIcon, AvatarIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, AvatarIcon, CopyIcon } from "@radix-ui/react-icons";
 import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { BalanceProvider } from "../contexts/BalanceContext";
 import { Header } from "../components/Header";
@@ -53,6 +53,8 @@ function BuyContent() {
   const [error, setError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
+  const [copyConfirmMessage, setCopyConfirmMessage] = useState<string | null>(null);
   const [showCoinbaseOnramp, setShowCoinbaseOnramp] = useState(false);
   const [guestCheckout, setGuestCheckout] = useState(false);
   const [showPayButton, setShowPayButton] = useState(false);
@@ -638,6 +640,20 @@ function BuyContent() {
     
   },[ready, authenticated, walletForPurchase, isValid, balance, price]);
 
+  const copyToClipboard = useCallback(() => {
+    if (walletForPurchase) {
+    navigator.clipboard.writeText(walletForPurchase)
+      .then(() => {
+        setCopyConfirmMessage('Address copied to clipboard');
+        setTimeout(() => setCopyConfirmMessage(''), 3000); // Clear message after 3 seconds
+      })
+      .catch(() => {
+        setCopyConfirmMessage('Failed to copy address');
+        setTimeout(() => setCopyConfirmMessage(''), 3000); // Clear message after 3 seconds
+      });
+    }
+  }, [walletForPurchase]);
+
   if (ready && !isValid && !isVerifying) {
     return (
       <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
@@ -750,13 +766,33 @@ function BuyContent() {
                     }}>Pay with crypto</Button>
                   </AlertDialog.Trigger>
                   <AlertDialog.Content maxWidth="450px">
-                    <AlertDialog.Title>Pay with crypto</AlertDialog.Title>
-                    <AlertDialog.Description size="2">
+                    <AlertDialog.Title>Low funds</AlertDialog.Title>
+                    {/* <AlertDialog.Description size="2">
                       Paying in crypto supports local merchants by saving them money and eliminating bank fees.
                       If you have a Coinbase account, you can sign in and transfer money to your Gogh account.
                       If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com" size="2" target="_blank" rel="noopener noreferrer">
                       signing up later</Link>. It takes about 5 minutes.
+                    </AlertDialog.Description> */}
+
+                    <AlertDialog.Description size="2">
+                      Transfer funds to your address below or from your Coinbase account.
                     </AlertDialog.Description>
+                    <Flex direction={'column'} py={'5'}>
+                      <TextField.Root value={walletForPurchase || ''} disabled placeholder="Enter Base USDC address from Coinbase">
+                        <TextField.Slot side="right">
+                          <IconButton size="1" variant="ghost" onClick={copyToClipboard}>
+                            <CopyIcon height="20" width="20" />
+                          </IconButton>
+                        </TextField.Slot>
+                      </TextField.Root>
+                      {copyConfirmMessage && (
+                        <Text size={'2'}>
+                          {copyConfirmMessage}
+                        </Text>
+                      )}
+
+                    </Flex>
+                    
 
                     <Flex gap="3" mt="4" justify="end">
                       <AlertDialog.Cancel>
