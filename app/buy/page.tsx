@@ -141,7 +141,6 @@ function BuyContent() {
               },
             ],
           })
-          console.log('account address:', account.address);
           
           if (account && account.address) {
             smartAccountAddress = account.address
@@ -149,7 +148,6 @@ function BuyContent() {
      
         };
         try {
-          console.log('smart account address:', smartAccountAddress);
           const userPayload = {
             privyId: user.id,
             walletAddress: user.wallet?.address,
@@ -159,7 +157,9 @@ function BuyContent() {
           };
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
-          console.log('New user created:', response.data);
+          setCurrentUser(response.data.user)
+          const walletAddress = response.data.user.smartAccountAddress || response.data.user.walletAddress;
+        setWalletForPurchase(walletAddress);
         } catch (error: unknown) {
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
@@ -170,7 +170,7 @@ function BuyContent() {
           }
         }
       }
-
+      
       if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
         try {
           await wallet.switchChain(chainIdNum);
@@ -276,13 +276,9 @@ function BuyContent() {
         const response = await fetch(`/api/user/me/${user.id}`);
 
         if (!response.ok) {
-          if (response.status === 404) {
-            console.log('user doesnt exist')
-          }
           throw new Error('Failed to fetch user');
         }
         const userData = await response.json();
-        console.log('userData:', userData);
 
         setCurrentUser(userData.user);
         const walletAddress = userData.user.smartAccountAddress || userData.user.walletAddress;
@@ -290,7 +286,6 @@ function BuyContent() {
         
       } catch (error) {
         console.error('Error fetching user:', error);
-        console.log("no wallet at fetch user")
       }
     };
   
@@ -299,7 +294,8 @@ function BuyContent() {
     }
   }, [activeWalletAddress, authenticated, ready, user ]);
 
-  useEffect(() => {
+  {/* 
+    useEffect(() => {
     if (currentUser) {
       const { smartAccountAddress, walletAddress } = currentUser;
   
@@ -311,6 +307,8 @@ function BuyContent() {
       }
     }
   }, [currentUser]);
+  */}
+  
 
   // Handle mobile pay
   const handleMobilePay = async () => {
@@ -323,7 +321,6 @@ function BuyContent() {
       redirectURL: window.location.href,
       merchantObject: merchant
     };
-    console.log("Sending request data:", requestData);
 
     try {
       const response = await fetch('/api/stripe/checkout/create-checkout-session', {
@@ -430,7 +427,6 @@ function BuyContent() {
             },
           ],
         })
-        console.log('account address:', account.address);
   
         const smartAccountClient = createSmartAccountClient({
           account,
@@ -462,9 +458,7 @@ function BuyContent() {
           functionName: 'transfer',
           args: [merchantWalletAddress, amountInUSDC]
         })
-  
-        console.log("amount to send:", amountInUSDC);
-  
+    
         const transactionHash = await smartAccountClient.sendTransaction({
           account: smartAccountClient.account,
           to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
@@ -589,7 +583,6 @@ function BuyContent() {
       }
   
       const data = await response.json();
-      console.log('Transaction saved:', data);
     } catch (error) {
       console.error('Error saving transaction:', error);
     }
@@ -599,8 +592,6 @@ function BuyContent() {
 // Make sure to change the chainID.
   useEffect(() => {
     if(ready && authenticated && isValid && walletForPurchase) {
-      console.log("wallet for purchase in balance useEffect:", walletForPurchase);
-
       const fetchBalance = async () => {
         setIsBalanceLoading(true);
         try {
@@ -639,7 +630,7 @@ function BuyContent() {
       }
     };
     
-  },[ready, authenticated, walletForPurchase, isValid, balance, price]);
+  },[ready, authenticated, walletForPurchase, isValid, balance, price, currentUser]);
 
   const copyToClipboard = useCallback(() => {
     if (walletForPurchase) {
@@ -734,6 +725,7 @@ function BuyContent() {
               </>
             ) : (
               <Flex direction={'column'} align={'center'} mx={'4'}>
+              {/*
               {embeddedWallet ? (
                 !isBalanceLoading && (
                   <Callout.Root color="red" mb={'4'}>
@@ -757,6 +749,7 @@ function BuyContent() {
                   </Callout.Root>
                 )
               )}
+              */}
 
               <Flex direction={'column'} gap={'4'}>
                 <AlertDialog.Root>
@@ -971,7 +964,7 @@ function BuyContent() {
             onClick={() => {
               setGuestCheckout(true);
             }}>
-            Continue as guest
+            Pay as guest
           </Button>
           </Flex>
           </>
