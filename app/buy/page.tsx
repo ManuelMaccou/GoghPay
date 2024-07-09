@@ -290,7 +290,7 @@ function BuyContent() {
         
       } catch (error) {
         console.error('Error fetching user:', error);
-        setNoWalletForPurchase(true);
+        console.log("no wallet at fetch user")
       }
     };
   
@@ -305,6 +305,7 @@ function BuyContent() {
   
       if (!smartAccountAddress && !walletAddress) {
         setNoWalletForPurchase(true);
+        console.log("no wallet at use effect")
       } else {
         setNoWalletForPurchase(false);
       }

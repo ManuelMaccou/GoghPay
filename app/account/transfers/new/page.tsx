@@ -385,7 +385,6 @@ export default function NewTransfer() {
       } catch (error) {
         console.error('Error fetching user:', error);
         setError('Failed to fetch user data');
-        setNoWalletForPurchase(true);
       }
     };
 
@@ -544,7 +543,7 @@ export default function NewTransfer() {
           }}>
           <Heading>Transfer from bank</Heading>
           <Text>
-            Move funds for free from your bank to Gogh and make purchases at your favorite vendors
+            Move funds for free from your bank to Gogh and make purchases at your favorite vendors.
           </Text>
           <CoinbaseButton
             destinationWalletAddress={walletForPurchase || ""}
