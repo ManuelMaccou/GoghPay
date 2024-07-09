@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from "@radix-ui/themes";
+import { Box, Flex, Text } from "@radix-ui/themes";
 import { css } from '@stitches/react';
 
 interface NotificationMessageProps {
@@ -36,7 +36,7 @@ const notificationBoxStyles = css({
 const NotificationMessage: React.FC<NotificationMessageProps> = ({ message, type }) => {
   return (
     <Box className={notificationBoxStyles({ type })}>
-      <Text size="5">{message}</Text>
+      <Text wrap={'wrap'} size="5">{message}</Text>
     </Box>
   );
 };

@@ -18,7 +18,7 @@ import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { signerToSafeSmartAccount } from "permissionless/accounts";
 import { BalanceProvider, useBalance } from "@/app/contexts/BalanceContext";
 import NotificationMessage from "@/app/components/Notification";
-import { isValid } from "date-fns";
+import NoWalletForPurchaseError from "@/app/components/NoWalletForPurchaseError";
 
 export default function NewTransfer() {
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +28,7 @@ export default function NewTransfer() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
+  const [noWalletForPurchase, setNoWalletForPurchase] = useState(false);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const [balance, setBalance] = useState<number>(0);
   const [address, setAddress] = useState('');
@@ -148,127 +149,181 @@ export default function NewTransfer() {
     setIsLoading(true);
     setPendingMessage('Please wait...');
 
-    // Old Code using Privy and Pimlico docs
-
-    try {
-      const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
-      const eip1193provider = await wallet.getEthereumProvider();
-
-      console.log('Creating privy client...');
-      const privyClient = createWalletClient({
-        account: wallet.address as `0x${string}`,
-        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-        transport: custom(eip1193provider)
-      });
-
-      console.log('Creating custom signer...');
-      const customSigner = walletClientToSmartAccountSigner(privyClient);
-
-      console.log('Creating public client...');
-      const publicClient = createPublicClient({
-        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-        transport: http(),
-      });
-
-      console.log('Creating bundler client...');
-      const bundlerClient = createPimlicoBundlerClient({
-        transport: http(rpcUrl),
-        entryPoint: ENTRYPOINT_ADDRESS_V07
-      }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
-
-      console.log('Creating smart account...');
-      const account = await signerToSafeSmartAccount(publicClient, {
-        signer: customSigner,
-        entryPoint: ENTRYPOINT_ADDRESS_V07,
-        safeVersion: "1.4.1",
-        setupTransactions: [
-          {
-            to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-            value: 0n,
-            data: encodeFunctionData({
-              abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
-              args: [
-                erc20PaymasterAddress,
-                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
-              ],
-            }),
-          },
-        ],
-      })
-
-      const smartAccountClient = createSmartAccountClient({
-        account,
-        entryPoint: ENTRYPOINT_ADDRESS_V07,
-        chain: baseSepolia,
-        bundlerTransport: http(rpcUrl),
-        middleware: {
-          gasPrice: async () => {
-            return (await bundlerClient.getUserOperationGasPrice()).fast
-          },
-          sponsorUserOperation: async (args) => {
-            const gasEstimates = await bundlerClient.estimateUserOperationGas({
-              userOperation: {
-                ...args.userOperation,
+    if (embeddedWallet) {
+      try {
+        const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+        const eip1193provider = await wallet.getEthereumProvider();
+  
+        console.log('Creating privy client...');
+        const privyClient = createWalletClient({
+          account: wallet.address as `0x${string}`,
+          chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
+          transport: custom(eip1193provider)
+        });
+  
+        console.log('Creating custom signer...');
+        const customSigner = walletClientToSmartAccountSigner(privyClient);
+  
+        console.log('Creating public client...');
+        const publicClient = createPublicClient({
+          chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
+          transport: http(),
+        });
+  
+        console.log('Creating bundler client...');
+        const bundlerClient = createPimlicoBundlerClient({
+          transport: http(rpcUrl),
+          entryPoint: ENTRYPOINT_ADDRESS_V07
+        }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
+  
+        console.log('Creating smart account...');
+        const account = await signerToSafeSmartAccount(publicClient, {
+          signer: customSigner,
+          entryPoint: ENTRYPOINT_ADDRESS_V07,
+          safeVersion: "1.4.1",
+          setupTransactions: [
+            {
+              to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+              value: 0n,
+              data: encodeFunctionData({
+                abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+                args: [
+                  erc20PaymasterAddress,
+                  0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+                ],
+              }),
+            },
+          ],
+        })
+  
+        const smartAccountClient = createSmartAccountClient({
+          account,
+          entryPoint: ENTRYPOINT_ADDRESS_V07,
+          chain: baseSepolia,
+          bundlerTransport: http(rpcUrl),
+          middleware: {
+            gasPrice: async () => {
+              return (await bundlerClient.getUserOperationGasPrice()).fast
+            },
+            sponsorUserOperation: async (args) => {
+              const gasEstimates = await bundlerClient.estimateUserOperationGas({
+                userOperation: {
+                  ...args.userOperation,
+                  paymaster: erc20PaymasterAddress,
+                },
+              })
+         
+              return {
+                ...gasEstimates,
                 paymaster: erc20PaymasterAddress,
-              },
-            })
-       
-            return {
-              ...gasEstimates,
-              paymaster: erc20PaymasterAddress,
-            };
+              };
+            },
           },
-        },
-      })
-
-      const data = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: 'transfer',
-        args: [coinbaseAddress, amountInUSDC]
-      })
-
-      const transactionHash = await smartAccountClient.sendTransaction({
-        account: smartAccountClient.account,
-        to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-        data: data,
-        value: BigInt(0),
-        maxFeePerGas: BigInt(1000000000), // 1 Gwei
-        maxPriorityFeePerGas: BigInt(1000000000), // 1 Gwei
-        gas: BigInt(1000000000),
-
-      });
-      setPendingMessage(null);
-      setTransferSuccessMessage('Transfer complete')
-      setTransferStarted(false)
-      fetchBalance();
-      console.log('Transaction sent! Hash:', transactionHash);
-
-      await saveTransfer({
-        privyId: user?.id,
-        user: currentUser?._id,
-        amount: transferInputValue,
-        fromGoghAddress: walletForPurchase,
-        toCoinbaseAddress: currentUser?.coinbaseAddress,
-        transactionHash: transactionHash,
-      });
-
-
-    } catch (error) {
-      if (isError(error)) {
-        console.error('Error sending sponsored USDC transfer:', error.message); // REMOVE THIS FOR PRODUCTION. IT LOGS SENSITIVE INFO
-        setTransferErrorMessage(`Sponsored USDC transfer failed: ${error.message}`);
+        })
+  
+        const data = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [coinbaseAddress, amountInUSDC]
+        })
+  
+        const transactionHash = await smartAccountClient.sendTransaction({
+          account: smartAccountClient.account,
+          to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+          data: data,
+          value: BigInt(0),
+          maxFeePerGas: BigInt(1000000000), // 1 Gwei
+          maxPriorityFeePerGas: BigInt(1000000000), // 1 Gwei
+          gas: BigInt(1000000000),
+  
+        });
+        setPendingMessage(null);
+        setTransferSuccessMessage('Transfer complete')
         setTransferStarted(false)
-      } else {
-        console.error('An unexpected error occurred:', error);
-        setTransferErrorMessage('An unexpected error occurred');
+        fetchBalance();
+        console.log('Transaction sent! Hash:', transactionHash);
+  
+        await saveTransfer({
+          privyId: user?.id,
+          user: currentUser?._id,
+          amount: transferInputValue,
+          fromGoghAddress: walletForPurchase,
+          toCoinbaseAddress: currentUser?.coinbaseAddress,
+          transactionHash: transactionHash,
+        });
+  
+  
+      } catch (error) {
+        if (isError(error)) {
+          console.error('Error sending USDC transfer');
+          setTransferErrorMessage('USDC transfer failed. Please try again or contact us if the issue persists.');
+          setTransferStarted(false)
+        } else {
+          console.error('An unexpected error occurred:', error);
+          setTransferErrorMessage('An unexpected error occurred');
+          setTransferStarted(false)
+        }
+      } finally {
+        setIsLoading(false);
+        setPendingMessage(null);
         setTransferStarted(false)
       }
-    } finally {
-      setIsLoading(false);
-      setPendingMessage(null);
-      setTransferStarted(false)
+
+    } else {
+      try {
+        const provider = await wallet.getEthereumProvider();
+
+        const data = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [coinbaseAddress, amountInUSDC]
+        })
+  
+        const transactionRequest = {
+          to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+          from: walletForPurchase,
+          data: data,
+          value: 0x0,
+        };
+  
+        const transactionHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [transactionRequest],
+        });
+        setPendingMessage(null);
+        setTransferSuccessMessage('Transfer complete')
+        setTransferStarted(false)
+        fetchBalance();
+        console.log('Transaction sent! Hash:', transactionHash);
+  
+        await saveTransfer({
+          privyId: user?.id,
+          user: currentUser?._id,
+          amount: transferInputValue,
+          fromGoghAddress: walletForPurchase,
+          toCoinbaseAddress: currentUser?.coinbaseAddress,
+          transactionHash: transactionHash,
+        });
+  
+  
+      } catch (error) {
+        if (isError(error)) {
+          console.error('Error sending USDC transfer');
+          setTransferErrorMessage('USDC transfer failed. Please try again or contact us if the issue persists.');
+          setTransferStarted(false)
+        } else {
+          console.error('An unexpected error occurred:', error);
+          setTransferErrorMessage('An unexpected error occurred');
+          setTransferStarted(false)
+        }
+      } finally {
+        setIsLoading(false);
+        setPendingMessage(null);
+        setTransferStarted(false)
+      }
     }
   }
+    
 
   async function saveTransfer(transferData: any) {
     const accessToken = await getAccessToken();
@@ -322,12 +377,15 @@ export default function NewTransfer() {
         setCurrentUser(userData.user);
         const walletAddress = userData.user.smartAccountAddress || userData.user.walletAddress;
         setWalletForPurchase(walletAddress);
+        
         if (userData.user.coinbaseAddress) {
           setAddress(userData.user.coinbaseAddress);
         }
+
       } catch (error) {
         console.error('Error fetching user:', error);
         setError('Failed to fetch user data');
+        setNoWalletForPurchase(true);
       }
     };
 
@@ -335,6 +393,18 @@ export default function NewTransfer() {
       fetchUser();
     }
   }, [ready, authenticated, user?.id, editAddressMode]); 
+
+  useEffect(() => {
+    if (currentUser) {
+      const { smartAccountAddress, walletAddress } = currentUser;
+  
+      if (!smartAccountAddress && !walletAddress) {
+        setNoWalletForPurchase(true);
+      } else {
+        setNoWalletForPurchase(false);
+      }
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     const getDefaultCoinbaseAddress = async () => {
@@ -423,12 +493,9 @@ export default function NewTransfer() {
 
 
   return (
-    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>    
-      <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
-        <ArrowLeftIcon style={{color: 'black'}}/>
-          <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
-      </Button>  
-      <BalanceProvider walletForPurchase={walletForPurchase}>
+    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
+     <NoWalletForPurchaseError condition={noWalletForPurchase} />  
+    <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           embeddedWallet={embeddedWallet}
           authenticated={authenticated}
@@ -436,6 +503,10 @@ export default function NewTransfer() {
           currentUser={currentUser}
         />
       </BalanceProvider>
+      <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
+        <ArrowLeftIcon style={{color: 'black'}}/>
+          <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
+      </Button>  
       <Flex direction={'column'} justify={'center'} gap={'4'}>
         <Text>
           We integrate with Coinbase to offer quick, safe transfers to your bank.
@@ -492,9 +563,6 @@ export default function NewTransfer() {
             <TextField.Root variant="soft" size="2" placeholder="0" value={transferInputValue} onChange={handleTransferInputChange} style={{backgroundColor: "white", fontSize: '30px', fontWeight: 'bold'}} />
             <Badge size={'3'} variant="soft">USDC</Badge>
           </Flex>
-          {transferErrorMessage && (
-          <Text color="red">{transferErrorMessage}</Text>
-        )}
           <Flex direction={'column'} align={'center'} gap={'4'}>
             <Text size={'2'} align={'center'}>If this is your first deposit, we recommend making a test transaction of 1 USDC.</Text>
             {currentUser?.coinbaseAddress ? (
@@ -544,6 +612,9 @@ export default function NewTransfer() {
                         if (numericTransferInputValue > 0 && walletForPurchase && currentUser.coinbaseAddress) {
                           sendUSDC(currentUser.coinbaseAddress as `0x${string}`, numericTransferInputValue);
                           setError(null);
+                          setPendingMessage(null);
+                          setTransferErrorMessage(null);
+                          setTransferSuccessMessage(null);
                         } else {
                           console.error("Invalid transfer amount or wallet address.");
                           setError("Invalid transfer amount or wallet address. Unable to process the transaction.");

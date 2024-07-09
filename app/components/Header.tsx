@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { ConnectedWallet, usePrivy } from "@privy-io/react-auth";
 import { useBalance } from '../contexts/BalanceContext';
-import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden } from '@radix-ui/themes';
+import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link } from '@radix-ui/themes';
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 import Login from './Login';
 import { User } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRightFromBracket, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRightFromBracket, faEnvelope, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'next/navigation';
 import styles from './styles.module.css'
 
@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
 
   return (
     <Box width={'100%'}>
-      <Flex justify={'between'} direction={'row'} pb={'6'}>
+      <Flex justify={'between'} direction={'row'} pb={'4'}>
         {authenticated ? (
           <>
             {!isBalanceLoading ? (
@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
                   <VisuallyHidden>
                     <Dialog.Title>Menu</Dialog.Title>
                   </VisuallyHidden>
-                  <Flex direction={'row'} justify={'between'}>
+                  <Flex direction={'row'} justify={'between'} flexGrow={'1'}>
                     {embeddedWallet && authenticated ? (
                       <Card variant="ghost" mb={'3'}>
                         <Flex gap="3" align="center" justify={'end'}>
@@ -116,6 +116,11 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
                             <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
                             <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfers`)}>Transfer funds</Button>
                           </Flex>
+                          <Separator size={'4'} />
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faEnvelope} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`mailto:support@ongogh.com`)}>Contact us</Button>
+                          </Flex>
                         </Flex>
                       </>
                     ) : (
@@ -127,13 +132,20 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
                         <Separator size={'4'} />
                         <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                           <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
+                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfers`)}>Transfer funds</Button>
+                        </Flex>
+                        <Separator size={'4'} />
+                        <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                          <FontAwesomeIcon style={{padding: '20px'}} icon={faEnvelope} />
+                          <Link style={{color: 'black'}}  href='mailto:support@ongogh.com' target='_blank' rel='noopener noreferrer'>
+                            Contact us
+                          </Link>
                         </Flex>
                       </>
                     )}
                   </Flex>
                   )}
-                  <Flex direction={'row'} justify={'center'}>
+                  <Flex direction={'column'} justify={'between'} align={'center'}>
                     <Dialog.Close>
                       <Login />
                     </Dialog.Close>

@@ -21,6 +21,7 @@ import { BalanceProvider } from "../contexts/BalanceContext";
 import { Header } from "../components/Header";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
+import NoWalletForPurchaseError from "../components/NoWalletForPurchaseError";
 const { ethers } = require("ethers");
 
 interface PurchaseParams {
@@ -47,6 +48,7 @@ function BuyContent() {
   const [merchant, setMerchant] = useState<Merchant>();
   const [currentUser, setCurrentUser] = useState<User>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
+  const [noWalletForPurchase, setNoWalletForPurchase] = useState(false);
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
@@ -283,16 +285,29 @@ function BuyContent() {
         setCurrentUser(userData.user);
         const walletAddress = userData.user.smartAccountAddress || userData.user.walletAddress;
         setWalletForPurchase(walletAddress);
+        
       } catch (error) {
         console.error('Error fetching user:', error);
+        setNoWalletForPurchase(true);
       }
     };
-    console.log("wallet for purchase in fetch user useEffect:", walletForPurchase)
   
     if (ready && authenticated) {
       fetchUser();
     }
-  }, [activeWalletAddress, authenticated, ready, user, walletForPurchase]);
+  }, [activeWalletAddress, authenticated, ready, user ]);
+
+  useEffect(() => {
+    if (currentUser) {
+      const { smartAccountAddress, walletAddress } = currentUser;
+  
+      if (!smartAccountAddress && !walletAddress) {
+        setNoWalletForPurchase(true);
+      } else {
+        setNoWalletForPurchase(false);
+      }
+    }
+  }, [currentUser]);
 
   // Handle mobile pay
   const handleMobilePay = async () => {
@@ -371,129 +386,186 @@ function BuyContent() {
     setPurchaseStarted(true)
     setPendingMessage('Please wait...');
 
-    // Old Code using Privy and Pimlico docs
-
-    try {
-      const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
-      const eip1193provider = await wallet.getEthereumProvider();
-
-      const privyClient = createWalletClient({
-        account: wallet.address as `0x${string}`,
-        chain: baseSepolia,
-        transport: custom(eip1193provider)
-      });
-
-      const customSigner = walletClientToSmartAccountSigner(privyClient);
-
-      const publicClient = createPublicClient({
-        chain: baseSepolia,
-        transport: http(),
-      });
-
-      const bundlerClient = createPimlicoBundlerClient({
-        transport: http(rpcUrl),
-        entryPoint: ENTRYPOINT_ADDRESS_V07
-      }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
-
-      const account = await signerToSafeSmartAccount(publicClient, {
-        signer: customSigner,
-        entryPoint: ENTRYPOINT_ADDRESS_V07,
-        safeVersion: "1.4.1",
-        setupTransactions: [
-          {
-            to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-            value: 0n,
-            data: encodeFunctionData({
-              abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
-              args: [
-                erc20PaymasterAddress,
-                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
-              ],
-            }),
-          },
-        ],
-      })
-      console.log('account address:', account.address);
-
-      const smartAccountClient = createSmartAccountClient({
-        account,
-        entryPoint: ENTRYPOINT_ADDRESS_V07,
-        chain: baseSepolia,
-        bundlerTransport: http(rpcUrl),
-        middleware: {
-          gasPrice: async () => {
-            return (await bundlerClient.getUserOperationGasPrice()).fast
-          },
-          sponsorUserOperation: async (args) => {
-            const gasEstimates = await bundlerClient.estimateUserOperationGas({
-              userOperation: {
-                ...args.userOperation,
-                paymaster: erc20PaymasterAddress,
-              },
-            })
-       
-            return {
-              ...gasEstimates,
-              paymaster: erc20PaymasterAddress,
-            };
-          },
-        },
-      })
-
-      const data = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: 'transfer',
-        args: [merchantWalletAddress, amountInUSDC]
-      })
-
-      console.log("amount to send:", amountInUSDC);
-
-      const transactionHash = await smartAccountClient.sendTransaction({
-        account: smartAccountClient.account,
-        to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-        data: data,
-        value: BigInt(0),
-        maxFeePerGas: BigInt(1000000000), // 1 Gwei
-        maxPriorityFeePerGas: BigInt(1000000000), // 1 Gwei
-        gas: BigInt(1000000000),
-
-      });
-      setPendingMessage(null);
-      setPurchaseStarted(false)
-      console.log('Transaction sent! Hash:', transactionHash);
-
-      await saveTransaction({
-        merchantId: merchant?._id,
-        buyerId: currentUser?._id,
-        buyerPrivyId: currentUser?.privyId,
-        productName: purchaseParams.product,
-        productPrice: price,
-        transactionHash: transactionHash,
-        paymentType: 'crypto'
-      });
-
-      const params = new URLSearchParams({
-        merchantId: merchant?._id ?? '',
-        price: price.toString(),
-        transactionHash: transactionHash.toString(),
-        checkout_method: "wallet",
-      });
+    if (embeddedWallet) {
+      try {
+        const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+        const eip1193provider = await wallet.getEthereumProvider();
   
-      router.push(`/checkout/success?${params.toString()}`);
-
-    } catch (error) {
-      if (isError(error)) {
-        console.error('Error sending USDC:', error.message); // REMOVE THIS FOR PRODUCTION. IT LOGS SENSITIVE INFO
-        setError(`Transaction failed: ${error.message}`);
-      } else {
-        console.error('An unexpected error occurred:', error);
-        setError('An unexpected error occurred');
+        const privyClient = createWalletClient({
+          account: wallet.address as `0x${string}`,
+          chain: baseSepolia,
+          transport: custom(eip1193provider)
+        });
+  
+        const customSigner = walletClientToSmartAccountSigner(privyClient);
+  
+        const publicClient = createPublicClient({
+          chain: baseSepolia,
+          transport: http(),
+        });
+  
+        const bundlerClient = createPimlicoBundlerClient({
+          transport: http(rpcUrl),
+          entryPoint: ENTRYPOINT_ADDRESS_V07
+        }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
+  
+        const account = await signerToSafeSmartAccount(publicClient, {
+          signer: customSigner,
+          entryPoint: ENTRYPOINT_ADDRESS_V07,
+          safeVersion: "1.4.1",
+          setupTransactions: [
+            {
+              to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+              value: 0n,
+              data: encodeFunctionData({
+                abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+                args: [
+                  erc20PaymasterAddress,
+                  0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+                ],
+              }),
+            },
+          ],
+        })
+        console.log('account address:', account.address);
+  
+        const smartAccountClient = createSmartAccountClient({
+          account,
+          entryPoint: ENTRYPOINT_ADDRESS_V07,
+          chain: baseSepolia,
+          bundlerTransport: http(rpcUrl),
+          middleware: {
+            gasPrice: async () => {
+              return (await bundlerClient.getUserOperationGasPrice()).fast
+            },
+            sponsorUserOperation: async (args) => {
+              const gasEstimates = await bundlerClient.estimateUserOperationGas({
+                userOperation: {
+                  ...args.userOperation,
+                  paymaster: erc20PaymasterAddress,
+                },
+              })
+         
+              return {
+                ...gasEstimates,
+                paymaster: erc20PaymasterAddress,
+              };
+            },
+          },
+        })
+  
+        const data = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [merchantWalletAddress, amountInUSDC]
+        })
+  
+        console.log("amount to send:", amountInUSDC);
+  
+        const transactionHash = await smartAccountClient.sendTransaction({
+          account: smartAccountClient.account,
+          to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+          data: data,
+          value: BigInt(0),
+          maxFeePerGas: BigInt(1000000000), // 1 Gwei
+          maxPriorityFeePerGas: BigInt(1000000000), // 1 Gwei
+          gas: BigInt(1000000000),
+        });
+        setPendingMessage(null);
+        setPurchaseStarted(false)
+        console.log('Transaction sent! Hash:', transactionHash);
+  
+        await saveTransaction({
+          merchantId: merchant?._id,
+          buyerId: currentUser?._id,
+          buyerPrivyId: currentUser?.privyId,
+          productName: purchaseParams.product,
+          productPrice: price,
+          transactionHash: transactionHash,
+          paymentType: 'sponsored crypto'
+        });
+  
+        const params = new URLSearchParams({
+          merchantId: merchant?._id ?? '',
+          price: price.toString(),
+          transactionHash: transactionHash.toString(),
+          checkout_method: "wallet",
+        });
+    
+        router.push(`/checkout/success?${params.toString()}`);
+  
+      } catch (error) {
+        if (isError(error)) {
+          console.error('Error sending USDC:', error.message); // REMOVE THIS FOR PRODUCTION. IT LOGS SENSITIVE INFO
+          setError(`Transaction failed: ${error.message}`);
+        } else {
+          console.error('An unexpected error occurred:', error);
+          setError('An unexpected error occurred');
+        }
+      } finally {
+        setIsLoading(false); // Set loading state to false
+        setPendingMessage(null);
       }
-    } finally {
-      setIsLoading(false); // Set loading state to false
-      setPendingMessage(null);
+
+    } else {
+      try {
+        const provider = await wallet.getEthereumProvider();
+
+        const data = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [merchantWalletAddress, amountInUSDC]
+        })
+  
+        const transactionRequest = {
+          to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+          from: walletForPurchase,
+          data: data,
+          value: 0x0,
+        };
+  
+        const transactionHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [transactionRequest],
+        });
+        setPendingMessage(null);
+        setPurchaseStarted(false)
+        console.log('Transaction sent! Hash:', transactionHash);
+
+        await saveTransaction({
+          merchantId: merchant?._id,
+          buyerId: currentUser?._id,
+          buyerPrivyId: currentUser?.privyId,
+          productName: purchaseParams.product,
+          productPrice: price,
+          transactionHash: transactionHash,
+          paymentType: 'crypto'
+        });
+  
+        const params = new URLSearchParams({
+          merchantId: merchant?._id ?? '',
+          price: price.toString(),
+          transactionHash: transactionHash.toString(),
+          checkout_method: "wallet",
+        });
+    
+        router.push(`/checkout/success?${params.toString()}`);
+  
+      } catch (error) {
+        if (isError(error)) {
+          console.error('Error sending USDC:', error.message); // REMOVE THIS FOR PRODUCTION. IT LOGS SENSITIVE INFO
+          setError(`Transaction failed: ${error.message}`);
+        } else {
+          console.error('An unexpected error occurred:', error);
+          setError('An unexpected error occurred');
+        }
+      } finally {
+        setIsLoading(false); // Set loading state to false
+        setPendingMessage(null);
+      }
     }
   }
+    
 
   // Save transaction
   async function saveTransaction(transactionData: any) {
@@ -584,6 +656,7 @@ function BuyContent() {
 
   return (
     <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
+      <NoWalletForPurchaseError condition={noWalletForPurchase} /> 
       <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           embeddedWallet={embeddedWallet}
@@ -757,7 +830,11 @@ function BuyContent() {
                         <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
                           <Flex direction={'row'} gap={'2'} align={'center'}>
                             <FontAwesomeIcon icon={faWallet} />
-                            <Text>Your Gogh account</Text>
+                            {embeddedWallet ? (
+                              <Text>Wallet</Text>
+                            ) : (
+                              <Text>Your Gogh account</Text>
+                            )}
                           </Flex>
                           <Text size={'2'} align={'right'} wrap={'wrap'}>{walletForPurchase?.slice(0, 6)}...{walletForPurchase?.slice(-4)}</Text>
                         </Flex>
