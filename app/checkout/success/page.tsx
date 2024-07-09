@@ -8,14 +8,7 @@ import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { CheckIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/navigation';
 
-interface SuccessContentProps {
-  merchantId: string | null;
-  price: string | null;
-  stripeCheckoutId: string | null;
-  checkoutMethod: string | null;
-}
-
-function SuccessContent({ merchantId, price, stripeCheckoutId, checkoutMethod }: SuccessContentProps) {
+function SuccessContent() {
   const [merchant, setMerchant] = useState<Merchant>();
   const [checkoutUser, setCheckoutUser] = useState<User>();
   const [stripeUserAdded, setStripeUserAdded] = useState<boolean>(false);
@@ -30,6 +23,12 @@ function SuccessContent({ merchantId, price, stripeCheckoutId, checkoutMethod }:
   const privyId = user?.id;
 
   const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
+
+  const searchParams = useSearchParams();
+  const merchantId = searchParams.get('merchantId');
+  const price = searchParams.get('price');
+  const stripeCheckoutId = searchParams.get('session_id');
+  const checkoutMethod = searchParams.get('checkout_method');
 
   useEffect(() => {
     if (!ready) return;
@@ -304,20 +303,9 @@ function SuccessContent({ merchantId, price, stripeCheckoutId, checkoutMethod }:
 }
 
 export default function Success() {
-  const searchParams = useSearchParams();
-  const merchantId = searchParams.get('merchantId');
-  const price = searchParams.get('price');
-  const stripeCheckoutId = searchParams.get('session_id');
-  const checkoutMethod = searchParams.get('checkout_method');
-
   return (
     <Suspense fallback={<Spinner />}>
-      <SuccessContent
-        merchantId={merchantId}
-        price={price}
-        stripeCheckoutId={stripeCheckoutId}
-        checkoutMethod={checkoutMethod}
-      />
+      <SuccessContent />
     </Suspense>
   );
 }

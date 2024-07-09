@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fetch, { RequestInit } from 'node-fetch';
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const address = url.searchParams.get('address');
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams
+  const address = searchParams.get('address');
   console.log('address:', address);
 
   if (!address) {

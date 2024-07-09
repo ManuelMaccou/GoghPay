@@ -2,9 +2,8 @@ import Subscription from "@/app/models/Subscription";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const merchantId = searchParams.get('merchantId');
-  const userId = searchParams.get('userId');
+  const merchantId = req.nextUrl.searchParams.get('merchantId');
+  const userId = req.nextUrl.searchParams.get('userId');
 
   if (!merchantId || !userId) {
     return NextResponse.json({ error: 'Missing merchantId or userId' }, { status: 400 });

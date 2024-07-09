@@ -2,25 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/app/utils/mongodb';
 import User from '@/app/models/User';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
+  await connectToDatabase();
+  const searchParams = request.nextUrl.searchParams;
+  const emailAddress = searchParams.get('address');
+  console.log('email address in /by-email route:', emailAddress);
+
+  /*
+  const userIdFromToken = req.headers.get('x-user-id');
+
+  if (!userIdFromToken) {
+    return NextResponse.json({ message: "Unauthorized" }, {status: 401});
+  }
+  */
+  
   try {
-
-    /*
-    const userIdFromToken = req.headers.get('x-user-id');
-
-    if (!userIdFromToken) {
-      return NextResponse.json({ message: "Unauthorized" }, {status: 401});
-    }
-    */
-
-    await connectToDatabase();
-    const { searchParams } = new URL(req.url);
-    const emailAddress = searchParams.get('address');
-    console.log('email address in /by-email route:', emailAddress);
-
     const user = await User.findOne({ email: emailAddress });
     console.log('found user is by-email route:', user);
-
+    
     if (!user) {
       return NextResponse.json({ message: "User not found" }, {status: 404});
     }
