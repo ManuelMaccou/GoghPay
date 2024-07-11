@@ -9,11 +9,11 @@ import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertD
 import * as Avatar from '@radix-ui/react-avatar';
 import NotificationMessage from "../components/Notification";
 import { User } from "../types/types";
-import {createWalletClient, custom, encodeFunctionData, erc20Abi, createPublicClient, http, parseAbiItem} from 'viem';
+import {createWalletClient, custom, encodeFunctionData, erc20Abi, createPublicClient, http, parseAbiItem, Chain} from 'viem';
 import {createSmartAccountClient, ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner} from 'permissionless';
 import {signerToSafeSmartAccount} from 'permissionless/accounts';
 import {createPimlicoBundlerClient} from 'permissionless/clients/pimlico';
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import axios from "axios";
 import { InfoCircledIcon, AvatarIcon, CopyIcon } from "@radix-ui/react-icons";
 import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
@@ -99,6 +99,26 @@ function BuyContent() {
 
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
 
+  const chainMapping: { [key: string]: Chain } = {
+    'baseSepolia': baseSepolia,
+    'base': base,
+  };
+
+ // Utility function to get Chain object from environment variable
+  const getChainFromEnv = (envVar: string | undefined): Chain => {
+    if (!envVar) {
+      throw new Error('Environment variable for chain is not defined');
+    }
+    
+    const chain = chainMapping[envVar];
+    
+    if (!chain) {
+      throw new Error(`No chain found for environment variable: ${envVar}`);
+    }
+
+    return chain;
+  };
+
   const disableLogin = !ready || (ready && authenticated);
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
@@ -112,14 +132,14 @@ function BuyContent() {
 
           const privyClient = createWalletClient({
             account: embeddedWallet.address as `0x${string}`,
-            chain: baseSepolia,
+            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
             transport: custom(eip1193provider)
           });
 
           const customSigner = walletClientToSmartAccountSigner(privyClient);
 
           const publicClient = createPublicClient({
-            chain: baseSepolia,
+            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
             transport: http(),
           });
 
@@ -393,14 +413,14 @@ function BuyContent() {
   
         const privyClient = createWalletClient({
           account: wallet.address as `0x${string}`,
-          chain: baseSepolia,
+          chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
           transport: custom(eip1193provider)
         });
   
         const customSigner = walletClientToSmartAccountSigner(privyClient);
   
         const publicClient = createPublicClient({
-          chain: baseSepolia,
+          chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
           transport: http(),
         });
   
@@ -484,6 +504,7 @@ function BuyContent() {
   
         const params = new URLSearchParams({
           merchantId: merchant?._id ?? '',
+          productName: purchaseParams?.product?.toString() ?? 'undefined',
           price: price.toString(),
           transactionHash: transactionHash.toString(),
           checkout_method: "wallet",
@@ -541,6 +562,7 @@ function BuyContent() {
   
         const params = new URLSearchParams({
           merchantId: merchant?._id ?? '',
+          productName: purchaseParams?.product?.toString() ?? 'undefined',
           price: price.toString(),
           transactionHash: transactionHash.toString(),
           checkout_method: "wallet",
@@ -664,7 +686,6 @@ function BuyContent() {
 
   return (
     <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
-      <NoWalletForPurchaseError condition={noWalletForPurchase} /> 
       <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           embeddedWallet={embeddedWallet}
@@ -924,7 +945,7 @@ function BuyContent() {
             )
           )}
           </>
-        ) : guestCheckout ? (
+        ) : (
           <>
            <Flex direction={'column'} gap={'4'} align={'center'} justify={'center'}>
             <Button size={'4'} disabled={disableLogin}
@@ -946,27 +967,6 @@ function BuyContent() {
               Mobile pay
             </Button>
             </Flex>
-          </>
-        ) : (
-          <>
-          <Flex direction={'column'} gap={'4'} align={'center'} justify={'center'}>
-          <Button size={'4'} variant="surface" loading={isLoading} style={{
-            width: '200px'
-            }}
-            onClick={login}>
-            Login
-          </Button>
-
-          <Button size={'4'} variant="ghost" disabled={disableLogin}
-            style={{
-              width: '200px'
-            }}
-            onClick={() => {
-              setGuestCheckout(true);
-            }}>
-            Pay as guest
-          </Button>
-          </Flex>
           </>
         )}
       </Flex>

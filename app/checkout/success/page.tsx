@@ -1,12 +1,27 @@
 'use client';
 
+import { PrivyClient } from '@privy-io/server-auth';
 import { Merchant, User } from '@/app/types/types';
 import { Button, Callout, Card, Flex, Heading, Spinner, Strong, Text } from '@radix-ui/themes';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { getAccessToken, usePrivy } from '@privy-io/react-auth';
+import { ConnectedWallet, getAccessToken, usePrivy } from '@privy-io/react-auth';
 import { CheckIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/navigation';
+import { Chain, createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
+import { base, baseSepolia } from 'viem/chains';
+import { ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner } from 'permissionless';
+import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
+import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
+import { signerToSafeSmartAccount } from 'permissionless/accounts';
+
+
+interface PurchaseParams {
+  merchantId: string | null;
+  product: string | null;
+  price: number;
+  walletAddress?: string | null;
+}
 
 function SuccessContent() {
   const [merchant, setMerchant] = useState<Merchant>();
@@ -19,16 +34,37 @@ function SuccessContent() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const { user, ready } = usePrivy();
+  const { user, ready, login } = usePrivy();
   const privyId = user?.id;
 
   const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
 
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
+  const productName = searchParams.get('productName');
   const price = searchParams.get('price');
   const stripeCheckoutId = searchParams.get('session_id');
   const checkoutMethod = searchParams.get('checkout_method');
+
+  const chainMapping: { [key: string]: Chain } = {
+    'baseSepolia': baseSepolia,
+    'base': base,
+  };
+
+  // Utility function to get Chain object from environment variable
+  const getChainFromEnv = (envVar: string | undefined): Chain => {
+    if (!envVar) {
+      throw new Error('Environment variable for chain is not defined');
+    }
+    
+    const chain = chainMapping[envVar];
+    
+    if (!chain) {
+      throw new Error(`No chain found for environment variable: ${envVar}`);
+    }
+
+    return chain;
+  };
 
   useEffect(() => {
     if (!ready) return;
@@ -80,8 +116,8 @@ function SuccessContent() {
 
       if (!userResponse.ok) {
         if (userResponse.status === 404) {
-          console.log('creating a new user');
-          await createUser(email);
+          console.log('creating a new user with email:', email);
+          await importPrivyUser(email);
         } else {
           throw new Error(`Failed to find user: ${userResponse.statusText}`);
         }
@@ -92,14 +128,70 @@ function SuccessContent() {
       }
     };
 
-    async function createUser(email: string) {
+    async function createUser(email: string, privyId: string, wallet: ConnectedWallet, walletAddress: string) {
+      console.log('adding a user with privy ID and creating smart account');
+
+/*
+      let smartAccountAddress;
+      const eip1193provider = await wallet.getEthereumProvider();
+      const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
+
+      const privyClient = createWalletClient({
+        account: walletAddress as `0x${string}`,
+        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
+        transport: custom(eip1193provider)
+      });
+
+      const customSigner = walletClientToSmartAccountSigner(privyClient);
+
+      const publicClient = createPublicClient({
+        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
+        transport: http(),
+      });
+
+      const bundlerClient = createPimlicoBundlerClient({
+        transport: http(
+          "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
+        ),
+        entryPoint: ENTRYPOINT_ADDRESS_V07
+      }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
+
+      const account = await signerToSafeSmartAccount(publicClient, {
+        signer: customSigner,
+        entryPoint: ENTRYPOINT_ADDRESS_V07,
+        safeVersion: "1.4.1",
+        setupTransactions: [
+          {
+            to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
+              args: [
+                erc20PaymasterAddress,
+                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+              ],
+            }),
+          },
+        ],
+      })
+      console.log('account address:', account.address);
+      
+      if (account && account.address) {
+        smartAccountAddress = account.address
+      };
+*/
+
       const response = await fetch('/api/user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          privyId,
           email,
+          wallet,
+          walletAddress,
+          // smartAccountAddress,
           creationType: 'stripe'
         }),
       });
@@ -111,7 +203,41 @@ function SuccessContent() {
       setCheckoutUser(newStripeCheckoutUser.user);
     };
 
-    // Decide which function to call based on checkout method
+    async function importPrivyUser (email: string) {
+      console.log('importing a privy user with email:', email);
+      const accessToken = await getAccessToken();
+      const userData = {
+        email: email,
+      };
+  
+      try {
+        const response = await fetch('/api/user/import-privy-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify(userData),
+        });
+    
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    
+        const data = await response.json();
+        console.log('data from importing user:', data.user);
+
+        const privyId = data.user.id;
+        const wallet = data.user.wallet;
+        const walletAddress = data.user.wallet.address;
+        console.log('attempting login');
+        login();
+        await createUser(email, privyId, wallet, walletAddress);
+      } catch (error) {
+        console.error('Error importing user:', error);
+      }
+    }
+
     async function fetchUserDetails() {
       if (checkoutMethod === 'wallet') {
         await fetchUserFromWallet();
@@ -149,6 +275,47 @@ function SuccessContent() {
     if (checkoutUser) {
       console.log("checkout user:", checkoutUser);
       checkSubscriptionStatus();
+    }
+  }, [checkoutUser, merchantId, ready]);
+
+  useEffect(() => {
+    if (!checkoutUser || !merchantId || !ready) return;
+    if (checkoutMethod === 'wallet') return;
+
+    async function saveTransaction() {
+      const transactionData = {
+        merchantId: merchantId,
+        buyerId: checkoutUser?._id,
+        buyerPrivyId: checkoutUser?.privyId,
+        productName: productName,
+        productPrice: price,
+        paymentType: 'mobile pay'
+      }
+      const accessToken = await getAccessToken();
+      try {
+        const response = await fetch('/api/transaction', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+  
+          },
+          body: JSON.stringify(transactionData),
+        });
+    
+        if (!response.ok) {
+          throw new Error('Failed to save transaction');
+        }
+    
+        const data = await response.json();
+      } catch (error) {
+        console.error('Error saving transaction:', error);
+      }
+    }
+
+    if (checkoutUser) {
+      console.log("checkout user:", checkoutUser);
+      saveTransaction();
     }
   }, [checkoutUser, merchantId, ready]);
 
@@ -284,13 +451,23 @@ function SuccessContent() {
                     </Button>
                   </>
                 ) : (
-                  <Flex justify={"center"}>
+                  <Flex direction={'column'} align={'center'} justify={"center"} gap={'6'}>
                     <Callout.Root variant="soft" color="green">
                       <Callout.Icon>
                         <CheckIcon />
                       </Callout.Icon>
                       <Callout.Text align={"center"}>Got it!</Callout.Text>
                     </Callout.Root>
+                    <Button
+                      variant="ghost"
+                      size={"4"}
+                      style={{
+                        width: "250px",
+                      }}
+                      onClick={() => router.push("/")}
+                    >
+                      Return home
+                    </Button>
                   </Flex>
                 )}
               </Flex>

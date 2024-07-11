@@ -7,7 +7,7 @@ const transactionSchema = new mongoose.Schema({
   buyer: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   productName: { type: String, required: true },
   productPrice: { type: Number, required: true },
-  paymentType: { type: String, required: true },
+  paymentType: { type: String, required: true }, // 'sponsored crypto', 'crypto', 'mobile pay'
   transactionHash: { type: String },
 }, { timestamps: true });
 

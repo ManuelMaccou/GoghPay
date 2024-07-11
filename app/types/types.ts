@@ -27,7 +27,7 @@ export interface Transaction {
   productName: string;
   productPrice: number;
   transactionHash: string;
-  paymentType: string;
+  paymentType: string; // 'sponsored crypto', 'crypto', 'mobile pay'
   createdAt: Date;
 }
 

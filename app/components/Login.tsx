@@ -2,8 +2,8 @@ import React from 'react';
 import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import axios, { AxiosError } from 'axios';
 import { Button, Flex } from "@radix-ui/themes";
-import { createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { Chain, createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
+import { base, baseSepolia } from 'viem/chains';
 import { ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner } from 'permissionless';
 import { signerToSafeSmartAccount } from 'permissionless/accounts';
 
@@ -12,13 +12,44 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Login() {
+type ButtonVariant = "solid" | "outline" | "ghost" | "classic" | "soft" | "surface";
+type ButtonSize = '1' | '2' | '3' | '4'; 
+type ButtonJustify = "end" | "center" | "start" | "between";
+
+interface LoginProps {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  width?: string;
+  justify?: ButtonJustify;
+}
+
+export default function Login({ variant = 'outline', size = '3', width = 'fit-content', justify = 'end' }: LoginProps) {
   const {wallets} = useWallets();
   const wallet = wallets[0];
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
+
+  const chainMapping: { [key: string]: Chain } = {
+    'baseSepolia': baseSepolia,
+    'base': base,
+  };
+
+ // Utility function to get Chain object from environment variable
+  const getChainFromEnv = (envVar: string | undefined): Chain => {
+    if (!envVar) {
+      throw new Error('Environment variable for chain is not defined');
+    }
+    
+    const chain = chainMapping[envVar];
+    
+    if (!chain) {
+      throw new Error(`No chain found for environment variable: ${envVar}`);
+    }
+
+    return chain;
+  };
 
   const { getAccessToken, authenticated, logout, ready } = usePrivy();
   const { login } = useLogin({
@@ -33,14 +64,14 @@ export default function Login() {
 
           const privyClient = createWalletClient({
             account: embeddedWallet.address as `0x${string}`,
-            chain: baseSepolia,
+            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
             transport: custom(eip1193provider)
           });
 
           const customSigner = walletClientToSmartAccountSigner(privyClient);
 
           const publicClient = createPublicClient({
-            chain: baseSepolia,
+            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
             transport: http(),
           });
 
@@ -123,8 +154,8 @@ export default function Login() {
           Log out
         </Button>
       ) : (
-        <Flex direction={'row'} justify={'end'} width={'100%'} mx={'4'}>
-          <Button size={'3'} variant='outline' onClick={login}>
+        <Flex direction={'row'} justify={justify} width={'100%'} mx={'4'}>
+           <Button size={size} variant={variant} style={{width: width}} onClick={login}>
             Log in
           </Button>
         </Flex>

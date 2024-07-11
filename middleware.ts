@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrivyClient } from '@privy-io/server-auth';
 
 // Initialize the PrivyClient with the app ID and secret
-const privy = new PrivyClient(process.env.NEXT_PUBLIC_PRIVY_APP_ID!, process.env.NEXT_PUBLIC_PRIVY_SECRET!);
+const privy = new PrivyClient(process.env.NEXT_PUBLIC_PRIVY_APP_ID!, process.env.PRIVY_SECRET!);
 
 export async function middleware(req: NextRequest) {
   try {

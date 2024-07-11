@@ -508,7 +508,6 @@ export default function NewTransfer() {
 
   return (
     <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
-      <NoWalletForPurchaseError condition={noWalletForPurchase} />  
       <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           embeddedWallet={embeddedWallet}
