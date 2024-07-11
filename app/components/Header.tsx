@@ -36,10 +36,10 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
         {authenticated ? (
           <>
             {!isBalanceLoading ? (
-              <Badge size={'3'}>Balance: ${balance}</Badge>
+              <Badge size={'3'}>USDC Balance: ${balance}</Badge>
             ) : (
               <Badge size={'3'}>
-                Balance: 
+                USDC balance: 
                 <Spinner />
               </Badge>
             )}
@@ -118,8 +118,10 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <FontAwesomeIcon style={{padding: '20px'}} icon={faEnvelope} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`mailto:support@ongogh.com`)}>Contact us</Button>
+                            <a href="mailto:support@ongogh.com" style={{ width: '100%', display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+                              <FontAwesomeIcon style={{ padding: '20px' }} icon={faEnvelope} />
+                              <Button variant='ghost' size={'4'} style={{ color: 'black', width: '100%', justifyContent: 'start' }}>Contact us</Button>
+                            </a>
                           </Flex>
                         </Flex>
                       </>

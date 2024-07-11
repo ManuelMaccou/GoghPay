@@ -54,7 +54,7 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
             defaultExperience: 'buy',
         },
         onSuccess: () => {
-            router.push(redirectURL);
+            router.replace(redirectURL);
         },
         experienceLoggedIn: 'new_tab',
     };

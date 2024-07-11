@@ -2,11 +2,11 @@
 
 import { User } from "@/app/types/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/app/components/Header";
 import { ConnectedWallet, getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Badge, Box, Button, Callout, Card, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
-import { ArrowLeftIcon, AvatarIcon, ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
+import { ArrowLeftIcon, AvatarIcon, CopyIcon, ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { CoinbaseButton } from "@/app/buy/components/coinbaseOnramp";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -36,6 +36,7 @@ export default function NewTransfer() {
   const [editAddressMode, setEditAddressMode] = useState(false);
   const [addressUpdated, setAddressUpdated] = useState(false);
   const [walletUpdateMessage, setWalletUpdateMessage] = useState<string | null>(null);
+  const [copyConfirmMessage, setCopyConfirmMessage] = useState<string | null>(null);
   const [transferInputValue, setTransferInputValue] = useState('');
   const [transferValueIsValid, setTransferValueIsValid] = useState(false);
   const [transferStarted, setTransferStarted] = useState(false);
@@ -349,6 +350,20 @@ export default function NewTransfer() {
     }
   }
 
+  const copyToClipboard = useCallback(() => {
+    if (walletForPurchase) {
+    navigator.clipboard.writeText(walletForPurchase)
+      .then(() => {
+        setCopyConfirmMessage('Address copied to clipboard');
+        setTimeout(() => setCopyConfirmMessage(''), 3000); // Clear message after 3 seconds
+      })
+      .catch(() => {
+        setCopyConfirmMessage('Failed to copy address');
+        setTimeout(() => setCopyConfirmMessage(''), 3000); // Clear message after 3 seconds
+      });
+    }
+  }, [walletForPurchase]);
+
   useEffect(() => {
     const numericTransferInputValue = Number(transferInputValue);
     if (transferInputValue && numericTransferInputValue > 0) {
@@ -493,8 +508,8 @@ export default function NewTransfer() {
 
   return (
     <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
-     <NoWalletForPurchaseError condition={noWalletForPurchase} />  
-    <BalanceProvider walletForPurchase={walletForPurchase}>
+      <NoWalletForPurchaseError condition={noWalletForPurchase} />  
+      <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           embeddedWallet={embeddedWallet}
           authenticated={authenticated}
@@ -506,149 +521,209 @@ export default function NewTransfer() {
         <ArrowLeftIcon style={{color: 'black'}}/>
           <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
       </Button>  
-      <Flex direction={'column'} justify={'center'} gap={'4'}>
-        <Text>
-          We integrate with Coinbase to offer quick, safe transfers to your bank.
-        </Text>
-        <TextField.Root value={address} onChange={handleAddressChange} disabled={isValidAddress} placeholder="Enter Base USDC address from Coinbase">
-        <TextField.Slot side="right">
-          <IconButton size="1" variant="ghost" onClick={handleEditAddress}>
-            <Pencil2Icon height="14" width="14" />
-          </IconButton>
-        </TextField.Slot>
-        </TextField.Root>
-        {address && !isValidAddress && (
-          <Text color="red" mt={'-3'}>Enter a valid address</Text>
-        )}
-        {address && addressUpdated && isValidAddress && (
-          <Text mt={'-3'}>Address ready</Text>
-        )}
-        {!currentUser?.coinbaseAddress && (
-          <Callout.Root color="orange">
-            <Callout.Icon>
-              <ExclamationTriangleIcon />
-            </Callout.Icon>
-            <Callout.Text>
-              <Link href='https://www.ongogh.com/onboard' target='_blank' rel='noopener noreferrer'>
-                Read this to get your address.
-              </Link> 
-            </Callout.Text>
-          </Callout.Root>
-        )}
-      </Flex>
       <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'center'} gap={'4'}>
-        <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
-            boxShadow: 'var(--shadow-2)',
-            borderRadius: '10px'
-          }}>
-          <Heading>Transfer from bank</Heading>
-          <Text>
-            Move funds for free from your bank to Gogh and make purchases at your favorite vendors.
-          </Text>
-          <CoinbaseButton
-            destinationWalletAddress={walletForPurchase || ""}
-            price={0}
-            redirectURL={redirectURL}
-          />
-        
-        </Flex>
-        <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
-            boxShadow: 'var(--shadow-2)',
-            borderRadius: '10px'
-          }}>
-          <Heading>Deposit to Coinbase</Heading>
-          <Text mt={'-3'}>Enter amount</Text>
-          <Flex direction={'row'} align={'center'} style={{boxShadow: 'var(--shadow-1)'}} p={'3'}>
-            <TextField.Root variant="soft" size="2" placeholder="0" value={transferInputValue} onChange={handleTransferInputChange} style={{backgroundColor: "white", fontSize: '30px', fontWeight: 'bold'}} />
-            <Badge size={'3'} variant="soft">USDC</Badge>
-          </Flex>
-          <Flex direction={'column'} align={'center'} gap={'4'}>
-            <Text size={'2'} align={'center'}>If this is your first deposit, we recommend making a test transaction of 1 USDC.</Text>
-            {currentUser?.coinbaseAddress ? (
-              <Dialog.Root>
-                <Dialog.Trigger>
-                  <Button highContrast style={{width: '200px'}} disabled={!transferValueIsValid || transferStarted}>Review transaction</Button>
-                </Dialog.Trigger>
-                <Dialog.Content width={'90vw'}>
-                  <Flex direction={'column'} width={'100%'}>
-                  <Dialog.Title align={'center'}>Confirm transfer</Dialog.Title>
-                  <VisuallyHidden asChild>
-                    <Dialog.Description size="2" mb="4">
-                      Confirm transaction details
-                    </Dialog.Description>
-                  </VisuallyHidden>
-                  <Separator size={'4'} mb={'5'}/>
-                  <Text align={'center'} size={'7'} weight={'bold'}>${transferInputValue}.00</Text>
-                  <Text size={'2'} align={'center'}>{transferInputValue} USDC @ $1.00</Text>
-                  <Flex direction={'column'} mt={'3'} p={'3'} style={{border: '1px solid #e0e0e0', borderRadius: '5px'}}>
-                    <Flex direction={'row'} justify={'between'}>
-                      <Text size={'4'} weight={'bold'}>From:</Text>
-                      <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
-                        <Flex direction={'row'} gap={'2'} align={'center'}>
-                          <FontAwesomeIcon icon={faWallet} />
-                          <Text>Your Gogh account</Text>
-                        </Flex>
-                        <Text size={'2'} align={'right'} wrap={'wrap'}>{walletForPurchase?.slice(0, 6)}...{walletForPurchase?.slice(-4)}</Text>
-                      </Flex>
-                    </Flex>
-                    <Separator size={'4'} my={'3'} />
-                    <Flex direction={'row'} justify={'between'}>
-                      <Text size={'4'} weight={'bold'}>To:</Text>
-                      <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
-                        <Flex direction={'row'} gap={'2'} align={'center'}>
-                          <FontAwesomeIcon icon={faWallet} />
-                          <Text>Your Coinbase account</Text>
-                        </Flex>
-                        <Text size={'2'} align={'right'} wrap={'wrap'}>{currentUser?.coinbaseAddress.slice(0, 6)}...{currentUser?.coinbaseAddress.slice(-4)}</Text>
-                      </Flex>
+        {ready && (
+          authenticated ? (
+            <>
+              <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                boxShadow: 'var(--shadow-2)',
+                borderRadius: '10px'
+                }}>
+                <Heading>Transfer from bank</Heading>
+                <Text>
+                  We integrate with Coinbase to offer quick, safe transfers from your bank.
+                </Text>
+                <CoinbaseButton
+                  destinationWalletAddress={walletForPurchase || ""}
+                  price={0}
+                  redirectURL={redirectURL}
+                />
+              </Flex>
+              {currentUser && !currentUser.merchant && (
+                <>
+                  <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                    boxShadow: 'var(--shadow-2)',
+                    borderRadius: '10px'
+                    }}>
+                    <Heading align={'center'}>Transfer from a crypto wallet</Heading>
+                    {embeddedWallet ? (
+                      <Text>
+                      Copy the address below to transfer funds into your Gogh account.
+                    </Text>
+                    ) : (
+                    <Text>
+                      Copy your address below to transfer funds from an existing wallet.
+                    </Text>
+                    )}
+              
+                    <Flex direction={'column'} pb={'5'} width={'100%'}>
+                      <TextField.Root value={walletForPurchase || ''} disabled>
+                        <TextField.Slot side="right">
+                          <IconButton size="1" variant="ghost" onClick={copyToClipboard}>
+                            <CopyIcon height="20" width="20" />
+                          </IconButton>
+                        </TextField.Slot>
+                      </TextField.Root>
+                      {copyConfirmMessage && (
+                        <Text size={'2'}>
+                          {copyConfirmMessage}
+                        </Text>
+                      )}
+
                     </Flex>
                   </Flex>
-                  <Flex direction={'column'} align={'center'} gap={'7'} mt={'5'}>
-                    <Dialog.Close>
-                      <Button size={'4'} style={{width: '200px'}} 
-                      onClick={() => {
-                        const numericTransferInputValue = Number(transferInputValue);
-                        if (numericTransferInputValue > 0 && walletForPurchase && currentUser.coinbaseAddress) {
-                          sendUSDC(currentUser.coinbaseAddress as `0x${string}`, numericTransferInputValue);
-                          setError(null);
-                          setPendingMessage(null);
-                          setTransferErrorMessage(null);
-                          setTransferSuccessMessage(null);
-                        } else {
-                          console.error("Invalid transfer amount or wallet address.");
-                          setError("Invalid transfer amount or wallet address. Unable to process the transaction.");
-                        }
+              
+
+                  {Boolean(balance && balance > 0) && (
+                    <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                      boxShadow: 'var(--shadow-2)',
+                      borderRadius: '10px'
                       }}>
-                        Confirm and send
-                      </Button>
-                    </Dialog.Close>
-                    <Dialog.Close>
-                      <Button size={'4'} variant="ghost" color="gray" style={{width: '200px'}}>Cancel</Button>
-                    </Dialog.Close>
-                  </Flex>
+                      <Heading>Deposit to Coinbase</Heading>
+                      <Flex direction={'column'} justify={'center'} gap={'4'} width={'100%'}>
+                        <TextField.Root value={address} onChange={handleAddressChange} disabled={isValidAddress} placeholder="Enter Base USDC address from Coinbase">
+                        <TextField.Slot side="right">
+                          <IconButton size="1" variant="ghost" onClick={handleEditAddress}>
+                            <Pencil2Icon height="14" width="14" />
+                          </IconButton>
+                        </TextField.Slot>
+                        </TextField.Root>
+                        {address && !isValidAddress && (
+                          <Text color="red" mt={'-3'}>Enter a valid address</Text>
+                        )}
+                        {address && addressUpdated && isValidAddress && (
+                          <Text mt={'-3'}>Address ready</Text>
+                        )}
+                        {!currentUser?.coinbaseAddress && (
+                          <Flex direction={'row'} gap={'2'} align={'center'} justify={'center'} mt={'-2'} mb={'3'}>
+                            <ExclamationTriangleIcon />
+                            <Link underline="always" href='https://www.ongogh.com/onboard' target='_blank' rel='noopener noreferrer'>
+                                Read this to get your address.
+                              </Link> 
+                          </Flex>
+                    
+                        )}
+                      </Flex>
+                      <Flex direction={'row'} align={'center'} style={{boxShadow: 'var(--shadow-1)'}} p={'3'}>
+                        <TextField.Root variant="soft" placeholder="Enter amount" value={transferInputValue} onChange={handleTransferInputChange} style={{backgroundColor: "white", fontSize: '20px', fontWeight: 'bold'}} />
+                        <Badge size={'3'} variant="soft">USDC</Badge>
+                      </Flex>
+                      <Flex direction={'column'} align={'center'} gap={'4'}>
+                        <Text size={'2'} align={'center'}>If this is your first deposit, we recommend making a test transaction of 1 USDC.</Text>
+                        {currentUser?.coinbaseAddress ? (
+                          <Dialog.Root>
+                            <Dialog.Trigger>
+                              <Button highContrast style={{width: '200px'}} disabled={!transferValueIsValid || transferStarted}>Review transaction</Button>
+                            </Dialog.Trigger>
+                            <Dialog.Content width={'90vw'}>
+                              <Flex direction={'column'} width={'100%'}>
+                                <Dialog.Title align={'center'}>Confirm transfer</Dialog.Title>
+                                <VisuallyHidden asChild>
+                                  <Dialog.Description size="2" mb="4">
+                                  Confirm transaction details
+                                  </Dialog.Description>
+                                </VisuallyHidden>
+                                <Separator size={'4'} mb={'5'}/>
+                                <Text align={'center'} size={'7'} weight={'bold'}>${transferInputValue}.00</Text>
+                                <Text size={'2'} align={'center'}>{transferInputValue} USDC @ $1.00</Text>
+                                <Flex direction={'column'} mt={'3'} p={'3'} style={{border: '1px solid #e0e0e0', borderRadius: '5px'}}>
+                                  <Flex direction={'row'} justify={'between'}>
+                                    <Text size={'4'} weight={'bold'}>From:</Text>
+                                    <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
+                                      <Flex direction={'row'} gap={'2'} align={'center'}>
+                                        <FontAwesomeIcon icon={faWallet} />
+                                        <Text>Your Gogh account</Text>
+                                      </Flex>
+                                      <Text size={'2'} align={'right'} wrap={'wrap'}>{walletForPurchase?.slice(0, 6)}...{walletForPurchase?.slice(-4)}</Text>
+                                    </Flex>
+                                  </Flex>
+                                  <Separator size={'4'} my={'3'} />
+                                  <Flex direction={'row'} justify={'between'}>
+                                    <Text size={'4'} weight={'bold'}>To:</Text>
+                                    <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
+                                      <Flex direction={'row'} gap={'2'} align={'center'}>
+                                        <FontAwesomeIcon icon={faWallet} />
+                                        <Text>Your Coinbase account</Text>
+                                      </Flex>
+                                      <Text size={'2'} align={'right'} wrap={'wrap'}>{currentUser?.coinbaseAddress.slice(0, 6)}...{currentUser?.coinbaseAddress.slice(-4)}</Text>
+                                    </Flex>
+                                  </Flex>
+                                </Flex>
+                                <Flex direction={'column'} align={'center'} gap={'7'} mt={'5'}>
+                                  <Dialog.Close>
+                                    <Button size={'4'} style={{width: '200px'}} 
+                                      onClick={() => {
+                                        const numericTransferInputValue = Number(transferInputValue);
+                                        if (numericTransferInputValue > 0 && walletForPurchase && currentUser.coinbaseAddress) {
+                                          sendUSDC(currentUser.coinbaseAddress as `0x${string}`, numericTransferInputValue);
+                                          setError(null);
+                                          setPendingMessage(null);
+                                          setTransferErrorMessage(null);
+                                          setTransferSuccessMessage(null);
+                                        } else {
+                                          console.error("Invalid transfer amount or wallet address.");
+                                          setError("Invalid transfer amount or wallet address. Unable to process the transaction.");
+                                        }
+                                      }}>
+                                      Confirm and send
+                                    </Button>
+                                  </Dialog.Close>
+                                  <Dialog.Close>
+                                    <Button size={'4'} variant="ghost" color="gray" style={{width: '200px'}}>Cancel</Button>
+                                  </Dialog.Close>
+                                </Flex>
+                              </Flex>
+                            </Dialog.Content>
+                          </Dialog.Root>
+                        ) : (
+                          <Text color="red">Enter USDC address to Deposit.</Text>
+                        )}
+                        {pendingMessage && (
+                          <Box mx={'3'}>
+                            <NotificationMessage message={pendingMessage} type="pending" />
+                          </Box>
+                        )}
+                        {tranferSuccessMessage && (
+                          <Box mx={'3'}>
+                            <NotificationMessage message={tranferSuccessMessage} type="success" />
+                          </Box>
+                        )}
+                        {transferErrorMessage && (
+                          <Box mx={'3'}>
+                            <NotificationMessage message={transferErrorMessage} type="error" />
+                          </Box>
+                        )}
+                      </Flex>
+                    </Flex>
+                  )}
+
+                </>
+              )}
+              {currentUser && currentUser.merchant && (
+                <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                  boxShadow: 'var(--shadow-2)',
+                  borderRadius: '10px'
+                  }}>
+                  <Heading>Transfer to bank</Heading>
+                  <Text>
+                    Access your Coinbase account to transfer funds from Coinbase to your bank.
+                  </Text>
+                  <a href="https://www.coinbase.com" target="_blank" rel="noopener noreferrer">
+                    <Button style={{backgroundColor: '#0051FD', width: '200px'}}>
+                        Go to your account
+                    </Button>
+                  </a>
                 </Flex>
-              </Dialog.Content>
-            </Dialog.Root>
-            ) : (
-              <Text color="red">Enter USDC address to Deposit.</Text>
-            )}
-            {pendingMessage && (
-              <Box mx={'3'}>
-                <NotificationMessage message={pendingMessage} type="pending" />
-              </Box>
-            )}
-            {tranferSuccessMessage && (
-              <Box mx={'3'}>
-                <NotificationMessage message={tranferSuccessMessage} type="success" />
-              </Box>
-            )}
-            {transferErrorMessage && (
-              <Box mx={'3'}>
-                <NotificationMessage message={transferErrorMessage} type="error" />
-              </Box>
-            )}
-          </Flex>
-        </Flex>
+              )}
+            </>
+          ) : (
+            <Flex direction={'column'} height={'200px'} align={'center'} justify={'center'}>
+              <Text align={'center'}>
+                Please log in to view this page
+              </Text>
+            </Flex>
+          )
+        )}
       </Flex>
     </Flex>
   )
