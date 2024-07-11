@@ -51,7 +51,7 @@ function SuccessContent() {
     'base': base,
   };
 
-  // Utility function to get Chain object from environment variable
+  // Utility function to get Chain object from environment variable.
   const getChainFromEnv = (envVar: string | undefined): Chain => {
     if (!envVar) {
       throw new Error('Environment variable for chain is not defined');
@@ -230,8 +230,6 @@ function SuccessContent() {
         const privyId = data.user.id;
         const wallet = data.user.wallet;
         const walletAddress = data.user.wallet.address;
-        console.log('attempting login');
-        login();
         await createUser(email, privyId, wallet, walletAddress);
       } catch (error) {
         console.error('Error importing user:', error);
@@ -282,15 +280,16 @@ function SuccessContent() {
     if (!checkoutUser || !merchantId || !ready) return;
     if (checkoutMethod === 'wallet') return;
 
+    const transactionData = {
+      merchantId: merchantId,
+      buyerId: checkoutUser?._id,
+      buyerPrivyId: checkoutUser?.privyId,
+      productName: productName,
+      productPrice: price,
+      paymentType: 'mobile pay'
+    }
+
     async function saveTransaction() {
-      const transactionData = {
-        merchantId: merchantId,
-        buyerId: checkoutUser?._id,
-        buyerPrivyId: checkoutUser?.privyId,
-        productName: productName,
-        productPrice: price,
-        paymentType: 'mobile pay'
-      }
       const accessToken = await getAccessToken();
       try {
         const response = await fetch('/api/transaction', {
@@ -317,7 +316,7 @@ function SuccessContent() {
       console.log("checkout user:", checkoutUser);
       saveTransaction();
     }
-  }, [checkoutUser, merchantId, ready]);
+  }, [checkoutUser, merchantId, ready, checkoutMethod, price, productName]);
 
   const handleNewSubscription = async (subscriberStatus: String) => {
     console.log('checkoutuser:', checkoutUser);

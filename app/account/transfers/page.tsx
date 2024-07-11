@@ -109,8 +109,6 @@ function isError(error: any): error is Error {
           <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
             <ArrowLeftIcon style={{color: 'black'}}/>
             <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
-            <Text>View transfers from your Gogh account to Coinbase</Text>
-            <Text>For </Text>
           </Button>
     
           {ready ? (
