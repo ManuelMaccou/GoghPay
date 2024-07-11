@@ -1,7 +1,7 @@
 
-import User from '@/app/models/User';
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/app/utils/mongodb';
+import User from '@/app/models/User';
 
 export async function POST(req: NextRequest) {
   try {

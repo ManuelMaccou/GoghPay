@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Merchant from '@/app/models/Merchant';
 import connectToDatabase from '@/app/utils/mongodb';
+import Merchant from '@/app/models/Merchant';
+
 
 type Params = {
   userId: string

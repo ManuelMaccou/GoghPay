@@ -56,7 +56,7 @@ export default function Home() {
     return chain;
   };
   
-/*
+
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
       console.log('login successful');
@@ -163,7 +163,6 @@ export default function Home() {
         console.error("Privy login error:", error);
     },
   });
-  */
 
   const handleNewSaleClick = () => {
     router.push('/sell');
@@ -270,10 +269,7 @@ export default function Home() {
         ) : (
           !isLoading && (
             <Flex direction={'column'} justify={'center'} align={'center'}>
-              <Login
-                variant='solid'
-                width='250px'
-                justify='center' />
+              <Login variant='solid' width='200px' justify='center' />
             </Flex>
           )
         )}

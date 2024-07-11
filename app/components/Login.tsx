@@ -22,8 +22,7 @@ interface LoginProps {
   width?: string;
   justify?: ButtonJustify;
 }
-
-export default function Login({ variant = 'outline', size = '3', width = 'fit-content', justify = 'end' }: LoginProps) {
+const Login: React.FC<LoginProps> = ({ variant = 'outline', size = '3', width = 'fit-content', justify = 'end' }) => {
   const {wallets} = useWallets();
   const wallet = wallets[0];
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
@@ -51,11 +50,11 @@ export default function Login({ variant = 'outline', size = '3', width = 'fit-co
     return chain;
   };
 
-  const { getAccessToken, authenticated, logout, ready } = usePrivy();
+  const { authenticated, logout } = usePrivy();
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-
       if (isNewUser) {
+        console.log("is new user")
         let smartAccountAddress;
         
         if (embeddedWallet) {
@@ -110,6 +109,7 @@ export default function Login({ variant = 'outline', size = '3', width = 'fit-co
             smartAccountAddress: smartAccountAddress,
           };
 
+          console.log('creating new user');
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
           console.log('New user created:', response.data);
         } catch (error: unknown) {
@@ -163,3 +163,5 @@ export default function Login({ variant = 'outline', size = '3', width = 'fit-co
     </>
   );
 };
+
+export default Login;

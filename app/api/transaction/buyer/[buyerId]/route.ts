@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/app/utils/mongodb';
 import Transaction from '@/app/models/Transaction';
-import Merchant from '@/app/models/Merchant'; // Ensure Merchant is imported if needed for type inference
 
 type Params = {
   buyerId: string;
@@ -22,6 +21,6 @@ export async function GET(req: NextRequest, context: { params: Params }) {
     return NextResponse.json({ message: "No transactions found." }, { status: 404 });
   }
 
-  console.log("Buyer transactions found:");
+  console.log("Buyer transactions found:", totalTransactions);
   return NextResponse.json({ totalTransactions }, { status: 200 });
 }
