@@ -3,9 +3,10 @@
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, User, Transaction } from "@/app/types/types";
+import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Table, Text, TextField } from "@radix-ui/themes";
+import { Badge, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Table, Text, TextField } from "@radix-ui/themes";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
@@ -36,6 +37,15 @@ export default function Sales({ params }: { params: { userId: string } }) {
   const router = useRouter();
   const visitingUser = params.userId
 
+  const getPaymentTypeInfo = (paymentType: string) => {
+    const types: { [key: string]: { label: string; color: string } } = {
+      'sponsored crypto': { label: 'Crypto', color: '#4CAF50' },
+      'crypto': { label: 'Crypto', color: '#4CAF50' },
+      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' }
+    };
+    return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       if (!user) return;
@@ -58,6 +68,49 @@ export default function Sales({ params }: { params: { userId: string } }) {
       fetchUser();
     }
   }, [authenticated, ready, user, visitingUser]);
+
+  useEffect(() => {
+    if (!embeddedWallet) return;
+    if (!currentUser) return;
+    if (currentUser.smartAccountAddress) return;
+
+    const addSmartAccountAddress = async () => {
+      const accessToken = await getAccessToken();
+      try {
+       const smartAccountAddress = await createSmartAccount(embeddedWallet);
+
+        if (!smartAccountAddress) {
+          throw new Error('Failed to create smart account.');
+        }
+
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartAccountAddress,
+            privyId: user?.id
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create smart account');
+        }
+        console.log('successfully added smart account')
+        
+      } catch (error) {
+        console.error('Error adding smart account:', error);
+      } finally {
+       
+      }
+    };
+
+    if (user && embeddedWallet && currentUser && !currentUser.smartAccountAddress) {
+      addSmartAccountAddress();
+    }
+  }, [user, currentUser, embeddedWallet]);
 
   useEffect(() => {
     if (!ready || !authenticated) {
@@ -161,10 +214,11 @@ export default function Sales({ params }: { params: { userId: string } }) {
   
 
   return (
- 
+    <>
     <Flex direction={'column'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'}>
       <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
+          merchant={currentUser?.merchant}
           embeddedWallet={embeddedWallet}
           authenticated={authenticated}
           walletForPurchase={walletForPurchase}
@@ -173,7 +227,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
       </BalanceProvider>
       <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
         <ArrowLeftIcon style={{color: 'black'}}/>
-          <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Crypto Sales</Text>
+          <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Sales</Text>
       </Button>
       {ready ? (
         authenticated ? (
@@ -220,12 +274,15 @@ export default function Sales({ params }: { params: { userId: string } }) {
                 <Table.Row>
                   <Table.ColumnHeaderCell>Price</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
                 </Table.Row>
               </Table.Header>
     
               <Table.Body>
-                  {totalTransactions?.map((transaction) => (
+                {totalTransactions?.map((transaction) => {
+                  const { label, color } = getPaymentTypeInfo(transaction.paymentType);
+                  return (
                     <Table.Row key={transaction._id}>
                       <Table.RowHeaderCell>${transaction.productPrice.toFixed(2)}</Table.RowHeaderCell>
                       <Table.Cell>
@@ -234,13 +291,17 @@ export default function Sales({ params }: { params: { userId: string } }) {
                         </Text>
                       </Table.Cell>
                       <Table.Cell>
+                        <Badge radius="large" style={{ backgroundColor: color, color: 'white', padding: '3px 7px 3px 7px' }}>{label}</Badge>
+                      </Table.Cell>
+                      <Table.Cell>
                         <Text wrap={'nowrap'}>
                           {format(new Date(transaction.createdAt), 'MMM dd, yyyy')}
                         </Text>
                       </Table.Cell>
                     </Table.Row>
-                  ))}
-                </Table.Body>
+                  );
+                })}
+              </Table.Body>
             </Table.Root>
             </Box>
             {merchant?.promo && (
@@ -289,5 +350,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
       )}
       
     </Flex>
+    </>
   );
 }

@@ -5,7 +5,6 @@ import { ConnectedWallet, getEmbeddedConnectedWallet, useLogin, usePrivy, useWal
 import { useBalance } from '../contexts/BalanceContext';
 import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link } from '@radix-ui/themes';
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
-import Login from './Login';
 import { User } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRightFromBracket, faEnvelope, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
@@ -18,11 +17,13 @@ import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
 import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
 import { signerToSafeSmartAccount } from 'permissionless/accounts';
 import axios from 'axios';
+import { createSmartAccount } from '../utils/createSmartAccount';
 
 
 
 
 interface HeaderProps {
+  merchant: boolean | undefined;
   embeddedWallet: ConnectedWallet | null;
   authenticated: boolean;
   currentUser?: User;
@@ -33,7 +34,7 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
+export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
   const { user, ready, logout} = usePrivy();
   const { balance, isBalanceLoading } = useBalance();
   const {wallets} = useWallets();
@@ -43,87 +44,20 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
-  const chainMapping: { [key: string]: Chain } = {
-    'baseSepolia': baseSepolia,
-    'base': base,
-  };
-
- // Utility function to get Chain object from environment variable
-  const getChainFromEnv = (envVar: string | undefined): Chain => {
-    if (!envVar) {
-      throw new Error('Environment variable for chain is not defined');
-    }
-    
-    const chain = chainMapping[envVar];
-    
-    if (!chain) {
-      throw new Error(`No chain found for environment variable: ${envVar}`);
-    }
-
-    return chain;
-  };
-
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
       console.log('login successful');
+      console.log("embedded wallet object before function:", embeddedWallet);
 
-      const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-      console.log("wallet object:", wallet);
+      let smartAccountAddress;
 
       if (isNewUser) {
-        let smartAccountAddress;
-        
         if (embeddedWallet) {
-          const eip1193provider = await wallet.getEthereumProvider();
-          const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
-
-          const privyClient = createWalletClient({
-            account: embeddedWallet.address as `0x${string}`,
-            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-            transport: custom(eip1193provider)
-          });
-
-          const customSigner = walletClientToSmartAccountSigner(privyClient);
-
-          const publicClient = createPublicClient({
-            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-            transport: http(),
-          });
-    
-          const bundlerClient = createPimlicoBundlerClient({
-            transport: http(
-              "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
-            ),
-            entryPoint: ENTRYPOINT_ADDRESS_V07
-          }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
-
-          const account = await signerToSafeSmartAccount(publicClient, {
-            signer: customSigner,
-            entryPoint: ENTRYPOINT_ADDRESS_V07,
-            safeVersion: "1.4.1",
-            setupTransactions: [
-              {
-                to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-                value: 0n,
-                data: encodeFunctionData({
-                  abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
-                  args: [
-                    erc20PaymasterAddress,
-                    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
-                  ],
-                }),
-              },
-            ],
-          })
-          console.log('account address:', account.address);
-          
-          if (account && account.address) {
-            smartAccountAddress = account.address
-          };
-     
+          smartAccountAddress = await createSmartAccount(embeddedWallet);
         };
+        
         try {
-          console.log('smart account address:', smartAccountAddress);
+          console.log('smart account address during login:', smartAccountAddress);
           const userPayload = {
             privyId: user.id,
             walletAddress: user.wallet?.address,
@@ -175,14 +109,23 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
       <Flex justify={'between'} direction={'row'} pb={'4'}>
         {authenticated ? (
           <>
-            {!isBalanceLoading ? (
+          {!merchant ? (
+            !isBalanceLoading ? (
               <Badge size={'3'}>USDC Balance: ${balance}</Badge>
             ) : (
               <Badge size={'3'}>
                 USDC balance: 
                 <Spinner />
               </Badge>
-            )}
+            )
+          ) : (
+            <Badge size={'3'}>
+              <Link href='https://www.coinbase.com/assets' target='_blank' rel='noopener noreferrer'>
+                View balance on Coinbase
+              </Link>
+            </Badge>
+          )}
+    
             <Dialog.Root>
               <Dialog.Trigger>
                 <IconButton variant='ghost'>
@@ -248,11 +191,6 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
-                          </Flex>
-                          <Separator size={'4'} />
-                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                             <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
                             <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfers`)}>Transfer funds</Button>
                           </Flex>
@@ -307,6 +245,6 @@ export const Header: React.FC<HeaderProps> = ({ embeddedWallet, authenticated, c
           </Flex>
         )}
       </Flex>
-    </Box>
+  </Box>
   );
 };

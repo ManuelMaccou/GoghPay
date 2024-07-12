@@ -22,6 +22,7 @@ import { Header } from "../components/Header";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import NoWalletForPurchaseError from "../components/NoWalletForPurchaseError";
+import { createSmartAccount } from "../utils/createSmartAccount";
 const { ethers } = require("ethers");
 
 interface PurchaseParams {
@@ -123,50 +124,13 @@ function BuyContent() {
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
 
+      let smartAccountAddress;
+
       if (isNewUser) {
-        let smartAccountAddress;
-        
         if (embeddedWallet) {
-          const eip1193provider = await wallet.getEthereumProvider();
-          const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
-
-          const privyClient = createWalletClient({
-            account: embeddedWallet.address as `0x${string}`,
-            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-            transport: custom(eip1193provider)
-          });
-
-          const customSigner = walletClientToSmartAccountSigner(privyClient);
-
-          const publicClient = createPublicClient({
-            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-            transport: http(),
-          });
-
-          const account = await signerToSafeSmartAccount(publicClient, {
-            signer: customSigner,
-            entryPoint: ENTRYPOINT_ADDRESS_V07,
-            safeVersion: "1.4.1",
-            setupTransactions: [
-              {
-                to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-                value: 0n,
-                data: encodeFunctionData({
-                  abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
-                  args: [
-                    erc20PaymasterAddress,
-                    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
-                  ],
-                }),
-              },
-            ],
-          })
-          
-          if (account && account.address) {
-            smartAccountAddress = account.address
-          };
-     
+          smartAccountAddress = await createSmartAccount(embeddedWallet);
         };
+        
         try {
           const userPayload = {
             privyId: user.id,
@@ -314,23 +278,50 @@ function BuyContent() {
     }
   }, [activeWalletAddress, authenticated, ready, user ]);
 
-  {/* 
-    useEffect(() => {
-    if (currentUser) {
-      const { smartAccountAddress, walletAddress } = currentUser;
-  
-      if (!smartAccountAddress && !walletAddress) {
-        setNoWalletForPurchase(true);
-        console.log("no wallet at use effect")
-      } else {
-        setNoWalletForPurchase(false);
+  useEffect(() => {
+    if (!embeddedWallet) return;
+    if (!currentUser) return;
+    if (currentUser.smartAccountAddress) return;
+
+    const addSmartAccountAddress = async () => {
+      const accessToken = await getAccessToken();
+      try {
+       const smartAccountAddress = await createSmartAccount(embeddedWallet);
+
+        if (!smartAccountAddress) {
+          throw new Error('Failed to create smart account.');
+        }
+
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartAccountAddress,
+            privyId: user?.id
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create smart account');
+        }
+        console.log('successfully added smart account')
+        
+      } catch (error) {
+        console.error('Error adding smart account:', error);
+      } finally {
+       
       }
+    };
+
+    if (user && embeddedWallet && currentUser && !currentUser.smartAccountAddress) {
+      addSmartAccountAddress();
     }
-  }, [currentUser]);
-  */}
+  }, [user, currentUser, embeddedWallet, getAccessToken]);
   
 
-  // Handle mobile pay
   const handleMobilePay = async () => {
     setIsLoading(true);
     setError(null);
@@ -451,7 +442,7 @@ function BuyContent() {
         const smartAccountClient = createSmartAccountClient({
           account,
           entryPoint: ENTRYPOINT_ADDRESS_V07,
-          chain: baseSepolia,
+          chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
           bundlerTransport: http(rpcUrl),
           middleware: {
             gasPrice: async () => {
@@ -688,6 +679,7 @@ function BuyContent() {
     <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
       <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
+          merchant={currentUser?.merchant}
           embeddedWallet={embeddedWallet}
           authenticated={authenticated}
           walletForPurchase={walletForPurchase}

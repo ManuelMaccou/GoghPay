@@ -21,17 +21,8 @@ type BuyWithCoinbaseButtonProps = {
 export function BuyWithCoinbaseButton({ onPress, isLoading }: BuyWithCoinbaseButtonProps) {
   return (
     <Reset>
-      <Button variant='ghost' loading={isLoading} className={styles.cbButton} onClick={onPress}>
-        <Image
-          src={`/buttons/button-cbPay-normal-continue.png`}
-          alt={"coinbase pay button"}
-          width={200}
-          height={40}
-          style={{
-            maxWidth: "100%",
-            height: "auto"
-          }}
-        />
+      <Button loading={isLoading} style={{backgroundColor: '#0051FD', width: '200px'}} onClick={onPress}>
+        Continue with Coinbase
       </Button>
     </Reset>
   );

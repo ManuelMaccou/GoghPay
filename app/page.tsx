@@ -18,6 +18,7 @@ import MobileMenu from './components/MobileMenu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRightFromBracket, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import Login from './components/Login';
+import { createSmartAccount } from './utils/createSmartAccount';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -33,6 +34,7 @@ export default function Home() {
   const router = useRouter();
 
   const wallet = wallets[0];
+  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
@@ -64,58 +66,13 @@ export default function Home() {
       const embeddedWallet = getEmbeddedConnectedWallet(wallets);
       console.log("wallet object:", wallet);
 
+      let smartAccountAddress;
+
       if (isNewUser) {
-        let smartAccountAddress;
-        
         if (embeddedWallet) {
-          const eip1193provider = await wallet.getEthereumProvider();
-          const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
-
-          const privyClient = createWalletClient({
-            account: embeddedWallet.address as `0x${string}`,
-            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-            transport: custom(eip1193provider)
-          });
-
-          const customSigner = walletClientToSmartAccountSigner(privyClient);
-
-          const publicClient = createPublicClient({
-            chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-            transport: http(),
-          });
-    
-          const bundlerClient = createPimlicoBundlerClient({
-            transport: http(
-              "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
-            ),
-            entryPoint: ENTRYPOINT_ADDRESS_V07
-          }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
-
-          const account = await signerToSafeSmartAccount(publicClient, {
-            signer: customSigner,
-            entryPoint: ENTRYPOINT_ADDRESS_V07,
-            safeVersion: "1.4.1",
-            setupTransactions: [
-              {
-                to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-                value: 0n,
-                data: encodeFunctionData({
-                  abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
-                  args: [
-                    erc20PaymasterAddress,
-                    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
-                  ],
-                }),
-              },
-            ],
-          })
-          console.log('account address:', account.address);
-          
-          if (account && account.address) {
-            smartAccountAddress = account.address
-          };
-     
+          smartAccountAddress = await createSmartAccount(embeddedWallet);
         };
+
         try {
           console.log('smart account address:', smartAccountAddress);
           const userPayload = {
@@ -164,6 +121,7 @@ export default function Home() {
     },
   });
 
+
   const handleNewSaleClick = () => {
     router.push('/sell');
   };
@@ -201,6 +159,49 @@ export default function Home() {
       setIsLoading(false);
     }
   }, [authenticated, ready, user]);
+
+  useEffect(() => {
+    if (!embeddedWallet) return;
+    if (!currentUser) return;
+    if (currentUser.smartAccountAddress) return;
+
+    const addSmartAccountAddress = async () => {
+      const accessToken = await getAccessToken();
+      try {
+       const smartAccountAddress = await createSmartAccount(embeddedWallet);
+
+        if (!smartAccountAddress) {
+          throw new Error('Failed to create smart account.');
+        }
+
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartAccountAddress,
+            privyId: user?.id
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create smart account');
+        }
+        console.log('successfully added smart account')
+        
+      } catch (error) {
+        console.error('Error adding smart account:', error);
+      } finally {
+       
+      }
+    };
+
+    if (user && embeddedWallet && currentUser && !currentUser.smartAccountAddress) {
+      addSmartAccountAddress();
+    }
+  }, [user, currentUser, embeddedWallet, getAccessToken]);
 
   return (
     <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
@@ -251,10 +252,6 @@ export default function Home() {
                     <Button size={'4'} style={{width: "300px"}}
                       onClick={() => router.push(`/account/sales`)}>
                         Sales
-                      </Button>
-                    <Button size={'4'} style={{width: "300px"}}
-                      onClick={() => router.push(`/account/purchases`)}>
-                        Purchases
                     </Button>
                   </>
                 ) : (
@@ -269,7 +266,9 @@ export default function Home() {
         ) : (
           !isLoading && (
             <Flex direction={'column'} justify={'center'} align={'center'}>
-              <Login variant='solid' width='200px' justify='center' />
+              <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
+                Log in
+              </Button>
             </Flex>
           )
         )}

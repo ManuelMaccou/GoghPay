@@ -34,7 +34,7 @@ function SuccessContent() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const { user, ready, login } = usePrivy();
+  const { authenticated, user, ready, login } = usePrivy();
   const privyId = user?.id;
 
   const isError = (error: any): error is Error => error instanceof Error && typeof error.message === "string";
@@ -131,56 +131,6 @@ function SuccessContent() {
     async function createUser(email: string, privyId: string, wallet: ConnectedWallet, walletAddress: string) {
       console.log('adding a user with privy ID and creating smart account');
 
-/*
-      let smartAccountAddress;
-      const eip1193provider = await wallet.getEthereumProvider();
-      const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
-
-      const privyClient = createWalletClient({
-        account: walletAddress as `0x${string}`,
-        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-        transport: custom(eip1193provider)
-      });
-
-      const customSigner = walletClientToSmartAccountSigner(privyClient);
-
-      const publicClient = createPublicClient({
-        chain: getChainFromEnv(process.env.NEXT_PUBLIC_NETWORK),
-        transport: http(),
-      });
-
-      const bundlerClient = createPimlicoBundlerClient({
-        transport: http(
-          "https://api.pimlico.io/v2/84532/rpc?apikey=a6a37a31-d952-430e-a509-8854d58ebcc7",
-        ),
-        entryPoint: ENTRYPOINT_ADDRESS_V07
-      }).extend(pimlicoPaymasterActions(ENTRYPOINT_ADDRESS_V07))
-
-      const account = await signerToSafeSmartAccount(publicClient, {
-        signer: customSigner,
-        entryPoint: ENTRYPOINT_ADDRESS_V07,
-        safeVersion: "1.4.1",
-        setupTransactions: [
-          {
-            to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
-            value: 0n,
-            data: encodeFunctionData({
-              abi: [parseAbiItem("function approve(address spender, uint256 amount)")],
-              args: [
-                erc20PaymasterAddress,
-                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
-              ],
-            }),
-          },
-        ],
-      })
-      console.log('account address:', account.address);
-      
-      if (account && account.address) {
-        smartAccountAddress = account.address
-      };
-*/
-
       const response = await fetch('/api/user', {
         method: 'POST',
         headers: {
@@ -191,7 +141,6 @@ function SuccessContent() {
           email,
           wallet,
           walletAddress,
-          // smartAccountAddress,
           creationType: 'stripe'
         }),
       });
@@ -237,15 +186,19 @@ function SuccessContent() {
     }
 
     async function fetchUserDetails() {
-      if (checkoutMethod === 'wallet') {
+      if (stripeCheckoutId) {
+        if (ready && authenticated) {
+          await fetchUserFromWallet();
+        } else {
+          await fetchUserFromStripe();
+        }
+      } else {
         await fetchUserFromWallet();
-      } else if (stripeCheckoutId) {
-        await fetchUserFromStripe();
       }
     }
 
     fetchUserDetails();
-  }, [checkoutMethod, privyId, ready, stripeCheckoutId]);
+  }, [checkoutMethod, privyId, ready, stripeCheckoutId, authenticated]);
 
   useEffect(() => {
     if (!checkoutUser || !merchantId || !ready) return;
@@ -289,7 +242,12 @@ function SuccessContent() {
       paymentType: 'mobile pay'
     }
 
+    let transactionSaved = false; 
+
     async function saveTransaction() {
+      if (transactionSaved) return;
+      transactionSaved = true;
+      
       const accessToken = await getAccessToken();
       try {
         const response = await fetch('/api/transaction', {
@@ -305,15 +263,17 @@ function SuccessContent() {
         if (!response.ok) {
           throw new Error('Failed to save transaction');
         }
-    
+        
+        
         const data = await response.json();
       } catch (error) {
         console.error('Error saving transaction:', error);
       }
     }
 
-    if (checkoutUser) {
+    if (checkoutUser && !transactionSaved) {
       console.log("checkout user:", checkoutUser);
+      console.log('transaction saved?', transactionSaved);
       saveTransaction();
     }
   }, [checkoutUser, merchantId, ready, checkoutMethod, price, productName]);

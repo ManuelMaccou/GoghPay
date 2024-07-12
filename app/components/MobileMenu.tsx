@@ -1,10 +1,7 @@
 
 import React, { useState, ReactNode } from 'react';
-import styles from './styles.module.css'
 import { Button, Text, DropdownMenu, Flex, IconButton, VisuallyHidden, TextField } from '@radix-ui/themes';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
-import Login from './Login';
 
 interface MobileMenuProps {
   walletForPurchase?: string | null;

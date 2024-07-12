@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
-const transactionSchema = new mongoose.Schema({
+const transactionSchema = new Schema({
   type: { type: String },
-  merchant: { type: Schema.Types.ObjectId, ref: 'Merchant', required: true },
+  merchant: { type: Schema.Types.ObjectId, ref: 'Merchant' },
   buyer: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   productName: { type: String, required: true },
   productPrice: { type: Number, required: true },
