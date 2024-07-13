@@ -3,11 +3,22 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
-import { usePrivy, useLogin } from '@privy-io/react-auth';
+import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import axios from 'axios';
-import { Button, Flex, Spinner } from "@radix-ui/themes";
+import { Button, Flex, Separator, Spinner } from "@radix-ui/themes";
 import { User } from './types/types';
 import styles from './components/styles.module.css';
+import { Chain, createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
+import { base, baseSepolia } from 'viem/chains';
+import { walletClientToSmartAccountSigner,ENTRYPOINT_ADDRESS_V07 } from 'permissionless';
+import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
+import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
+import { signerToSafeSmartAccount } from 'permissionless/accounts';
+import MobileMenu from './components/MobileMenu';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRightFromBracket, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import Login from './components/Login';
+import { createSmartAccount } from './utils/createSmartAccount';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -15,24 +26,64 @@ function isError(error: any): error is Error {
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isFetchingUser, setIsFetchingUser] = useState<boolean>(false);
+  const [isFetchingUser, setIsFetchingUser] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
+  const {wallets} = useWallets();
   const router = useRouter();
+
+  const wallet = wallets[0];
+  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+  const chainId = wallet?.chainId;
+  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
+
+  const chainMapping: { [key: string]: Chain } = {
+    'baseSepolia': baseSepolia,
+    'base': base,
+  };
+
+ // Utility function to get Chain object from environment variable
+  const getChainFromEnv = (envVar: string | undefined): Chain => {
+    if (!envVar) {
+      throw new Error('Environment variable for chain is not defined');
+    }
+    
+    const chain = chainMapping[envVar];
+    
+    if (!chain) {
+      throw new Error(`No chain found for environment variable: ${envVar}`);
+    }
+
+    return chain;
+  };
+  
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
       console.log('login successful');
-      const accessToken = await getAccessToken();
-      const userPayload = {
-        privyId: user.id,
-        walletAddress: user.wallet?.address,
-      };
+
+      const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+      console.log("wallet object:", wallet);
+
+      let smartAccountAddress;
+
       if (isNewUser) {
+        if (embeddedWallet) {
+          smartAccountAddress = await createSmartAccount(embeddedWallet);
+        };
+
         try {
-          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload, {
-              headers: { Authorization: `Bearer ${accessToken}` },
-          });
+          console.log('smart account address:', smartAccountAddress);
+          const userPayload = {
+            privyId: user.id,
+            walletAddress: user.wallet?.address,
+            email: user.email?.address || user.google?.email,
+            creationType: 'privy',
+            smartAccountAddress: smartAccountAddress,
+          };
+
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
           console.log('New user created:', response.data);
         } catch (error: unknown) {
           if (axios.isAxiosError(error)) {
@@ -43,21 +94,45 @@ export default function Home() {
               console.error('Unknown error:', error);
           }
         }
-      } 
+      }
+
+      if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+        try {
+          await wallet.switchChain(chainIdNum);
+        } catch (error: unknown) {
+          console.error('Error switching chain:', error);
+      
+          if (typeof error === 'object' && error !== null && 'code' in error) {
+            const errorCode = (error as { code: number }).code;
+            if (errorCode === 4001) {
+              alert('You need to switch networks to proceed.');
+            } else {
+              alert('Failed to switch the network. Please try again.');
+            }
+          } else {
+            console.log('An unexpected error occurred.');
+          }
+          return;
+        }
+      };
     },
     onError: (error) => {
         console.error("Privy login error:", error);
     },
   });
 
+
   const handleNewSaleClick = () => {
     router.push('/sell');
   };
 
   useEffect(() => {
+    if (!ready) return;
+  
     const fetchUser = async () => {
       if (!user) return;
-      setIsFetchingUser(true);
+      setIsFetchingUser(true)
+
       try {
         const response = await fetch(`/api/user/me/${user.id}`);
         if (!response.ok) {
@@ -74,13 +149,59 @@ export default function Home() {
         setError('Error fetching user');
       } finally {
         setIsFetchingUser(false);
+        setIsLoading(false);
       }
     };
 
-    if (ready && authenticated) {
+    if (ready && authenticated && user) {
       fetchUser();
+    } else {
+      setIsLoading(false);
     }
   }, [authenticated, ready, user]);
+
+  useEffect(() => {
+    if (!embeddedWallet) return;
+    if (!currentUser) return;
+    if (currentUser.smartAccountAddress) return;
+
+    const addSmartAccountAddress = async () => {
+      const accessToken = await getAccessToken();
+      try {
+       const smartAccountAddress = await createSmartAccount(embeddedWallet);
+
+        if (!smartAccountAddress) {
+          throw new Error('Failed to create smart account.');
+        }
+
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartAccountAddress,
+            privyId: user?.id
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create smart account');
+        }
+        console.log('successfully added smart account')
+        
+      } catch (error) {
+        console.error('Error adding smart account:', error);
+      } finally {
+       
+      }
+    };
+
+    if (user && embeddedWallet && currentUser && !currentUser.smartAccountAddress) {
+      addSmartAccountAddress();
+    }
+  }, [user, currentUser, embeddedWallet, getAccessToken]);
 
   return (
     <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
@@ -96,7 +217,7 @@ export default function Home() {
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
         <Image
-          src="/logos/gogh_logo_white.png"
+          src="/logos/gogh_logo_white.svg"
           alt="Gogh"
           width={960}
           height={540}
@@ -108,7 +229,14 @@ export default function Home() {
             maxWidth: "100%",
           }} 
         />
-        {ready && authenticated ? (
+
+        {isLoading || (!ready && (
+          <Flex direction={'column'} justify={'center'} align={'center'}>
+            <Spinner />
+          </Flex>
+        ))}
+
+        {!isLoading && ready && authenticated ? (
           isFetchingUser ? (
             <Flex direction={'column'} justify={'center'} align={'center'}>
               <Spinner />
@@ -118,29 +246,36 @@ export default function Home() {
               <Flex direction={'column'} gap={'5'}>
                 {currentUser?.merchant ? (
                   <>
-                    <Button size={'4'} style={{height: '100px'}} onClick={handleNewSaleClick}>
+                    <Button size={'4'} style={{width: "300px"}} onClick={handleNewSaleClick}>
                       New Sale
                     </Button>
-                    <Button size={'4'}>Sales</Button>
-                    <Button size={'4'} style={{width: "300px"}}>Purchases</Button>
+                    <Button size={'4'} style={{width: "300px"}}
+                      onClick={() => router.push(`/account/sales`)}>
+                        Sales
+                    </Button>
                   </>
                 ) : (
-                  <Button size={'4'} style={{width: "300px"}}>Purchases</Button>
+                  <Button size={'4'} style={{width: "300px"}}
+                    onClick={() => router.push(`/account/purchases`)}>
+                      Purchases
+                  </Button>
                 )}
               </Flex>
             </Flex>
           )
         ) : (
-          <Flex direction={'column'} justify={'center'} align={'center'}>
-            <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
-              Log in
-            </Button>
-          </Flex>
+          !isLoading && (
+            <Flex direction={'column'} justify={'center'} align={'center'}>
+              <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
+                Log in
+              </Button>
+            </Flex>
+          )
         )}
       </Flex>
-      {ready && authenticated && !isFetchingUser && (
+      {ready && authenticated && !isFetchingUser && !isLoading && (
         <Flex direction={'column'} justify={'center'} align={'center'} position={'absolute'} bottom={'9'} width={'100%'}>
-          <Button highContrast size={'4'} onClick={logout}>
+          <Button highContrast size={'4'} style={{width: "300px"}} onClick={logout}>
             Log out
           </Button>
         </Flex>

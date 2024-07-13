@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { generateQrCode } from "./generateQrCodeUrl";
 import Spinner from '../../components/Spinner';
 import { usePrivy } from '@privy-io/react-auth';
@@ -17,16 +17,31 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
   const [formData, setFormData] = useState({ product: "", price: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMEssage] = useState<String>("");
+  const priceInputRef = useRef<HTMLInputElement>(null);
   const { user } =usePrivy();
 
-  if(!user) {
-    console.error("Unauthorized");
-    return <p>Unauthorized - Please log in</p>;
-  }
+  useEffect(() => {
+    if (priceInputRef.current) {
+      priceInputRef.current.setSelectionRange(1, 1);
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({ ...prevState, [name]: value }));
+    if (name === 'price') {
+      // Remove any non-numeric characters except dot
+      const cleanedValue = value.replace(/[^0-9.]/g, '');
+      setFormData(prevState => ({ ...prevState, [name]: `$${cleanedValue}` }));
+    } else {
+      setFormData(prevState => ({ ...prevState, [name]: value }));
+    }
+  };
+
+  const handleFocus = () => {
+    if (priceInputRef.current) {
+      const length = formData.price.length;
+      priceInputRef.current.setSelectionRange(1, length); // Set cursor position after $
+    }
   };
 
   const validateAndFormatPrice = (price: string): string => {
@@ -54,7 +69,6 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
     const form = new FormData();
     form.append("product", formData.product);
     form.append("price", formattedPrice);
-    // Append other necessary data, e.g., userId
     
     try {
       const result = await generateQrCode({ message: "" }, userId, form);
@@ -70,50 +84,41 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
   };
 
   return (
-    
-    <Flex direction={'column'} align={'center'} justify={'center'} minWidth={'70%'} mx={'2'}>
+    <Flex flexGrow={'1'} direction={'column'} align={'center'} justify={'between'} minWidth={'70%'}>
       <form onSubmit={handleSubmit} className={styles.formGroup}>
-        <Flex direction={'column'} minWidth={'100%'}>
-        <Card variant="classic">
-          <Box p={'5'}>
-        <label htmlFor="product" className={styles.formLabel}>Product Name</label>
-        <TextField.Root
-          mb={'5'}
-          mt={'1'}
-          type="text"
-          size={'2'}
-          name="product"
-          value={formData.product}
-          onChange={handleChange}
-          required
-          />
-        <label htmlFor="price" className={styles.formLabel}>Price</label>
-        <Flex direction={'row'} flexGrow={'1'}>
-        <Text mr={'2'} ml={'-4'} size={'6'}>$</Text>
-        <TextField.Root
-          mb={'5'}
-          mt={'1'}
-          style={{width:'100%'}}
-          type="text"
-          size={'2'}
-          name="price"
-          value={formData.price}
-          onChange={handleChange}
-          required
-        />
-        </Flex>
-        <Flex direction={'column'}>
-        <Button mb={'3'} type="submit" loading={isLoading}>
-          Create QR Code
-        </Button>
-        <Text>{errorMessage}</Text>
-        </Flex>
-        </Box>
-        </Card>
-        </Flex>
+          <Flex direction={'column'} justify={'center'}>
+            <label htmlFor="product" className={styles.formLabel}>Product Name</label>
+            <TextField.Root
+              mb={'5'}
+              mt={'1'}
+              type="text"
+              size={'2'}
+              name="product"
+              value={formData.product}
+              onChange={handleChange}
+              required
+            />
+            <label htmlFor="price" className={styles.formLabel}>Price</label>
+              <TextField.Root
+                mb={'5'}
+                mt={'1'}
+                ref={priceInputRef}
+                type="text"
+                size={'2'}
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                onFocus={handleFocus}
+                required
+              />
+          </Flex>
+          <Flex direction={'column'}>
+            <Button mb={'3'} type="submit" loading={isLoading}>
+              Create QR Code
+            </Button>
+            <Text>{errorMessage}</Text>
+          </Flex>
       </form>
     </Flex>
-    
-    
   );
 }

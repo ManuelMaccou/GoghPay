@@ -8,12 +8,12 @@ export default function UserProvider({children}: {children: React.ReactNode}) {
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
-        defaultChain: baseSepolia, // change this to base for production
-        supportedChains: [baseSepolia],
+        defaultChain: base,
+        supportedChains: [baseSepolia, base],
         appearance: {
           theme: 'light',
           accentColor: '#676FFF',
-          logo: '/logos/gogh_logo_black.png',
+          logo: '/logos/gogh_logo_black.svg',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',

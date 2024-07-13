@@ -1,10 +1,10 @@
 import React from 'react';
-import { Box, Text } from "@radix-ui/themes";
+import { Box, Flex, Text } from "@radix-ui/themes";
 import { css } from '@stitches/react';
 
 interface NotificationMessageProps {
   message: string;
-  type: 'error' | 'success';
+  type: 'pending' | 'error' | 'success';
 }
 
 const notificationBoxStyles = css({
@@ -14,6 +14,11 @@ const notificationBoxStyles = css({
   textAlign: 'center',
   variants: {
     type: {
+      pending: {
+        backgroundColor: 'rgba(29, 132, 226, 0.1)',
+        border: '1px solid #1D84E2',
+        color: '#1D84E2',
+      },
       error: {
         backgroundColor: 'rgba(255, 0, 0, 0.1)',
         border: '1px solid red',
@@ -31,7 +36,7 @@ const notificationBoxStyles = css({
 const NotificationMessage: React.FC<NotificationMessageProps> = ({ message, type }) => {
   return (
     <Box className={notificationBoxStyles({ type })}>
-      <Text size="5">{message}</Text>
+      <Text wrap={'wrap'} size="5">{message}</Text>
     </Box>
   );
 };

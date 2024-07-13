@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Merchant from '@/app/models/Merchant';
 import connectToDatabase from '@/app/utils/mongodb';
+import Merchant from '@/app/models/Merchant';
+
 
 type Params = {
   merchantId: string
@@ -15,7 +16,6 @@ export async function GET(request: Request, context: { params: Params }) {
     console.log("merchant not found");
     return NextResponse.json({ message: "Merchant not found." }, {status:404});
   }
-  console.log("merchant:", merchant);
 
   return NextResponse.json(merchant);
 }

@@ -12,8 +12,8 @@ function verifySignature(params: Record<string, string | undefined>, signature: 
   const filteredEntries = Object.entries(params).filter(([key, value]) => relevantParams.includes(key) && value !== undefined) as [string, string][];
   const sortedFilteredEntries = filteredEntries.sort((a, b) => a[0].localeCompare(b[0]));
   const sortedQueryString = new URLSearchParams(sortedFilteredEntries).toString();
-
   const computedSignature = createHmac('sha256', secretKey).update(sortedQueryString).digest('hex');
+
   return signature === computedSignature;
 }
 
