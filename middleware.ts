@@ -5,24 +5,6 @@ import { PrivyClient } from '@privy-io/server-auth';
 const privy = new PrivyClient(process.env.NEXT_PUBLIC_PRIVY_APP_ID!, process.env.PRIVY_SECRET!);
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = new URL(req.url);
-
-  // Get the mobile-only setting from the environment variable
-  const mobileOnly = process.env.NEXT_PUBLIC_MOBILE_ONLY === 'true';
-
-  // Check if the request is coming from a mobile device for non-auth routes if mobile-only restriction is enabled
-  if (mobileOnly && pathname !== '/mobile-only' && !pathname.startsWith('/api/')) {
-    const userAgent = req.headers.get('user-agent') || '';
-    const isMobile = /Mobi|Android/i.test(userAgent);
-
-    // If the request is not from a mobile device, redirect to the mobile-only page
-    if (!isMobile) {
-      return NextResponse.redirect(new URL('/mobile-only', req.url));
-    }
-  }
-
-  // Apply authentication logic for specific API routes
-  if (pathname.startsWith('/api/merchant/verifyMerchantStatus') || pathname.startsWith('/api/user/update') || pathname.startsWith('/api/transfer')) {
     try {
       // Extract the Authorization header from the request
       const authHeader = req.headers.get('authorization');
@@ -57,15 +39,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // For other routes, proceed as usual
-  return NextResponse.next();
-}
-
 export const config = {
-  matcher: [
-    '/api/merchant/verifyMerchantStatus/:path*', 
-    '/api/user/update', 
-    '/api/transfer',
-    '/:path*'  // Apply middleware to all routes for the mobile check
-  ]
+  matcher: ['/api/merchant/verifyMerchantStatus/:path*', '/api/user/update', '/api/transfer']
 };
+
