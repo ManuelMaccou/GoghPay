@@ -3,7 +3,7 @@
 import React, { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode.react';
-import { getAccessToken, usePrivy } from '@privy-io/react-auth';
+import { getAccessToken, useLogout, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text } from '@radix-ui/themes';
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
@@ -15,7 +15,7 @@ function isError(error: any): error is Error {
 
 export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { ready, authenticated, user, login } = usePrivy();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [message, setMessage] = useState<string>("");
@@ -24,6 +24,11 @@ export default function Sell() {
 
   const router = useRouter();
 
+  const { logout } = useLogout ({
+    onSuccess: async () => {
+      router.push('/');
+    }
+  })
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);

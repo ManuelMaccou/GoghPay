@@ -36,16 +36,12 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
         },
         quantity: 1,
       }],
-      payment_intent_data: {
-        description: `${merchantObject.name}: ${product}`,
-        application_fee_amount: applicationFee,
-        transfer_data: {
-          destination: stripeConnectedAccountId,
-        },
-      },
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}&merchantId=${merchantId}&merchantWalletAddress=${merchantWalletAddress}&productName=${product}&price=${price}`,
       cancel_url: redirectURL,
+    },
+    {
+      stripeAccount: stripeConnectedAccountId,
     }
   );
     if (session.url) {

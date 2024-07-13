@@ -37,7 +37,7 @@ function isError(error: any): error is Error {
 }
 
 function BuyContent() {
-  const { ready, authenticated, logout } = usePrivy();
+  const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const [isValid, setIsValid] = useState(false);
   const [purchaseParams, setPurchaseParams] = useState<PurchaseParams>({

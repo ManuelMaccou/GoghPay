@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { ConnectedWallet, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
+import { ConnectedWallet, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useBalance } from '../contexts/BalanceContext';
 import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link } from '@radix-ui/themes';
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
@@ -35,7 +35,7 @@ function isError(error: any): error is Error {
 }
 
 export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
-  const { user, ready, logout} = usePrivy();
+  const { user, ready } = usePrivy();
   const { balance, isBalanceLoading } = useBalance();
   const {wallets} = useWallets();
   const router = useRouter();
@@ -44,6 +44,12 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
+  const { logout } = useLogout ({
+    onSuccess: async () => {
+      router.push('/');
+    }
+  })
+  
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
       console.log('login successful');
@@ -227,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                   )}
                   <Flex direction={'column'} justify={'between'} align={'center'}>
                     <Dialog.Close>
-                      <Flex direction={'column'} justify={'center'} align={'center'}>
+                      <Flex direction={'column'} justify={'center'} mx={'4'} style={{width: '100%'}}>
                         <Button variant='outline' onClick={logout}>
                           Log out
                         </Button>

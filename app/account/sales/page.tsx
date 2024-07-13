@@ -4,7 +4,7 @@ import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, User, Transaction } from "@/app/types/types";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
-import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Table, Text, TextField } from "@radix-ui/themes";
 import { format } from 'date-fns';
@@ -17,7 +17,7 @@ function isError(error: any): error is Error {
 
 
 export default function Sales({ params }: { params: { userId: string } }) {
-  const { ready, authenticated, login, logout, user } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
@@ -33,6 +33,12 @@ export default function Sales({ params }: { params: { userId: string } }) {
   const { wallets } = useWallets();
   const wallet = wallets[0]
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+
+  const { logout } = useLogout ({
+    onSuccess: async () => {
+      router.push('/');
+    }
+  })
   
   const router = useRouter();
   const visitingUser = params.userId

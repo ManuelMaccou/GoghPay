@@ -44,7 +44,7 @@ export default function NewTransfer() {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [redirectURL, setRedirectURL] = useState('');
 
-  const { user, ready, authenticated, logout, login } = usePrivy();
+  const { user, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 

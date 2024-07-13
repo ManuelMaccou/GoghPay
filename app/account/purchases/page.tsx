@@ -16,7 +16,7 @@ function isError(error: any): error is Error {
 }
 
   export default function Sales({ params }: { params: { userId: string } }) {
-    const { ready, authenticated, login, logout, user } = usePrivy();
+    const { ready, authenticated, user } = usePrivy();
     const [isLoading, setIsLoading] = useState(true); 
     const [error, setError] = useState<string | null>(null);
     const [ isFetchingCurrentUser, setIsFetchingCurrentUser ] = useState(true);

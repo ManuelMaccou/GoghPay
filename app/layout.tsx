@@ -28,7 +28,6 @@ export default function RootLayout({
           <UserProvider>
             <Theme accentColor="indigo" grayColor="slate" radius="medium" scaling="100%" appearance='light' panelBackground='translucent'>
               {children}
-              
             </Theme>
           </UserProvider>
         </BalanceProvider>
