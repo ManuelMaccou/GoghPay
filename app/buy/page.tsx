@@ -740,7 +740,7 @@ function BuyContent() {
           currentUser={currentUser}
         />
       </BalanceProvider>
-      <Heading size={'7'} align={'center'}>Confirm details</Heading>
+      {/* <Heading size={'7'} align={'center'}>Confirm details</Heading> */}
       {!isFetchingMerchant ? (
         <Box width={'100%'}>
           <Flex justify={'center'}>
