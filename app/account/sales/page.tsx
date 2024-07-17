@@ -294,7 +294,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
               <Table.Header>
                 <Table.Row>
                   <Table.ColumnHeaderCell>Total</Table.ColumnHeaderCell>
-                  <Table.ColumnHeaderCell>Tip</Table.ColumnHeaderCell>
+                  {/* <Table.ColumnHeaderCell>Tip</Table.ColumnHeaderCell> */}
                   <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
@@ -307,11 +307,11 @@ export default function Sales({ params }: { params: { userId: string } }) {
                   return (
                     <Table.Row key={transaction._id}>
                       <Table.RowHeaderCell>${((transaction.productPrice) + (transaction.tipAmount || 0)).toFixed(2)}</Table.RowHeaderCell>
-                      <Table.Cell>
+                     {/* <Table.Cell>
                       <Text wrap={'nowrap'}>
                         {transaction.tipAmount ? `$${transaction.tipAmount.toFixed(2)}` : '-'}
                       </Text>
-                      </Table.Cell>
+                      </Table.Cell> */}
                       <Table.Cell>
                         <Text wrap={'nowrap'}>
                           {transaction.productName}
