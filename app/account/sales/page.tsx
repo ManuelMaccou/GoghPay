@@ -15,7 +15,6 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-
 export default function Sales({ params }: { params: { userId: string } }) {
   const { ready, authenticated, user } = usePrivy();
   const [isLoading, setIsLoading] = useState(true); 
@@ -172,6 +171,17 @@ export default function Sales({ params }: { params: { userId: string } }) {
   }, [user, ready, authenticated]);
 
   useEffect(() => {
+    const getPSTStartAndEndOfDay = () => {
+      // Calculate the start of today in PST
+      const now = new Date();
+      const pstOffset = 8 * 60 * 60 * 1000; // PST is UTC-8 hours
+      const startOfToday = new Date(now.getTime() - pstOffset);
+      startOfToday.setHours(0, 0, 0, 0);
+      const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000 - 1);
+  
+      return { startOfToday, endOfToday };
+    };
+
     const fetchTransactions = async () => {
       if (!merchant) return;
       try {
@@ -182,8 +192,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
         }
   
         const { totalTransactions, todaysTransactions } = await response.json();
-        console.log('totalTransactions:', totalTransactions);
-        console.log('todaysTransactions:', todaysTransactions);
   
         // Sort totalTransactions by date in descending order
         const sortedTotalTransactions = totalTransactions.slice().sort((a: Transaction, b: Transaction) => {
@@ -191,17 +199,24 @@ export default function Sales({ params }: { params: { userId: string } }) {
         });
   
         // Calculate total sale for all transactions
-        const total = sortedTotalTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.productPrice, 0);
+        const total = sortedTotalTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.productPrice + (transaction.tipAmount || 0), 0);
         setTotalSale(total);
         setTotalTransactions(sortedTotalTransactions);
+
+        // Get start and end of today in PST
+      const { startOfToday, endOfToday } = getPSTStartAndEndOfDay();
   
-        // Sort todaysTransactions by date in descending order
-        const sortedTodaysTransactions = todaysTransactions.slice().sort((a: Transaction, b: Transaction) => {
+        // Filter and sort today's transactions by date in descending order
+        const sortedTodaysTransactions = sortedTotalTransactions.filter((transaction: Transaction) => {
+          const createdAt = new Date(transaction.createdAt);
+          return createdAt >= startOfToday && createdAt <= endOfToday;
+        }).sort((a: Transaction, b: Transaction) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
+
   
         // Calculate total sale for today's transactions
-        const todayTotal = sortedTodaysTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.productPrice, 0);
+        const todayTotal = sortedTodaysTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.productPrice + (transaction.tipAmount || 0), 0);
         setTodaysTotalSale(todayTotal);
         setTodaysTransactions(sortedTodaysTransactions);
       } catch (err) {
@@ -278,7 +293,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
             <Table.Root size="1">
               <Table.Header>
                 <Table.Row>
-                  <Table.ColumnHeaderCell>Price</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Total</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Tip</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
@@ -290,7 +306,12 @@ export default function Sales({ params }: { params: { userId: string } }) {
                   const { label, color } = getPaymentTypeInfo(transaction.paymentType);
                   return (
                     <Table.Row key={transaction._id}>
-                      <Table.RowHeaderCell>${transaction.productPrice.toFixed(2)}</Table.RowHeaderCell>
+                      <Table.RowHeaderCell>${((transaction.productPrice) + (transaction.tipAmount || 0)).toFixed(2)}</Table.RowHeaderCell>
+                      <Table.Cell>
+                      <Text wrap={'nowrap'}>
+                        {transaction.tipAmount ? `$${transaction.tipAmount.toFixed(2)}` : '-'}
+                      </Text>
+                      </Table.Cell>
                       <Table.Cell>
                         <Text wrap={'nowrap'}>
                           {transaction.productName}
