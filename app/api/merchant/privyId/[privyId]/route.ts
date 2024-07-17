@@ -4,13 +4,13 @@ import Merchant from '@/app/models/Merchant';
 
 
 type Params = {
-  merchantId: string
+  privyId: string
 }
 
 export async function GET(request: Request, context: { params: Params }) {
   await connectToDatabase();
-  const merchantId = context.params.merchantId
-  const merchant = await Merchant.findOne({ _id: merchantId });
+  const privyId = context.params.privyId
+  const merchant = await Merchant.findOne({ privyId: privyId });
 
   if (!merchant) {
     console.log("merchant not found");

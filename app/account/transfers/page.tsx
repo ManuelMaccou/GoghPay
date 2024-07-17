@@ -1,6 +1,6 @@
 'use client'
 
-import { User } from "@/app/types/types";
+import { Merchant, User } from "@/app/types/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/app/components/Header";
@@ -28,15 +28,21 @@ export default function NewTransfer() {
   const [tranferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>();
+  const [merchant, setMerchant] = useState<Merchant>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [noWalletForPurchase, setNoWalletForPurchase] = useState(false);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const [balance, setBalance] = useState<number>(0);
   const [address, setAddress] = useState('');
+  const [merchantAddress, setMerchantAddress] = useState('');
   const [isValidAddress, setIsValidAddress] = useState(false);
+  const [isValidMerchantAddress, setIsValidMerchantAddress] = useState(false);
   const [editAddressMode, setEditAddressMode] = useState(false);
+  const [editMerchantAddressMode, setEditMerchantAddressMode] = useState(false);
   const [addressUpdated, setAddressUpdated] = useState(false);
+  const [merchantAddressUpdated, setMerchantAddressUpdated] = useState(false);
   const [walletUpdateMessage, setWalletUpdateMessage] = useState<string | null>(null);
+  const [merchantWalletUpdateMessage, setMerchantWalletUpdateMessage] = useState<string | null>(null);
   const [copyConfirmMessage, setCopyConfirmMessage] = useState<string | null>(null);
   const [transferInputValue, setTransferInputValue] = useState('');
   const [transferValueIsValid, setTransferValueIsValid] = useState(false);
@@ -66,7 +72,7 @@ export default function NewTransfer() {
     'base': base,
   };
 
- // Utility function to get Chain object from environment variable
+ // Utility function to get Chain object from environment variable.
   const getChainFromEnv = (envVar: string | undefined): Chain => {
     if (!envVar) {
       throw new Error('Environment variable for chain is not defined');
@@ -81,6 +87,7 @@ export default function NewTransfer() {
     return chain;
   };
 
+  // When a non-merchant inputs their Coinbase wallet address
   const handleAddressChange = (event: any) => {
     const input = event.target.value;
     setAddress(input);
@@ -92,6 +99,21 @@ export default function NewTransfer() {
     setEditAddressMode(true);
     setAddress('');
     setIsValidAddress(false);
+  };
+
+
+  // When a merchant inputs their Coinbase wallet address
+  const handleMerchantAddressChange = (event: any) => {
+    const input = event.target.value;
+    setMerchantAddress(input);
+    // Check if the input starts with '0x' and has a total length of 42 characters
+    setIsValidMerchantAddress(input.startsWith('0x') && input.length === 42);
+  };
+
+  const handleEditMerchantAddress = () => {
+    setEditMerchantAddressMode(true);
+    setMerchantAddress('');
+    setIsValidMerchantAddress(false);
   };
 
   const handleTransferInputChange = (event: any) => {
@@ -379,8 +401,24 @@ export default function NewTransfer() {
     setRedirectURL(currentURL);
   }, []);
   
+  
 
   useEffect(() => {
+    const fetchMerchant = async (id: string) => {
+      try {
+        const privyId = id
+        const response = await fetch(`/api/merchant/privyId/${privyId}`);
+        const data = await response.json();
+        setMerchant(data);
+      } catch (err) {
+        if (isError(err)) {
+          setError(`Error fetching merchant: ${err.message}`);
+        } else {
+          setError('Error fetching merchant');
+        }
+      }
+    }
+    
     const fetchUser = async () => {
       if (!ready || !user?.id) return;
 
@@ -396,6 +434,10 @@ export default function NewTransfer() {
         
         if (userData.user.coinbaseAddress) {
           setAddress(userData.user.coinbaseAddress);
+        }
+
+        if (userData.user.merchant) {
+          fetchMerchant(userData.user.privyId)
         }
 
       } catch (error) {
@@ -479,6 +521,20 @@ export default function NewTransfer() {
   }, [currentUser, ready])
 
   useEffect(() => {
+    const getDefaultMerchantAddress = async () => {
+      if (!ready) return;
+
+      if (merchant && merchant.walletAddress) {
+        setMerchantAddress(merchant.walletAddress);
+        setIsValidMerchantAddress(true);
+        setMerchantWalletUpdateMessage(null);
+      }
+    }
+
+    getDefaultMerchantAddress();
+  }, [merchant, ready])
+
+  useEffect(() => {
     const fetchBalance = async () => {
       if (!walletForPurchase) return;
 
@@ -548,6 +604,55 @@ export default function NewTransfer() {
     }
     
   }, [ready, address, isValidAddress, user?.id]);
+
+
+  useEffect(() => {
+    const updateMerchantAddress = async () => {
+      if (!ready || !isValidMerchantAddress || !merchant?.privyId) return; 
+
+      const accessToken = await getAccessToken();
+
+      try {
+        setMerchantWalletUpdateMessage(null)
+        const response = await fetch('/api/merchant/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            walletAddress: merchantAddress,
+            privyId: merchant.privyId,
+          }),
+        });
+      
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update the merchant address');
+        }
+
+        const responseData = await response.json();
+        console.log('Update successful:', responseData);
+        setMerchantAddressUpdated(true);
+        setMerchant(responseData.merchant)
+   
+      } catch (error) {
+        if (isError(error)) {
+          console.error('Error updating merchant address:', error.message);
+          setMerchantWalletUpdateMessage('There was an error. Please try again.')
+        } else {
+          console.error('An unexpected error occurred:', error);
+          setMerchantWalletUpdateMessage('There was an error. Please try again.')
+        }
+      }
+    };
+
+    if (isValidMerchantAddress) {
+      updateMerchantAddress();
+    }
+    
+  }, [ready, merchantAddress, isValidMerchantAddress, merchant?.privyId]);
 
 
   return (
@@ -748,6 +853,34 @@ export default function NewTransfer() {
                     </Flex>
                   )}
 
+                </>
+              )}
+              {currentUser && currentUser.merchant && (
+                <>
+                  <Flex direction={'column'} justify={'center'} gap={'4'} width={'100%'}>
+                    <TextField.Root value={merchantAddress} onChange={handleMerchantAddressChange} disabled={isValidMerchantAddress} placeholder="Enter Base USDC address from Coinbase">
+                    <TextField.Slot side="right">
+                      <IconButton size="1" variant="ghost" onClick={handleEditMerchantAddress}>
+                        <Pencil2Icon height="14" width="14" />
+                      </IconButton>
+                    </TextField.Slot>
+                    </TextField.Root>
+                    {merchantAddress && !isValidMerchantAddress && (
+                      <Text color="red" mt={'-3'}>Enter a valid address</Text>
+                    )}
+                    {merchantAddress && merchantAddressUpdated && isValidMerchantAddress && (
+                      <Text mt={'-3'}>Your USDC address</Text>
+                    )}
+                    <Flex direction={'row'} gap={'2'} align={'center'} justify={'center'} mt={'-2'} mb={'3'}>
+                      <ExclamationTriangleIcon />
+                      <Link underline="always" href='https://ongogh.com/coinbase' target='_blank' rel='noopener noreferrer'>
+                          Read this to get your address.
+                        </Link> 
+                    </Flex>
+                  </Flex>
+                  <Flex direction={'column'} py={'4'}>
+                    <Separator size={'4'} />
+                  </Flex>
                 </>
               )}
 

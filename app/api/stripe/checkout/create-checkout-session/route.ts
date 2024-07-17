@@ -6,15 +6,15 @@ import { Merchant } from '@/app/types/types';
 
 export async function POST(req: NextRequest, res: NextApiResponse) {
   try {
-    const { stripeConnectedAccountId, merchantId, merchantObject, product, price, walletAddress, redirectURL } = await req.json();
+    const { stripeConnectedAccountId, merchantId, merchantObject, product, price, finalPrice, walletAddress, redirectURL } = await req.json();
 
-    console.log("Received price:", price);
+    console.log("Received price:", finalPrice);
 
-    if (typeof price !== 'number' || isNaN(price)) {
-      console.error('Received price is not a valid number:', price);
+    if (typeof finalPrice !== 'number' || isNaN(finalPrice)) {
+      console.error('Received price is not a valid number:', finalPrice);
     }
 
-    const priceInCents = price * 100;
+    const priceInCents = finalPrice * 100;
     const merchantWalletAddress = walletAddress;
 
     let applicationFee;
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}&merchantId=${merchantId}&merchantWalletAddress=${merchantWalletAddress}&productName=${product}&price=${price}`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}&merchantId=${merchantId}&merchantWalletAddress=${merchantWalletAddress}&productName=${product}&price=${finalPrice}`,
       cancel_url: redirectURL,
     },
     {
