@@ -72,7 +72,7 @@ export default function NewTransfer() {
     'base': base,
   };
 
- // Utility function to get Chain object from environment variable
+ // Utility function to get Chain object from environment variable.
   const getChainFromEnv = (envVar: string | undefined): Chain => {
     if (!envVar) {
       throw new Error('Environment variable for chain is not defined');
@@ -401,8 +401,24 @@ export default function NewTransfer() {
     setRedirectURL(currentURL);
   }, []);
   
+  
 
   useEffect(() => {
+    const fetchMerchant = async (id: string) => {
+      try {
+        const privyId = id
+        const response = await fetch(`/api/merchant/privyId/${privyId}`);
+        const data = await response.json();
+        setMerchant(data);
+      } catch (err) {
+        if (isError(err)) {
+          setError(`Error fetching merchant: ${err.message}`);
+        } else {
+          setError('Error fetching merchant');
+        }
+      }
+    }
+    
     const fetchUser = async () => {
       if (!ready || !user?.id) return;
 
@@ -434,23 +450,6 @@ export default function NewTransfer() {
       fetchUser();
     }
   }, [ready, authenticated, user?.id, editAddressMode]); 
-
-
-
-  const fetchMerchant = async (id: string) => {
-    try {
-      const privyId = id
-      const response = await fetch(`/api/merchant/privyId/${privyId}`);
-      const data = await response.json();
-      setMerchant(data);
-    } catch (err) {
-      if (isError(err)) {
-        setError(`Error fetching merchant: ${err.message}`);
-      } else {
-        setError('Error fetching merchant');
-      }
-    }
-  }
 
   useEffect(() => {
     if (!embeddedWallet) return;
