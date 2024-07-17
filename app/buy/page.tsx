@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useCallback } from 'react'
 import { CoinbaseButton } from "./components/coinbaseOnramp";
 import { getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Merchant } from "../types/types";
-import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog, Link, Dialog, VisuallyHidden, Separator, TextField, IconButton } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Text, Spinner, Badge, Callout, Card, AlertDialog, Link, Dialog, VisuallyHidden, Separator, TextField, IconButton, RadioCards } from "@radix-ui/themes";
 import * as Avatar from '@radix-ui/react-avatar';
 import NotificationMessage from "../components/Notification";
 import { User } from "../types/types";
@@ -15,7 +15,7 @@ import {signerToSafeSmartAccount} from 'permissionless/accounts';
 import {createPimlicoBundlerClient} from 'permissionless/clients/pimlico';
 import { base, baseSepolia } from "viem/chains";
 import axios from "axios";
-import { InfoCircledIcon, AvatarIcon, CopyIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, AvatarIcon, CopyIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { BalanceProvider } from "../contexts/BalanceContext";
 import { Header } from "../components/Header";
@@ -67,6 +67,7 @@ function BuyContent() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
   const [purchaseStarted, setPurchaseStarted] = useState(false);
+  
 
   const router = useRouter();
 
@@ -87,7 +88,47 @@ function BuyContent() {
     setError('Provided price is invalid');
   }
 
-  const priceBigInt = !isNaN(price) ? BigInt(Math.round(price)) : null;
+  const [selectedTip, setSelectedTip] = useState<string>('0');
+  const [tipAmount, setTipAmount] = useState(0);
+  const [finalPrice, setFinalPrice] = useState(price);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  useEffect(() => {
+    setFinalPrice(price + tipAmount);
+  }, [price, tipAmount]);
+
+  const handleValueChange = (value:string) => {
+    setSelectedTip(value);
+    if (value === '4') {
+      setIsDialogOpen(true);
+      return;
+    }
+    let tipPercentage = 0;
+    switch (value) {
+      case '1':
+        tipPercentage = 0.15;
+        break;
+      case '2':
+        tipPercentage = 0.20;
+        break;
+      case '3':
+        tipPercentage = 0.25;
+        break;
+      default:
+        tipPercentage = 0;
+    }
+    setTipAmount(price * tipPercentage);
+  };
+
+  const handleCustomTipChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(event.target.value);
+    setTipAmount(isNaN(value) ? 0 : value);
+  };
+
+  const resetTipAmount = () => {
+    setTipAmount(0);
+    setSelectedTip('0');
+  };
   
   
   const wallet = wallets[0]
@@ -328,6 +369,7 @@ function BuyContent() {
 
     const requestData = {
       ...purchaseParams,
+      finalPrice: finalPrice,
       stripeConnectedAccountId: merchant?.stripeConnectedAccountId,
       redirectURL: window.location.href,
       merchantObject: merchant
@@ -365,7 +407,7 @@ function BuyContent() {
     }
   };
 
-  async function sendUSDC(merchantWalletAddress: `0x${string}`, price: number) {
+  async function sendUSDC(merchantWalletAddress: `0x${string}`, finalPrice: number) {
     if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
       try {
         await wallet.switchChain(chainIdNum);
@@ -392,7 +434,7 @@ function BuyContent() {
       return;
     }
     
-    const amountInUSDC = BigInt(price * 1_000_000);
+    const amountInUSDC = BigInt(finalPrice * 1_000_000);
 
     setPurchaseStarted(true)
     setPendingMessage('Please wait...');
@@ -489,6 +531,7 @@ function BuyContent() {
           buyerPrivyId: currentUser?.privyId,
           productName: purchaseParams.product,
           productPrice: price,
+          tipAmount: tipAmount,
           transactionHash: transactionHash,
           paymentType: 'sponsored crypto'
         });
@@ -496,7 +539,7 @@ function BuyContent() {
         const params = new URLSearchParams({
           merchantId: merchant?._id ?? '',
           productName: purchaseParams?.product?.toString() ?? 'undefined',
-          price: price.toString(),
+          price: finalPrice.toString(),
           transactionHash: transactionHash.toString(),
           checkout_method: "wallet",
         });
@@ -547,6 +590,7 @@ function BuyContent() {
           buyerPrivyId: currentUser?.privyId,
           productName: purchaseParams.product,
           productPrice: price,
+          tipAmount: tipAmount,
           transactionHash: transactionHash,
           paymentType: 'crypto'
         });
@@ -554,7 +598,7 @@ function BuyContent() {
         const params = new URLSearchParams({
           merchantId: merchant?._id ?? '',
           productName: purchaseParams?.product?.toString() ?? 'undefined',
-          price: price.toString(),
+          price: finalPrice.toString(),
           transactionHash: transactionHash.toString(),
           checkout_method: "wallet",
         });
@@ -601,8 +645,6 @@ function BuyContent() {
     }
   }
 
-// check the experience for non embedded wallets. Is it good?
-// Make sure to change the chainID.
   useEffect(() => {
     if(ready && authenticated && isValid && walletForPurchase) {
       const fetchBalance = async () => {
@@ -644,6 +686,18 @@ function BuyContent() {
     };
     
   },[ready, authenticated, walletForPurchase, isValid, balance, price, currentUser]);
+
+  useEffect(() => {
+    if (!balance) return;
+
+    if (balance < (finalPrice + 1)){
+      setShowPayButton(false);
+      setShowCoinbaseOnramp(true);
+    } else {
+      setShowPayButton(true);
+      setShowCoinbaseOnramp(false);
+    }
+  },[balance, finalPrice]);
 
   const copyToClipboard = useCallback(() => {
     if (walletForPurchase) {
@@ -705,11 +759,17 @@ function BuyContent() {
             </Flex>
             <Flex direction={'column'} align={'center'} mb={'2'}>
               <Text size={'9'} my={'4'}>
-                ${price}
+                ${price.toFixed(2)}
               </Text>
-              <Text size={'8'}>
-                {product}
-              </Text>
+              {tipAmount > 0 && (
+                <Flex direction={'row'} justify={'center'} gap={'3'}>
+                  <Text align={'center'} size={'5'}>+ ${tipAmount.toFixed(2)} tip</Text>
+                  <IconButton variant="ghost" color="gray" onClick={resetTipAmount}>
+                    <CrossCircledIcon />
+                  </IconButton>
+                </Flex>
+              )}
+              
             </Flex>
           </Box>
         ) : (
@@ -730,6 +790,76 @@ function BuyContent() {
               <NotificationMessage message={error} type="error" />
             </Box>
           )}
+          
+          <Flex direction={'column'} width={'100%'} mt={'4'} mb={'7'} align={'center'} gap={'3'}>
+            <Text size={'4'} align={'center'}>Add a tip?</Text>
+            <RadioCards.Root columns={'4'} gap={'3'} size={'1'} value={selectedTip} onValueChange={handleValueChange}>
+              <RadioCards.Item value="1">
+                <Flex direction="column" width="100%">
+                  <Text align={'center'} weight="bold">15%</Text>
+                  <Text align={'center'}>${(price * .15).toFixed(2)}</Text>
+                </Flex>
+              </RadioCards.Item>
+              <RadioCards.Item value="2">
+                <Flex direction="column" width="100%">
+                  <Text align={'center'} weight="bold">20%</Text>
+                  <Text align={'center'}>${(price * .20).toFixed(2)}</Text>
+                </Flex>
+              </RadioCards.Item>
+              <RadioCards.Item value="3">
+                <Flex direction="column" width="100%">
+                  <Text align={'center'} weight="bold">25%</Text>
+                  <Text align={'center'}>${(price * .25).toFixed(2)}</Text>
+                </Flex>
+              </RadioCards.Item>
+              <RadioCards.Item value="4">
+                <Flex direction="column" width="100%">
+                  <Text size={'1'} align={'center'} weight="bold">Custom</Text>
+                </Flex>
+              </RadioCards.Item>
+            </RadioCards.Root>
+          </Flex>
+
+          <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog.Trigger>
+              <Button style={{ display: 'none' }} />
+            </Dialog.Trigger>
+
+            <Dialog.Content maxWidth="450px">
+              <VisuallyHidden>
+                <Dialog.Title>Enter tip amount</Dialog.Title>
+              </VisuallyHidden>
+              <VisuallyHidden>
+                <Dialog.Description size="2" mb="4">
+                  Enter a tip amount.
+                </Dialog.Description>
+              </VisuallyHidden>
+
+              <Flex direction="column" gap="3">
+                <label>
+                  <Text as="div" size="2" mb="1" weight="bold">
+                    Enter dollar amount
+                  </Text>
+                  <TextField.Root placeholder="Enter amount" type="number" value={tipAmount} onChange={handleCustomTipChange}>
+                  <TextField.Slot>
+                    <Text>$</Text>
+                  </TextField.Slot>
+                  </TextField.Root>
+                </label>
+              </Flex>
+
+              <Flex gap="3" mt="4" justify="end">
+                <Dialog.Close>
+                  <Button variant="soft" color="gray">
+                    Cancel
+                  </Button>
+                </Dialog.Close>
+                <Dialog.Close>
+                  <Button>Ok</Button>
+                </Dialog.Close>
+              </Flex>
+            </Dialog.Content>
+          </Dialog.Root>
           {showCoinbaseOnramp && (
             isBalanceLoading ? (
               <>
@@ -810,7 +940,7 @@ function BuyContent() {
                       <AlertDialog.Action>
                         <CoinbaseButton
                           destinationWalletAddress={walletForPurchase || ""}
-                          price={purchaseParams.price || 0}
+                          price={finalPrice || 0}
                           redirectURL={redirectURL}
                         />
                       </AlertDialog.Action>
@@ -842,98 +972,101 @@ function BuyContent() {
                 <Spinner />
               </>
             ) : (
-              <Flex direction={'column'} gap={'4'}>
+              <>
+                
+                
+                <Flex direction={'column'} gap={'4'}>
 
-                <Dialog.Root>
-                  <Dialog.Trigger>
-                    <Button size={'4'} loading={isLoading} disabled={purchaseStarted} style={{
-                      width: '250px',
-                      backgroundColor: '#0051FD'
-                      }}
-                      onClick={() => {
-                        setError(null);
-                      }}>
-                      Pay with crypto
-                    </Button>
-                  </Dialog.Trigger>
-                  <Dialog.Content width={'90vw'}>
-                    <Flex direction={'column'} width={'100%'}>
-                    <Dialog.Title align={'center'}>Confirm purchase</Dialog.Title>
-                    <VisuallyHidden asChild>
-                      <Dialog.Description size="2" mb="4">
-                        Confirm transaction details
-                      </Dialog.Description>
-                    </VisuallyHidden>
-                    <Separator size={'4'} mb={'5'}/>
-                    <Text align={'center'} size={'7'} weight={'bold'}>${price}</Text>
-                    <Text size={'2'} align={'center'}>{price} USDC @ $1.00</Text>
-                    <Flex direction={'column'} my={'3'} p={'3'} style={{border: '1px solid #e0e0e0', borderRadius: '5px'}}>
-                      <Flex direction={'row'} justify={'between'}>
-                        <Text size={'4'} weight={'bold'}>From:</Text>
-                        <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
-                          <Flex direction={'row'} gap={'2'} align={'center'}>
-                            <FontAwesomeIcon icon={faWallet} />
-                            {embeddedWallet ? (
-                              <Text>Wallet</Text>
-                            ) : (
-                              <Text>Your Gogh account</Text>
-                            )}
+                  <Dialog.Root>
+                    <Dialog.Trigger>
+                      <Button size={'4'} loading={isLoading} disabled={purchaseStarted} style={{
+                        width: '250px',
+                        backgroundColor: '#0051FD'
+                        }}
+                        onClick={() => {
+                          setError(null);
+                        }}>
+                        Pay with crypto
+                      </Button>
+                    </Dialog.Trigger>
+                    <Dialog.Content width={'90vw'}>
+                      <Flex direction={'column'} width={'100%'}>
+                      <Dialog.Title align={'center'}>Confirm purchase</Dialog.Title>
+                      <VisuallyHidden asChild>
+                        <Dialog.Description size="2" mb="4">
+                          Confirm transaction details
+                        </Dialog.Description>
+                      </VisuallyHidden>
+                      <Separator size={'4'} mb={'5'}/>
+                      <Text align={'center'} size={'8'} weight={'bold'}>${finalPrice.toFixed(2)}</Text>
+                      <Flex direction={'column'} my={'3'} p={'3'} style={{border: '1px solid #e0e0e0', borderRadius: '5px'}}>
+                        <Flex direction={'row'} justify={'between'}>
+                          <Text size={'4'} weight={'bold'}>From:</Text>
+                          <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
+                            <Flex direction={'row'} gap={'2'} align={'center'}>
+                              <FontAwesomeIcon icon={faWallet} />
+                              {embeddedWallet ? (
+                                <Text>Wallet</Text>
+                              ) : (
+                                <Text>Your Gogh account</Text>
+                              )}
+                            </Flex>
+                            <Text size={'2'} align={'right'} wrap={'wrap'}>{walletForPurchase?.slice(0, 6)}...{walletForPurchase?.slice(-4)}</Text>
                           </Flex>
-                          <Text size={'2'} align={'right'} wrap={'wrap'}>{walletForPurchase?.slice(0, 6)}...{walletForPurchase?.slice(-4)}</Text>
+                        </Flex>
+                        <Separator size={'4'} my={'3'} />
+                        <Flex direction={'row'} justify={'between'}>
+                          <Text size={'4'} weight={'bold'}>To:</Text>
+                          <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
+                            <Flex direction={'row'} gap={'2'} align={'center'}>
+                              <FontAwesomeIcon icon={faWallet} />
+                              <Text>{merchant?.name}</Text>
+                            </Flex>
+                            <Text size={'2'} align={'right'} wrap={'wrap'}>{merchantWalletAddress?.slice(0, 6)}...{merchantWalletAddress?.slice(-4)}</Text>
+                          </Flex>
                         </Flex>
                       </Flex>
-                      <Separator size={'4'} my={'3'} />
-                      <Flex direction={'row'} justify={'between'}>
-                        <Text size={'4'} weight={'bold'}>To:</Text>
-                        <Flex direction={'column'} gap={'2'} maxWidth={'70%'}>
-                          <Flex direction={'row'} gap={'2'} align={'center'}>
-                            <FontAwesomeIcon icon={faWallet} />
-                            <Text>{merchant?.name}</Text>
-                          </Flex>
-                          <Text size={'2'} align={'right'} wrap={'wrap'}>{merchantWalletAddress?.slice(0, 6)}...{merchantWalletAddress?.slice(-4)}</Text>
-                        </Flex>
+                      <Callout.Root color="orange">
+                        <Callout.Icon>
+                          <InfoCircledIcon />
+                        </Callout.Icon>
+                        <Callout.Text>
+                          Crypto transactions are not eligible for refunds.
+                        </Callout.Text>
+                      </Callout.Root>
+                      <Flex direction={'column'} align={'center'} gap={'7'} mt={'5'}>
+                        <Dialog.Close>
+                          <Button size={'4'} loading={isLoading} style={{width: '200px'}} 
+                            onClick={() => {
+                            if (finalPrice !== null && walletForPurchase) {
+                              sendUSDC(merchantWalletAddress as `0x${string}`, finalPrice);
+                              setError(null);
+                            } else {
+                              console.error("Invalid price or wallet address.");
+                              setError("Invalid price or wallet address. Unable to process the transaction.");
+                            }
+                            }}>
+                              Confirm and send
+                          </Button>
+                        </Dialog.Close>
+                        <Dialog.Close>
+                          <Button size={'4'} variant="ghost" color="gray" style={{width: '200px'}}>Cancel</Button>
+                        </Dialog.Close>
                       </Flex>
                     </Flex>
-                    <Callout.Root color="orange">
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text>
-                        Crypto transactions are not eligible for refunds.
-                      </Callout.Text>
-                    </Callout.Root>
-                    <Flex direction={'column'} align={'center'} gap={'7'} mt={'5'}>
-                      <Dialog.Close>
-                        <Button size={'4'} loading={isLoading} style={{width: '200px'}} 
-                          onClick={() => {
-                          if (price !== null && walletForPurchase) {
-                            sendUSDC(merchantWalletAddress as `0x${string}`, price);
-                            setError(null);
-                          } else {
-                            console.error("Invalid price or wallet address.");
-                            setError("Invalid price or wallet address. Unable to process the transaction.");
-                          }
-                          }}>
-                            Confirm and send
-                        </Button>
-                      </Dialog.Close>
-                      <Dialog.Close>
-                        <Button size={'4'} variant="ghost" color="gray" style={{width: '200px'}}>Cancel</Button>
-                      </Dialog.Close>
-                    </Flex>
-                  </Flex>
-                </Dialog.Content>
-              </Dialog.Root>
-              <Button size={'4'} variant="surface" loading={isLoading} style={{
-                  width: '250px'
-                }}
-                onClick={() => {
-                  setError(null);
-                  handleMobilePay();
-                }}>
-                  Mobile pay
-              </Button>
-            </Flex>
+                  </Dialog.Content>
+                </Dialog.Root>
+                <Button size={'4'} variant="surface" loading={isLoading} style={{
+                    width: '250px'
+                  }}
+                  onClick={() => {
+                    setError(null);
+                    handleMobilePay();
+                  }}>
+                    Mobile pay
+                </Button>
+              </Flex>
+            </>
             )
           )}
           </>

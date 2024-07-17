@@ -4,7 +4,6 @@ import fetch, { RequestInit } from 'node-fetch';
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const address = searchParams.get('address');
-  console.log('address:', address);
 
   if (!address) {
     return new NextResponse(JSON.stringify({ error: 'Address parameter is required' }), {
@@ -41,14 +40,10 @@ export async function GET(request: NextRequest) {
 
     const decimals = 6;
     const balances = data.result.tokenBalances;
-    console.log('balances:', balances);
-
     const balanceInHex = balances[0].tokenBalance;
     const decimalValue = BigInt(balanceInHex);
     const readableBalance = decimalValue / BigInt(10 ** decimals);
     const flooredBalance = Math.floor(Number(readableBalance)); 
-
-    console.log("floored balance:", flooredBalance);
 
     return new NextResponse(JSON.stringify({
       balance: flooredBalance 
