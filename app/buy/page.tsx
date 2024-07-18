@@ -910,7 +910,7 @@ function BuyContent() {
                     {/* <AlertDialog.Description size="2">
                       Paying in crypto supports local merchants by saving them money and eliminating bank fees.
                       If you have a Coinbase account, you can sign in and transfer money to your Gogh account.
-                      If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com" size='2' target="_blank" rel="noopener noreferrer">
+                      If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com/" size='2' target="_blank" rel="noopener noreferrer">
                       signing up later</Link>. It takes about 5 minutes.
                     </AlertDialog.Description> */}
 
