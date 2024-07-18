@@ -279,7 +279,7 @@ export default function NewTransfer() {
   
       } catch (error) {
         if (isError(error)) {
-          console.error('Error sending USDC transfer');
+          console.error('Error sending USDC transfer', error);
           setTransferErrorMessage('USDC transfer failed. Please try again or contact us if the issue persists.');
           setTransferStarted(false)
         } else {
@@ -418,7 +418,7 @@ export default function NewTransfer() {
         }
       }
     }
-    
+
     const fetchUser = async () => {
       if (!ready || !user?.id) return;
 

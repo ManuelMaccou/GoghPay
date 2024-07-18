@@ -440,6 +440,7 @@ function BuyContent() {
     setPendingMessage('Please wait...');
 
     if (embeddedWallet) {
+      console.log("wallet address for pimlico:", wallet.address)
       try {
         const erc20PaymasterAddress = process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS as `0x${string}`;
         const eip1193provider = await wallet.getEthereumProvider();
@@ -480,6 +481,8 @@ function BuyContent() {
             },
           ],
         })
+
+        console.log('smart account address:', account.address);
   
         const smartAccountClient = createSmartAccountClient({
           account,
@@ -907,12 +910,12 @@ function BuyContent() {
                     {/* <AlertDialog.Description size="2">
                       Paying in crypto supports local merchants by saving them money and eliminating bank fees.
                       If you have a Coinbase account, you can sign in and transfer money to your Gogh account.
-                      If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com" size="2" target="_blank" rel="noopener noreferrer">
+                      If you don&apos;t, we recommend using mobile pay for now, and <Link href="https://coinbase.com/" size='2' target="_blank" rel="noopener noreferrer">
                       signing up later</Link>. It takes about 5 minutes.
                     </AlertDialog.Description> */}
 
                     <AlertDialog.Description size="2">
-                      Transfer funds to your address below or from your Coinbase account.
+                      A minimum balance of $1 is required. Please transfer funds to your address below or from your Coinbase account.
                     </AlertDialog.Description>
                     <Flex direction={'column'} py={'5'}>
                       <TextField.Root value={walletForPurchase || ''} disabled placeholder="Enter Base USDC address from Coinbase">
