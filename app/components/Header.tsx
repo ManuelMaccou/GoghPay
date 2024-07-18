@@ -117,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
           <>
           {!merchant ? (
             !isBalanceLoading ? (
-              <Badge size={'3'}>USDC Balance: ${balance}</Badge>
+              <Badge size={'3'}>USDC Balance: ${balance.toFixed(2)}</Badge>
             ) : (
               <Badge size={'3'}>
                 USDC balance: 

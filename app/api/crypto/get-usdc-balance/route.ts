@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fetch, { RequestInit } from 'node-fetch';
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
+  const searchParams = request.nextUrl.searchParams;
   const address = searchParams.get('address');
 
   if (!address) {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   const fetchURL = process.env.NEXT_PUBLIC_ALCHEMY_URL!;
-  const usdcContactAddress = process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS
+  const usdcContactAddress = process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS;
 
   const requestOptions: RequestInit = {
     method: 'POST',
@@ -42,11 +42,11 @@ export async function GET(request: NextRequest) {
     const balances = data.result.tokenBalances;
     const balanceInHex = balances[0].tokenBalance;
     const decimalValue = BigInt(balanceInHex);
-    const readableBalance = decimalValue / BigInt(10 ** decimals);
-    const flooredBalance = Math.floor(Number(readableBalance)); 
+    const readableBalance = Number(decimalValue) / (10 ** decimals); // Convert balance to a decimal value
+    const formattedBalance = readableBalance.toFixed(2); // Format the balance to 2 decimal places
 
     return new NextResponse(JSON.stringify({
-      balance: flooredBalance 
+      balance: formattedBalance
     }), {
       status: 200,
       headers: {

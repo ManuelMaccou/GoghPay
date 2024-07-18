@@ -43,6 +43,7 @@ function SuccessContent() {
   const merchantId = searchParams.get('merchantId');
   const productName = searchParams.get('productName');
   const price = searchParams.get('price');
+  const priceNum = parseFloat(price || "0");
   const stripeCheckoutId = searchParams.get('session_id');
   const checkoutMethod = searchParams.get('checkout_method');
 
@@ -333,7 +334,7 @@ function SuccessContent() {
           weight={"bold"}
           size={"9"}
         >
-          ${price}
+          ${priceNum.toFixed(2)}
         </Text>
       </Flex>
       <Flex
