@@ -239,11 +239,9 @@ export default function Sales({ params }: { params: { userId: string } }) {
         </BalanceProvider>
         )}
       
-        <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
-          <ArrowLeftIcon style={{color: 'black'}}/>
-            <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Purchases</Text>
-        </Button>
-          {ready ? (
+        
+        <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Purchases</Text>
+        {ready ? (
             authenticated ? (
               isFetchingTransactions ? (
                 <>

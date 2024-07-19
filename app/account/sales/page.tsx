@@ -321,11 +321,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
         />
       </BalanceProvider>
       )}
-      
-      <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
-        <ArrowLeftIcon style={{color: 'black'}}/>
-          <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Sales</Text>
-      </Button>
+      <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Sales</Text>
       {ready ? (
         authenticated ? (
           isDeterminingMerchantStatus ? (
