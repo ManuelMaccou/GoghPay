@@ -33,6 +33,14 @@ export default function Sales({ params }: { params: { userId: string } }) {
   const wallet = wallets[0]
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
+  const handleSetCurrentUser = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleSetWalletForPurchase = (wallet: string | null) => {
+    setWalletForPurchase(wallet);
+  };
+
   const { logout } = useLogout ({
     onSuccess: async () => {
       router.push('/');
@@ -244,6 +252,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
           authenticated={authenticated}
           walletForPurchase={walletForPurchase}
           currentUser={currentUser}
+          setCurrentUser={handleSetCurrentUser}
+          setWalletForPurchase={handleSetWalletForPurchase}
         />
       </BalanceProvider>
       <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>

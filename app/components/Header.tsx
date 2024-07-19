@@ -28,17 +28,21 @@ interface HeaderProps {
   authenticated: boolean;
   currentUser?: User;
   walletForPurchase?: string | null;
+  setCurrentUser: (user: User) => void;
+  setWalletForPurchase: (wallet: string | null) => void;
 }
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
+export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authenticated, currentUser, walletForPurchase, setCurrentUser, setWalletForPurchase }) => {
   const { user, ready } = usePrivy();
   const { balance, isBalanceLoading } = useBalance();
   const {wallets} = useWallets();
   const router = useRouter();
+
+  const [headerLoginClicked, setHeaderLoginClicked] = useState<string | null>(null);
 
   const wallet = wallets[0];
   const chainId = wallet?.chainId;
@@ -52,58 +56,63 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
   
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-      console.log('login successful');
-      console.log("embedded wallet object before function:", embeddedWallet);
+      console.log('header login state in header', headerLoginClicked);
 
-      let smartAccountAddress;
-
-      if (isNewUser) {
-        if (embeddedWallet) {
-          smartAccountAddress = await createSmartAccount(embeddedWallet);
-        };
-        
-        try {
-          console.log('smart account address during login:', smartAccountAddress);
-          const userPayload = {
-            privyId: user.id,
-            walletAddress: user.wallet?.address,
-            email: user.email?.address || user.google?.email,
-            creationType: 'privy',
-            smartAccountAddress: smartAccountAddress,
+      if (headerLoginClicked === 'true') {
+  
+        let smartAccountAddress;
+  
+        if (isNewUser) {
+          if (embeddedWallet) {
+            smartAccountAddress = await createSmartAccount(embeddedWallet);
           };
-
-          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
-          console.log('New user created:', response.data);
-        } catch (error: unknown) {
-          if (axios.isAxiosError(error)) {
-              console.error('Error fetching user details:', error.response?.data?.message || error.message);
-          } else if (isError(error)) {
-              console.error('Unexpected error:', error.message);
-          } else {
-              console.error('Unknown error:', error);
-          }
-        }
-      }
-
-      if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
-        try {
-          await wallet.switchChain(chainIdNum);
-        } catch (error: unknown) {
-          console.error('Error switching chain:', error);
-      
-          if (typeof error === 'object' && error !== null && 'code' in error) {
-            const errorCode = (error as { code: number }).code;
-            if (errorCode === 4001) {
-              alert('You need to switch networks to proceed.');
+          
+          try {
+            console.log('smart account address during login:', smartAccountAddress);
+            const userPayload = {
+              privyId: user.id,
+              walletAddress: user.wallet?.address,
+              email: user.email?.address || user.google?.email,
+              creationType: 'privy',
+              smartAccountAddress: smartAccountAddress,
+            };
+  
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
+            setCurrentUser(response.data.user)
+            const walletAddress = response.data.user.smartAccountAddress || response.data.user.walletAddress;
+            setWalletForPurchase(walletAddress);
+            console.log('New user created:', response.data);
+          } catch (error: unknown) {
+            if (axios.isAxiosError(error)) {
+                console.error('Error fetching user details:', error.response?.data?.message || error.message);
+            } else if (isError(error)) {
+                console.error('Unexpected error:', error.message);
             } else {
-              alert('Failed to switch the network. Please try again.');
+                console.error('Unknown error:', error);
             }
-          } else {
-            console.log('An unexpected error occurred.');
           }
-          return;
         }
-      };
+  
+        if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+          try {
+            await wallet.switchChain(chainIdNum);
+          } catch (error: unknown) {
+            console.error('Error switching chain:', error);
+        
+            if (typeof error === 'object' && error !== null && 'code' in error) {
+              const errorCode = (error as { code: number }).code;
+              if (errorCode === 4001) {
+                alert('You need to switch networks to proceed.');
+              } else {
+                alert('Failed to switch the network. Please try again.');
+              }
+            } else {
+              console.log('An unexpected error occurred.');
+            }
+            return;
+          }
+        };
+      }
     },
     onError: (error) => {
         console.error("Privy login error:", error);
@@ -245,7 +254,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
           </>
         ) : (
           <Flex direction={'column'} justify={'center'} align={'end'} mx={'4'} style={{width: '100%'}}>
-            <Button size={'3'} variant='outline' onClick={login}>
+            <Button size={'3'} variant='outline' onClick={() => { login(); setHeaderLoginClicked('true'); }}>
               Log in
             </Button>
           </Flex>

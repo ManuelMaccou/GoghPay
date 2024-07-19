@@ -21,9 +21,7 @@ import { BalanceProvider } from "../contexts/BalanceContext";
 import { Header } from "../components/Header";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
-import NoWalletForPurchaseError from "../components/NoWalletForPurchaseError";
 import { createSmartAccount } from "../utils/createSmartAccount";
-const { ethers } = require("ethers");
 
 interface PurchaseParams {
   merchantId: string | null;
@@ -67,12 +65,20 @@ function BuyContent() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
   const [purchaseStarted, setPurchaseStarted] = useState(false);
-  
+  const [headerLoginClicked, setHeaderLoginClicked] = useState<string | null>(null);  
 
   const router = useRouter();
 
   const {user} = usePrivy();
   const {getAccessToken} = usePrivy();
+
+  const handleSetCurrentUser = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleSetWalletForPurchase = (wallet: string | null) => {
+    setWalletForPurchase(wallet);
+  };
 
   // Get params to verify signed URL
   const searchParams = useSearchParams();
@@ -164,10 +170,11 @@ function BuyContent() {
   const disableLogin = !ready || (ready && authenticated);
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
+      console.log('header login state', headerLoginClicked);
 
       let smartAccountAddress;
 
-      if (isNewUser) {
+      if (isNewUser && headerLoginClicked === 'false') {
         if (embeddedWallet) {
           smartAccountAddress = await createSmartAccount(embeddedWallet);
         };
@@ -184,7 +191,7 @@ function BuyContent() {
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
           setCurrentUser(response.data.user)
           const walletAddress = response.data.user.smartAccountAddress || response.data.user.walletAddress;
-        setWalletForPurchase(walletAddress);
+          setWalletForPurchase(walletAddress);
         } catch (error: unknown) {
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
@@ -316,6 +323,7 @@ function BuyContent() {
   
     if (ready && authenticated) {
       fetchUser();
+      console.log('fetching user from use effect');
     }
   }, [activeWalletAddress, authenticated, ready, user ]);
 
@@ -651,6 +659,7 @@ function BuyContent() {
   useEffect(() => {
     if(ready && authenticated && isValid && walletForPurchase) {
       const fetchBalance = async () => {
+        console.log('is fetching balance');
         setIsBalanceLoading(true);
         try {
           const response = await fetch(`/api/crypto/get-usdc-balance?address=${walletForPurchase}`);
@@ -741,6 +750,8 @@ function BuyContent() {
           authenticated={authenticated}
           walletForPurchase={walletForPurchase}
           currentUser={currentUser}
+          setCurrentUser={handleSetCurrentUser}
+          setWalletForPurchase={handleSetWalletForPurchase}
         />
       </BalanceProvider>
       {/* <Heading size={'7'} align={'center'}>Confirm details</Heading> */}
@@ -950,8 +961,9 @@ function BuyContent() {
                     </Flex>
                   </AlertDialog.Content>
                 </AlertDialog.Root>
-
-                <Button size={'4'} variant="surface" loading={isLoading} style={{
+                
+                {merchant && merchant.stripeConnectedAccountId && (
+                  <Button size={'4'} variant="surface" loading={isLoading} style={{
                     width: '250px'
                   }}
                   onClick={() => {
@@ -960,6 +972,8 @@ function BuyContent() {
                   }}>
                     Mobile pay
                 </Button>
+                )} 
+                
 
                 {/*<div id="cbpay-container"></div>*/}
               </Flex>
@@ -1059,7 +1073,9 @@ function BuyContent() {
                     </Flex>
                   </Dialog.Content>
                 </Dialog.Root>
-                <Button size={'4'} variant="surface" loading={isLoading} style={{
+
+                {merchant && merchant.stripeConnectedAccountId && (
+                  <Button size={'4'} variant="surface" loading={isLoading} style={{
                     width: '250px'
                   }}
                   onClick={() => {
@@ -1068,6 +1084,8 @@ function BuyContent() {
                   }}>
                     Mobile pay
                 </Button>
+                )}
+                
               </Flex>
             </>
             )
@@ -1081,7 +1099,7 @@ function BuyContent() {
                 width: 'max-content',
                 backgroundColor: '#0051FD'
               }}
-              onClick={login}>
+              onClick={() => { login(); setHeaderLoginClicked('false'); }}>
               Log in to pay with crypto
             </Button>
 

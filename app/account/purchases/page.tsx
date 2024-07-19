@@ -31,6 +31,14 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   const router = useRouter();
 
+  const handleSetCurrentUser = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleSetWalletForPurchase = (wallet: string | null) => {
+    setWalletForPurchase(wallet);
+  };
+
   const getPaymentTypeInfo = (paymentType: string) => {
     const types: { [key: string]: { label: string; color: string } } = {
       'sponsored crypto': { label: 'Crypto', color: '#4CAF50' },
@@ -159,6 +167,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
+            setCurrentUser={handleSetCurrentUser}
+            setWalletForPurchase={handleSetWalletForPurchase}
           />
         </BalanceProvider>
         <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>

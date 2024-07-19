@@ -60,6 +60,14 @@ export default function NewTransfer() {
 
   const { fetchBalance } = useBalance();
 
+  const handleSetCurrentUser = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleSetWalletForPurchase = (wallet: string | null) => {
+    setWalletForPurchase(wallet);
+  };
+
 
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
 
@@ -664,6 +672,8 @@ export default function NewTransfer() {
           authenticated={authenticated}
           walletForPurchase={walletForPurchase}
           currentUser={currentUser}
+          setCurrentUser={handleSetCurrentUser}
+          setWalletForPurchase={handleSetWalletForPurchase}
         />
       </BalanceProvider>
       <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
