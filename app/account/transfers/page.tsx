@@ -741,11 +741,7 @@ export default function NewTransfer() {
           />
         </BalanceProvider>
       )}
-        
-      <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
-        <ArrowLeftIcon style={{color: 'black'}}/>
-          <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
-      </Button>  
+      <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
       <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'start'} gap={'4'}>
         {ready && (
           authenticated ? (
