@@ -4,9 +4,10 @@ import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, User, Transaction } from "@/app/types/types";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
-import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
-import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Table, Text, TextField } from "@radix-ui/themes";
+import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
+import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Table, Text } from "@radix-ui/themes";
+import axios from "axios";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
@@ -30,8 +31,11 @@ export default function Sales({ params }: { params: { userId: string } }) {
   const [todaysTotalSale, setTodaysTotalSale] = useState<number>(0);
 
   const { wallets } = useWallets();
-  const wallet = wallets[0]
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+
+  const wallet = wallets[0]
+  const chainId = wallet?.chainId;
+  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
 
   const handleSetCurrentUser = (user: User) => {
     setCurrentUser(user);
@@ -46,6 +50,65 @@ export default function Sales({ params }: { params: { userId: string } }) {
       router.push('/');
     }
   })
+
+  const { login } = useLogin({
+    onComplete: async (user, isNewUser) => {
+
+      let smartAccountAddress;
+
+      if (isNewUser) {
+        if (embeddedWallet) {
+          smartAccountAddress = await createSmartAccount(embeddedWallet);
+        };
+        
+        try {
+          const userPayload = {
+            privyId: user.id,
+            walletAddress: user.wallet?.address,
+            email: user.email?.address || user.google?.email,
+            creationType: 'privy',
+            smartAccountAddress: smartAccountAddress,
+          };
+
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
+          setCurrentUser(response.data.user)
+          const walletAddress = response.data.user.smartAccountAddress || response.data.user.walletAddress;
+          setWalletForPurchase(walletAddress);
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error)) {
+              console.error('Error fetching user details:', error.response?.data?.message || error.message);
+          } else if (isError(error)) {
+              console.error('Unexpected error:', error.message);
+          } else {
+              console.error('Unknown error:', error);
+          }
+        }
+      }
+      
+      if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+        try {
+          await wallet.switchChain(chainIdNum);
+        } catch (error: unknown) {
+          console.error('Error switching chain:', error);
+      
+          if (typeof error === 'object' && error !== null && 'code' in error) {
+            const errorCode = (error as { code: number }).code;
+            if (errorCode === 4001) {
+              alert('You need to switch networks to proceed.');
+            } else {
+              alert('Failed to switch the network. Please try again.');
+            }
+          } else {
+            console.log('An unexpected error occurred.');
+          }
+          return;
+        }
+      };
+    },
+    onError: (error) => {
+      console.error("Privy login error:", error);
+    },
+  });
   
   const router = useRouter();
   const visitingUser = params.userId
@@ -245,7 +308,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
   return (
     <>
     <Flex direction={'column'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'}>
-      <BalanceProvider walletForPurchase={walletForPurchase}>
+      {ready && authenticated && (
+        <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           merchant={currentUser?.merchant}
           embeddedWallet={embeddedWallet}
@@ -256,6 +320,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
           setWalletForPurchase={handleSetWalletForPurchase}
         />
       </BalanceProvider>
+      )}
+      
       <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
         <ArrowLeftIcon style={{color: 'black'}}/>
           <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Sales</Text>
@@ -376,11 +442,19 @@ export default function Sales({ params }: { params: { userId: string } }) {
             </Flex>
           )
         ) : (
-          <Flex direction={'column'} height={'200px'} align={'center'} justify={'center'}>
-            <Text align={'center'}>
-              Please log in to view this page
-            </Text>
-          </Flex>
+          <Flex direction={'column'} height={'80vh'} align={'center'} justify={'center'} gap={'5'}>
+              <Text align={'center'}>
+                Please log in to view this page
+              </Text>
+              <Button size={'4'}
+              style={{
+                width: '250px',
+                backgroundColor: '#0051FD'
+              }}
+              onClick={login}>
+              Log in
+            </Button>
+            </Flex>
         )
       ) : (
         <Spinner />
