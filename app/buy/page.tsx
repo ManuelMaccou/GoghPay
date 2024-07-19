@@ -170,11 +170,10 @@ function BuyContent() {
   const disableLogin = !ready || (ready && authenticated);
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-      console.log('header login state', headerLoginClicked);
 
       let smartAccountAddress;
 
-      if (isNewUser && headerLoginClicked === 'false') {
+      if (isNewUser) {
         if (embeddedWallet) {
           smartAccountAddress = await createSmartAccount(embeddedWallet);
         };
@@ -743,52 +742,56 @@ function BuyContent() {
 
   return (
     <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
-      <BalanceProvider walletForPurchase={walletForPurchase}>
-        <Header
-          merchant={currentUser?.merchant}
-          embeddedWallet={embeddedWallet}
-          authenticated={authenticated}
-          walletForPurchase={walletForPurchase}
-          currentUser={currentUser}
-          setCurrentUser={handleSetCurrentUser}
-          setWalletForPurchase={handleSetWalletForPurchase}
-        />
-      </BalanceProvider>
+      {ready && authenticated && (
+        <BalanceProvider walletForPurchase={walletForPurchase}>
+          <Header
+            merchant={currentUser?.merchant}
+            embeddedWallet={embeddedWallet}
+            authenticated={authenticated}
+            walletForPurchase={walletForPurchase}
+            currentUser={currentUser}
+            setCurrentUser={handleSetCurrentUser}
+            setWalletForPurchase={handleSetWalletForPurchase}
+          />
+          </BalanceProvider>
+       )}
       {/* <Heading size={'7'} align={'center'}>Confirm details</Heading> */}
-      {!isFetchingMerchant ? (
-        <Box width={'100%'}>
-          <Flex justify={'center'}>
+      <Flex height={'100%'} flexGrow={'1'} direction={'column'} justify={'center'} align={'center'}>
+        {!isFetchingMerchant ? (
+          <Box width={'100%'}>
+            <Flex justify={'center'}>
 
-            <Avatar.Root>
-              <Avatar.Image 
-              className="MerchantLogo"
-              src={merchant?.storeImage }
-              alt="Merchant Logo"
-              style={{objectFit: "contain", maxWidth: '200px'}}
-              />
-              
-            </Avatar.Root>
+              <Avatar.Root>
+                <Avatar.Image 
+                className="MerchantLogo"
+                src={merchant?.storeImage }
+                alt="Merchant Logo"
+                style={{objectFit: "contain", maxWidth: '200px'}}
+                />
+                
+              </Avatar.Root>
 
-           
-            </Flex>
-            <Flex direction={'column'} align={'center'} mb={'2'}>
-              <Text size={'9'} my={'4'}>
-                ${price.toFixed(2)}
-              </Text>
-              {tipAmount > 0 && (
-                <Flex direction={'row'} justify={'center'} gap={'3'}>
-                  <Text align={'center'} size={'5'}>+ ${tipAmount.toFixed(2)} tip</Text>
-                  <IconButton variant="ghost" color="gray" onClick={resetTipAmount}>
-                    <CrossCircledIcon />
-                  </IconButton>
-                </Flex>
-              )}
-              
-            </Flex>
-          </Box>
-        ) : (
-          <Spinner />
-        )}
+            
+              </Flex>
+              <Flex direction={'column'} align={'center'} mb={'2'}>
+                <Text size={'9'} my={'4'}>
+                  ${price.toFixed(2)}
+                </Text>
+                {tipAmount > 0 && (
+                  <Flex direction={'row'} justify={'center'} gap={'3'}>
+                    <Text align={'center'} size={'5'}>+ ${tipAmount.toFixed(2)} tip</Text>
+                    <IconButton variant="ghost" color="gray" onClick={resetTipAmount}>
+                      <CrossCircledIcon />
+                    </IconButton>
+                  </Flex>
+                )}
+                
+              </Flex>
+            </Box>
+          ) : (
+            <Spinner />
+          )}
+        </Flex>
 
         <Box width={'100%'}>
         <Flex direction={'column'} align={'center'}>
@@ -1099,7 +1102,7 @@ function BuyContent() {
                 width: 'max-content',
                 backgroundColor: '#0051FD'
               }}
-              onClick={() => { login(); setHeaderLoginClicked('false'); }}>
+              onClick={login}>
               Log in to pay with crypto
             </Button>
 

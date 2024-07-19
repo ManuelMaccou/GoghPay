@@ -4,8 +4,8 @@ import { Merchant, User } from "@/app/types/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/app/components/Header";
-import { ConnectedWallet, getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
-import { Badge, Box, Button, Callout, Card, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
+import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
+import { Badge, Box, Button, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
 import { ArrowLeftIcon, AvatarIcon, CopyIcon, ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { CoinbaseButton } from "@/app/buy/components/coinbaseOnramp";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
@@ -18,8 +18,12 @@ import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { signerToSafeSmartAccount } from "permissionless/accounts";
 import { BalanceProvider, useBalance } from "@/app/contexts/BalanceContext";
 import NotificationMessage from "@/app/components/Notification";
-import NoWalletForPurchaseError from "@/app/components/NoWalletForPurchaseError";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
+import axios from "axios";
+
+function isError(error: any): error is Error {
+  return error instanceof Error && typeof error.message === "string";
+}
 
 export default function NewTransfer() {
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +71,65 @@ export default function NewTransfer() {
   const handleSetWalletForPurchase = (wallet: string | null) => {
     setWalletForPurchase(wallet);
   };
+
+  const { login } = useLogin({
+    onComplete: async (user, isNewUser) => {
+
+      let smartAccountAddress;
+
+      if (isNewUser) {
+        if (embeddedWallet) {
+          smartAccountAddress = await createSmartAccount(embeddedWallet);
+        };
+        
+        try {
+          const userPayload = {
+            privyId: user.id,
+            walletAddress: user.wallet?.address,
+            email: user.email?.address || user.google?.email,
+            creationType: 'privy',
+            smartAccountAddress: smartAccountAddress,
+          };
+
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
+          setCurrentUser(response.data.user)
+          const walletAddress = response.data.user.smartAccountAddress || response.data.user.walletAddress;
+          setWalletForPurchase(walletAddress);
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error)) {
+              console.error('Error fetching user details:', error.response?.data?.message || error.message);
+          } else if (isError(error)) {
+              console.error('Unexpected error:', error.message);
+          } else {
+              console.error('Unknown error:', error);
+          }
+        }
+      }
+      
+      if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
+        try {
+          await wallet.switchChain(chainIdNum);
+        } catch (error: unknown) {
+          console.error('Error switching chain:', error);
+      
+          if (typeof error === 'object' && error !== null && 'code' in error) {
+            const errorCode = (error as { code: number }).code;
+            if (errorCode === 4001) {
+              alert('You need to switch networks to proceed.');
+            } else {
+              alert('Failed to switch the network. Please try again.');
+            }
+          } else {
+            console.log('An unexpected error occurred.');
+          }
+          return;
+        }
+      };
+    },
+    onError: (error) => {
+      console.error("Privy login error:", error);
+    },
+  });
 
 
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
@@ -665,17 +728,20 @@ export default function NewTransfer() {
 
   return (
     <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
-      <BalanceProvider walletForPurchase={walletForPurchase}>
-        <Header
-          merchant={currentUser?.merchant}
-          embeddedWallet={embeddedWallet}
-          authenticated={authenticated}
-          walletForPurchase={walletForPurchase}
-          currentUser={currentUser}
-          setCurrentUser={handleSetCurrentUser}
-          setWalletForPurchase={handleSetWalletForPurchase}
-        />
-      </BalanceProvider>
+      {ready && authenticated && (
+        <BalanceProvider walletForPurchase={walletForPurchase}>
+          <Header
+            merchant={currentUser?.merchant}
+            embeddedWallet={embeddedWallet}
+            authenticated={authenticated}
+            walletForPurchase={walletForPurchase}
+            currentUser={currentUser}
+            setCurrentUser={handleSetCurrentUser}
+            setWalletForPurchase={handleSetWalletForPurchase}
+          />
+        </BalanceProvider>
+      )}
+        
       <Button variant="ghost" size={'4'} style={{width: 'max-content'}} onClick={() => router.back()}>
         <ArrowLeftIcon style={{color: 'black'}}/>
           <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
@@ -911,10 +977,18 @@ export default function NewTransfer() {
 
             </>
           ) : (
-            <Flex direction={'column'} height={'200px'} align={'center'} justify={'center'}>
+            <Flex direction={'column'} height={'80vh'} align={'center'} justify={'center'} gap={'5'}>
               <Text align={'center'}>
                 Please log in to view this page
               </Text>
+              <Button size={'4'}
+              style={{
+                width: '250px',
+                backgroundColor: '#0051FD'
+              }}
+              onClick={login}>
+              Log in
+            </Button>
             </Flex>
           )
         )}
