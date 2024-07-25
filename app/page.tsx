@@ -8,16 +8,6 @@ import axios from 'axios';
 import { Button, Flex, Separator, Spinner } from "@radix-ui/themes";
 import { User } from './types/types';
 import styles from './components/styles.module.css';
-import { Chain, createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
-import { walletClientToSmartAccountSigner,ENTRYPOINT_ADDRESS_V07 } from 'permissionless';
-import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
-import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
-import { signerToSafeSmartAccount } from 'permissionless/accounts';
-import MobileMenu from './components/MobileMenu';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRightFromBracket, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
-import Login from './components/Login';
 import { createSmartAccount } from './utils/createSmartAccount';
 
 function isError(error: any): error is Error {
@@ -37,27 +27,6 @@ export default function Home() {
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
-
-  const chainMapping: { [key: string]: Chain } = {
-    'baseSepolia': baseSepolia,
-    'base': base,
-  };
-
- // Utility function to get Chain object from environment variable
-  const getChainFromEnv = (envVar: string | undefined): Chain => {
-    if (!envVar) {
-      throw new Error('Environment variable for chain is not defined');
-    }
-    
-    const chain = chainMapping[envVar];
-    
-    if (!chain) {
-      throw new Error(`No chain found for environment variable: ${envVar}`);
-    }
-
-    return chain;
-  };
-  
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
@@ -94,6 +63,7 @@ export default function Home() {
               console.error('Unknown error:', error);
           }
         }
+        router.push('/account/transfer?step=new-user')
       }
 
       if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
@@ -267,7 +237,7 @@ export default function Home() {
           !isLoading && (
             <Flex direction={'column'} justify={'center'} align={'center'}>
               <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
-                Log in
+                Log in/Sign up
               </Button>
             </Flex>
           )
