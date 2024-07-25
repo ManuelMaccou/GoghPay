@@ -775,7 +775,7 @@ function TransferContent() {
                 <Dialog.Content maxWidth="450px">
                   <Dialog.Title>Do you have Coinbase?</Dialog.Title>
                   <Dialog.Description size="2" mb="4">
-                    We use Coinbase to easily and safely convert dollars to crypto. If you don't have a Coinbase account, you'll need to create one. It's free and only takes 5 minutes.
+                    We use Coinbase to easily and safely convert dollars to crypto. If you don&apos;t have a Coinbase account, you&apos;ll need to create one. It&apos;s free and only takes 5 minutes.
                   </Dialog.Description>
 
                   <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
