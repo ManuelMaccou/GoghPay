@@ -1,12 +1,12 @@
 'use client'
 
 import { Merchant, User } from "@/app/types/types";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Header } from "@/app/components/Header";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
 import { Badge, Box, Button, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
-import { ArrowLeftIcon, AvatarIcon, CopyIcon, ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
+import { CopyIcon, ExclamationTriangleIcon, InfoCircledIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { CoinbaseButton } from "@/app/buy/components/coinbaseOnramp";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -25,7 +25,7 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function NewTransfer() {
+function TransferContent() {
   const [error, setError] = useState<string | null>(null);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [transferErrorMessage, setTransferErrorMessage] = useState<string | null>(null);
@@ -53,6 +53,7 @@ export default function NewTransfer() {
   const [transferStarted, setTransferStarted] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [redirectURL, setRedirectURL] = useState('');
+  const [newUserExperience, setNewUserExperience] = useState(false);
 
   const { user, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
@@ -62,7 +63,20 @@ export default function NewTransfer() {
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
 
+  // Get params for new user experience
+  const searchParams = useSearchParams();
+  const stepParam = searchParams.get('step');
+  console.log(stepParam);
+
   const { fetchBalance } = useBalance();
+
+  const handleNewUserDialog = () => {
+    // Open the new tab
+    window.open('https://www.coinbase.com/', '_blank', 'noopener,noreferrer');
+
+    // Remove the URL parameter
+    router.replace('/account/transfer');
+  };
 
   const handleSetCurrentUser = (user: User) => {
     setCurrentUser(user);
@@ -471,6 +485,13 @@ export default function NewTransfer() {
     const currentURL = window.location.href;
     setRedirectURL(currentURL);
   }, []);
+
+  useEffect(() => {
+    if (stepParam && stepParam === 'new-user' && embeddedWallet) {
+      setNewUserExperience(true);
+    }
+  }, [stepParam, embeddedWallet]);
+  
   
   
 
@@ -741,11 +762,37 @@ export default function NewTransfer() {
           />
         </BalanceProvider>
       )}
-      <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfers</Text>
+      <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfer funds</Text>
       <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'start'} gap={'4'}>
         {ready && (
           authenticated ? (
             <>
+              <Dialog.Root open={newUserExperience} onOpenChange={setNewUserExperience}>
+                <Dialog.Trigger>
+                  <Button style={{ display: 'none' }} />
+                </Dialog.Trigger>
+
+                <Dialog.Content maxWidth="450px">
+                  <Dialog.Title>Do you have Coinbase?</Dialog.Title>
+                  <Dialog.Description size="2" mb="4">
+                    We use Coinbase to easily and safely convert dollars to crypto. If you don't have a Coinbase account, you'll need to create one. It's free and only takes 5 minutes.
+                  </Dialog.Description>
+
+                  <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                    <Dialog.Close>
+                      <Button variant="ghost"  onClick={() => router.replace('/account/transfer')}>
+                        I have an account
+                      </Button>
+                    </Dialog.Close>
+                    <Dialog.Close>
+                      <Button onClick={handleNewUserDialog}>
+                        Continue to Coinbase
+                      </Button>
+                    </Dialog.Close>
+                  </Flex>
+                </Dialog.Content>
+              </Dialog.Root>
+
               <Text>
                 We integrate with Coinbase to offer quick, safe transfers from your bank.
               </Text>
@@ -757,9 +804,9 @@ export default function NewTransfer() {
                     boxShadow: 'var(--shadow-2)',
                     borderRadius: '10px'
                     }}>
-                    <Heading>Transfer from bank</Heading>
+                    <Heading>Deposit into Gogh</Heading>
                     <Text>
-                      Move funds into your Gogh account so you can make purchases at your favorite vendors.
+                      Move funds into your Gogh account using Coinbase so you can make purchases at your favorite vendors. 
                     </Text>
                     <CoinbaseButton
                       destinationWalletAddress={walletForPurchase || ""}
@@ -768,38 +815,31 @@ export default function NewTransfer() {
                     />
                   </Flex>
 
-                  <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
-                    boxShadow: 'var(--shadow-2)',
-                    borderRadius: '10px'
-                    }}>
-                    <Heading align={'center'}>Transfer from a crypto wallet</Heading>
-                    {embeddedWallet ? (
+                  {!embeddedWallet && (
+                    <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                      boxShadow: 'var(--shadow-2)',
+                      borderRadius: '10px'
+                      }}>
+                      <Heading align={'center'}>Transfer from a crypto wallet</Heading>
                       <Text>
-                      Copy the address below to transfer funds into your Gogh account.
-                    </Text>
-                    ) : (
-                    <Text>
-                      Copy your address below to transfer funds from an existing wallet.
-                    </Text>
-                    )}
-              
-                    <Flex direction={'column'} pb={'5'} width={'100%'}>
-                      <TextField.Root value={walletForPurchase || ''} disabled>
-                        <TextField.Slot side="right">
-                          <IconButton size="1" variant="ghost" onClick={copyToClipboard}>
-                            <CopyIcon height="20" width="20" />
-                          </IconButton>
-                        </TextField.Slot>
-                      </TextField.Root>
-                      {copyConfirmMessage && (
-                        <Text size={'2'}>
-                          {copyConfirmMessage}
-                        </Text>
-                      )}
-
+                        Copy your address below to transfer funds from an existing wallet.
+                      </Text>
+                      <Flex direction={'column'} pb={'5'} width={'100%'}>
+                        <TextField.Root value={walletForPurchase || ''} disabled>
+                          <TextField.Slot side="right">
+                            <IconButton size="1" variant="ghost" onClick={copyToClipboard}>
+                              <CopyIcon height="20" width="20" />
+                            </IconButton>
+                          </TextField.Slot>
+                        </TextField.Root>
+                        {copyConfirmMessage && (
+                          <Text size={'2'}>
+                            {copyConfirmMessage}
+                          </Text>
+                        )}
+                      </Flex>
                     </Flex>
-                  </Flex>
-              
+                  )}
 
                   {Boolean(balance && balance > 0) && (
                     <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
@@ -809,7 +849,7 @@ export default function NewTransfer() {
                       <Heading>Deposit to Coinbase</Heading>
                       <Text>Once funds are in your Coinbase account, you can easily transfer them to your bank.</Text>
                       <Flex direction={'column'} justify={'center'} gap={'4'} width={'100%'}>
-                        <TextField.Root value={address} onChange={handleAddressChange} disabled={isValidAddress} placeholder="Enter Base USDC address from Coinbase">
+                        <TextField.Root value={address} onChange={handleAddressChange} disabled={isValidAddress} placeholder="Paste the USDC address from Coinbase">
                         <TextField.Slot side="right">
                           <IconButton size="1" variant="ghost" onClick={handleEditAddress}>
                             <Pencil2Icon height="14" width="14" />
@@ -824,7 +864,7 @@ export default function NewTransfer() {
                         )}
                         {!currentUser?.coinbaseAddress && (
                           <Flex direction={'row'} gap={'2'} align={'center'} justify={'center'} mt={'-2'} mb={'3'}>
-                            <ExclamationTriangleIcon />
+                            <InfoCircledIcon />
                             <Link underline="always" href='https://ongogh.com/coinbase' target='_blank' rel='noopener noreferrer'>
                                 Read this to get your address.
                               </Link> 
@@ -991,4 +1031,12 @@ export default function NewTransfer() {
       </Flex>
     </Flex>
   )
+}
+
+export default function Transfer() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <TransferContent />
+    </Suspense>
+  );
 }

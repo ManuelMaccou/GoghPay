@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                             <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfers`)}>Transfer funds</Button>
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                         <Separator size={'4'} />
                         <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                           <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfers`)}>Transfer funds</Button>
+                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
                         </Flex>
                         <Separator size={'4'} />
                         <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
