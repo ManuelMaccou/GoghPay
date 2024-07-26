@@ -19,6 +19,8 @@ export default function Home() {
   const [isFetchingUser, setIsFetchingUser] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExistingUser, setIsExistingUser] = useState<boolean | null>(null);
+
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
   const {wallets} = useWallets();
   const router = useRouter();
@@ -63,38 +65,16 @@ export default function Home() {
               console.error('Unknown error:', error);
           }
         }
-        router.push('/account/transfer?step=new-user')
+        router.replace('/account/transfer?step=new-user')
+        return;
       }
 
-      if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
-        try {
-          await wallet.switchChain(chainIdNum);
-        } catch (error: unknown) {
-          console.error('Error switching chain:', error);
-      
-          if (typeof error === 'object' && error !== null && 'code' in error) {
-            const errorCode = (error as { code: number }).code;
-            if (errorCode === 4001) {
-              alert('You need to switch networks to proceed.');
-            } else {
-              alert('Failed to switch the network. Please try again.');
-            }
-          } else {
-            console.log('An unexpected error occurred.');
-          }
-          return;
-        }
-      };
+      setIsExistingUser(true);
     },
     onError: (error) => {
         console.error("Privy login error:", error);
     },
   });
-
-
-  const handleNewSaleClick = () => {
-    router.push('/sell');
-  };
 
   useEffect(() => {
     if (!ready) return;
@@ -173,6 +153,16 @@ export default function Home() {
     }
   }, [user, currentUser, embeddedWallet, getAccessToken]);
 
+  useEffect(() => {
+    if (isExistingUser !== true) return;
+
+    if (currentUser && currentUser.merchant) {
+      router.replace('/account/sales')
+    } else if (currentUser && !currentUser.merchant) {
+      router.replace('/account/purchases')
+    }
+  }, [currentUser, isExistingUser, router]);
+
   return (
     <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
       <Image
@@ -206,50 +196,14 @@ export default function Home() {
           </Flex>
         ))}
 
-        {!isLoading && ready && authenticated ? (
-          isFetchingUser ? (
-            <Flex direction={'column'} justify={'center'} align={'center'}>
-              <Spinner />
-            </Flex>
-          ) : (
-            <Flex direction={'column'} justify={'between'}>
-              <Flex direction={'column'} gap={'5'}>
-                {currentUser?.merchant ? (
-                  <>
-                    <Button size={'4'} style={{width: "300px"}} onClick={handleNewSaleClick}>
-                      New Sale
-                    </Button>
-                    <Button size={'4'} style={{width: "300px"}}
-                      onClick={() => router.push(`/account/sales`)}>
-                        Sales
-                    </Button>
-                  </>
-                ) : (
-                  <Button size={'4'} style={{width: "300px"}}
-                    onClick={() => router.push(`/account/purchases`)}>
-                      Purchases
-                  </Button>
-                )}
-              </Flex>
-            </Flex>
-          )
-        ) : (
-          !isLoading && (
-            <Flex direction={'column'} justify={'center'} align={'center'}>
-              <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
-                Log in/Sign up
-              </Button>
-            </Flex>
-          )
+        {!isLoading && (
+          <Flex direction={'column'} justify={'center'} align={'center'}>
+            <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
+              Log in/Sign up
+            </Button>
+          </Flex>
         )}
       </Flex>
-      {ready && authenticated && !isFetchingUser && !isLoading && (
-        <Flex direction={'column'} justify={'center'} align={'center'} position={'absolute'} bottom={'9'} width={'100%'}>
-          <Button highContrast size={'4'} style={{width: "300px"}} onClick={logout}>
-            Log out
-          </Button>
-        </Flex>
-      )}
     </Flex>
   );
 };
