@@ -521,9 +521,11 @@ function BuyContent() {
           functionName: 'transfer',
           args: [merchantWalletAddress, amountInUSDC]
         })
+
+        console.log('smart account client address:', smartAccountClient.account.address);
     
         const transactionHash = await smartAccountClient.sendTransaction({
-          account: smartAccountClient.account,
+          // account: smartAccountClient.account,
           to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
           data: data,
           value: BigInt(0),

@@ -329,6 +329,8 @@ function TransferContent() {
             },
           },
         })
+
+        
   
         const data = encodeFunctionData({
           abi: erc20Abi,
@@ -337,7 +339,7 @@ function TransferContent() {
         })
   
         const transactionHash = await smartAccountClient.sendTransaction({
-          account: smartAccountClient.account,
+          // account: smartAccountClient.account,
           to: process.env.NEXT_PUBLIC_USDC_CONTRACT_ADDRESS as `0x${string}`,
           data: data,
           value: BigInt(0),
