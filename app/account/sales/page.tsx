@@ -1,8 +1,8 @@
 "use client"
 
+import { Merchant, User, Transaction } from "@/app/types/types";
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, User, Transaction } from "@/app/types/types";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon } from "@radix-ui/react-icons";
@@ -11,12 +11,13 @@ import axios from "axios";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
+import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Sales({ params }: { params: { userId: string } }) {
+export default function Sales({ params }: { params: { userId: string } }) {  
   const { ready, authenticated, user } = usePrivy();
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
@@ -121,6 +122,14 @@ export default function Sales({ params }: { params: { userId: string } }) {
     };
     return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
   };
+
+  useEffect(() => {
+    if (merchant) {
+      checkAndRefreshToken(merchant._id)
+      console.log('Checking Square auth token with merchant:', merchant);
+
+    }
+  }, [merchant]);
 
   useEffect(() => {
     const fetchUser = async () => {

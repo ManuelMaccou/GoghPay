@@ -3,25 +3,64 @@
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, User } from "@/app/types/types";
-import { Button, Flex, Heading, Link, Text } from "@radix-ui/themes";
+import { Button, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
 import * as Avatar from '@radix-ui/react-avatar';
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
+import crypto from 'crypto';
+import { setCookie } from 'nookies';
+import { useSearchParams } from "next/navigation";
+import Cookies from "js-cookie";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-
-export default function Integrations() {
+function IntegrationsContent() {
   const [error, setError] = useState<string | null>(null);
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
   const [merchant, setMerchant] = useState<Merchant>();
+  const [status, setStatus] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string>('');
+  // const [merchantSet, setMerchantSet] = useState<boolean>(false);
 
   const { login, user, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    const messageParam = searchParams.get('message');
+
+    setStatus(statusParam);
+    setMessage(decodeURIComponent(messageParam || ''));
+  }, [searchParams]);
+
+  useEffect(() => {
+    let token = Cookies.get('csrfToken');
+  
+    if (!token) {
+      // Generate CSRF token and set it as a cookie if it doesn't exist
+      token = crypto.randomBytes(16).toString('hex');
+      setCsrfToken(token);
+  
+      Cookies.set('csrfToken', token, {
+        expires: 1, // 1 day
+        path: '/',
+        secure: process.env.SECURE_ENV === 'true', // Secure flag set based on environment
+        sameSite: 'lax' // Changed from 'strict' to 'lax'
+      });
+      console.log('CSRF Token in client useEffect:', token);
+    } else {
+      setCsrfToken(token);
+      console.log('CSRF token retrieved from cookie:', token);
+    }
+  }, []);
+
 
   const squareAppId = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
   const squareEnv = process.env.NEXT_PUBLIC_SQUARE_ENV;
@@ -42,7 +81,9 @@ export default function Integrations() {
   ];
   const scopeString = squareScopes.join('+');
 
-  const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=82201dd8d83d23cc8a48caf52b`
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
+  const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=${csrfToken}&redirect_uri=${redirectUri}`
 
   const handleSetCurrentUser = (user: User) => {
     setCurrentUser(user);
@@ -58,6 +99,7 @@ export default function Integrations() {
         const privyId = id
         const response = await fetch(`/api/merchant/privyId/${privyId}`);
         const data = await response.json();
+        console.log('Fetched merchant:', data);
         setMerchant(data);
       } catch (err) {
         if (isError(err)) {
@@ -95,6 +137,16 @@ export default function Integrations() {
       fetchUser();
     }
   }, [ready, authenticated, user?.id]); 
+
+
+  useEffect(() => {
+    if (merchant) {
+      // setMerchantSet(true);
+      console.log('Checking Square auth token with merchant:', merchant);
+
+    }
+  }, [merchant]);
+
 
   
   return (
@@ -134,9 +186,18 @@ export default function Integrations() {
 
                     <Button asChild size={'4'} style={{width: '250px'}}>
                       <Link href={squareAuthUrl} target='_blank' rel='noopener noreferrer'>
-                        Authenticate
+                        Connect Square
                       </Link>
                     </Button>
+
+
+                    {/* Placeholder for error messaging */}
+
+                    {/* On success, show other components like a status indicator of "authenicated" or "connected" with a green check mark */}
+
+
+
+
                   </Flex>
                 </>
               )}
@@ -160,6 +221,12 @@ export default function Integrations() {
       </Flex>
     </Flex>
   )
+}
 
-
+export default function Integrations() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <IntegrationsContent />
+    </Suspense>
+  );
 }

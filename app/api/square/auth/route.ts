@@ -1,20 +1,20 @@
-// app/api/auth/square/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { withSession } from '@/app/lib/ironSession';
-import { generateCsrfToken } from '@/app/lib/csrf';
+import crypto from 'crypto';
 
-const SQUARE_CLIENT_ID = process.env.SQUARE_CLIENT_ID;
-const SQUARE_REDIRECT_URI = process.env.SQUARE_REDIRECT_URI;
-const SQUARE_AUTH_URL = 'https://connect.squareup.com/oauth2/authorize';
+const SQUARE_CLIENT_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
+const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV;
+const SQUARE_AUTH_URL = `https://connect.${SQUARE_ENV}.com/oauth2/authorize`;
 
 export async function GET(request: NextRequest) {
-  const csrfToken = generateCsrfToken();
-  request.session.csrfToken = csrfToken;
-  await request.session.save();
+  const csrfToken = crypto.randomBytes(16).toString('hex');
+  const state = csrfToken;
+  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/callback`;
 
-  const authUrl = `${SQUARE_AUTH_URL}?client_id=${SQUARE_CLIENT_ID}&response_type=code&redirect_uri=${SQUARE_REDIRECT_URI}&state=${csrfToken}`;
+  const authorizationUrl = `${SQUARE_AUTH_URL}?response_type=code&client_id=${SQUARE_CLIENT_ID}&state=${state}&redirect_uri=${redirectUri}`;
 
-  return NextResponse.json({ authUrl });
+  const response = NextResponse.redirect(authorizationUrl);
+  response.cookies.set('csrfToken', csrfToken, { httpOnly: true, secure: true, sameSite: 'strict' });
+
+  return response;
 }
 
-export const handler = withSession(GET);

@@ -8,7 +8,11 @@ const merchantSchema = new mongoose.Schema({
   walletAddress: { type: String, required: true },
   storeImage: { type: String },
   privyId: { type: String },
-  stripeConnectedAccountId: { type: String }
+  stripeConnectedAccountId: { type: String },
+  square_merchant_id: { type: String },
+  square_access_token: { type: String },
+  square_refresh_token: { type: String },
+  square_token_expires_at: { type: Date },
 }, { timestamps: true });
 
 const Merchant = mongoose.models.Merchant || mongoose.model('Merchant', merchantSchema);
