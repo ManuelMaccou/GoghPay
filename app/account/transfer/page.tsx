@@ -87,6 +87,7 @@ function TransferContent() {
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
+      setTransferSuccessMessage(null);
 
       let smartAccountAddress;
 
@@ -173,6 +174,7 @@ function TransferContent() {
 
   // When a non-merchant inputs their Coinbase wallet address
   const handleAddressChange = (event: any) => {
+    setTransferSuccessMessage(null);
     const input = event.target.value;
     setAddress(input);
     // Check if the input starts with '0x' and has a total length of 42 characters
@@ -180,6 +182,7 @@ function TransferContent() {
   };
 
   const handleEditAddress = () => {
+    setTransferSuccessMessage(null);
     setEditAddressMode(true);
     setAddress('');
     setIsValidAddress(false);
@@ -188,6 +191,7 @@ function TransferContent() {
 
   // When a merchant inputs their Coinbase wallet address
   const handleMerchantAddressChange = (event: any) => {
+    setTransferSuccessMessage(null);
     const input = event.target.value;
     setMerchantAddress(input);
     // Check if the input starts with '0x' and has a total length of 42 characters
@@ -195,12 +199,14 @@ function TransferContent() {
   };
 
   const handleEditMerchantAddress = () => {
+    setTransferSuccessMessage(null);
     setEditMerchantAddressMode(true);
     setMerchantAddress('');
     setIsValidMerchantAddress(false);
   };
 
   const handleTransferInputChange = (event: any) => {
+    setTransferSuccessMessage(null);
     const value = event.target.value;
 
     // Validate that the input is a number
@@ -222,6 +228,7 @@ function TransferContent() {
   };
 
   async function sendUSDC(coinbaseAddress: `0x${string}`, amount: number) {
+    setTransferSuccessMessage(null);
     setTransferStarted(true)
     if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
       try {
@@ -505,9 +512,9 @@ function TransferContent() {
         setMerchant(data);
       } catch (err) {
         if (isError(err)) {
-          setError(`Error fetching merchant: ${err.message}`);
+          console.error(`Error fetching merchant: ${err.message}`);
         } else {
-          setError('Error fetching merchant');
+          console.error('Error fetching merchant');
         }
       }
     }
@@ -535,7 +542,6 @@ function TransferContent() {
 
       } catch (error) {
         console.error('Error fetching user:', error);
-        setError('Failed to fetch user data');
       }
     };
 
@@ -641,7 +647,6 @@ function TransferContent() {
         setBalance(parseFloat(data.balance));
       } catch (error) {
         console.error('Error fetching balance:', error);
-        setError('Failed to check balance');
       } finally {
         setIsBalanceLoading(false);
       }

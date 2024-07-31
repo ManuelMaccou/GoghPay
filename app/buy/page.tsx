@@ -47,7 +47,6 @@ function BuyContent() {
   const [merchant, setMerchant] = useState<Merchant>();
   const [currentUser, setCurrentUser] = useState<User>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
-  const [noWalletForPurchase, setNoWalletForPurchase] = useState(false);
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
@@ -104,6 +103,7 @@ function BuyContent() {
   }, [price, tipAmount]);
 
   const handleValueChange = (value:string) => {
+    setError(null);
     setSelectedTip(value);
     if (value === '4') {
       setIsDialogOpen(true);
@@ -127,11 +127,13 @@ function BuyContent() {
   };
 
   const handleCustomTipChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     const value = parseFloat(event.target.value);
     setTipAmount(isNaN(value) ? 0 : value);
   };
 
   const resetTipAmount = () => {
+    setError(null);
     setTipAmount(0);
     setSelectedTip('0');
   };
@@ -170,6 +172,7 @@ function BuyContent() {
   const disableLogin = !ready || (ready && authenticated);
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
+      setError(null);
 
       let smartAccountAddress;
 
@@ -415,6 +418,7 @@ function BuyContent() {
   };
 
   async function sendUSDC(merchantWalletAddress: `0x${string}`, finalPrice: number) {
+    setError(null);
     if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
       try {
         await wallet.switchChain(chainIdNum);
@@ -957,11 +961,13 @@ function BuyContent() {
                         </Button>
                       </AlertDialog.Cancel>
                       <AlertDialog.Action>
-                        <CoinbaseButton
-                          destinationWalletAddress={walletForPurchase || ""}
-                          price={finalPrice || 0}
-                          redirectURL={redirectURL}
-                        />
+                        <Flex>
+                          <CoinbaseButton
+                            destinationWalletAddress={walletForPurchase || ""}
+                            price={finalPrice || 0}
+                            redirectURL={redirectURL}
+                          />
+                        </Flex>
                       </AlertDialog.Action>
                     </Flex>
                   </AlertDialog.Content>
