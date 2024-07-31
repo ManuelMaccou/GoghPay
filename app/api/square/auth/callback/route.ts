@@ -14,21 +14,11 @@ export async function GET(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
 
   const { searchParams } = new URL(request.url);
-  const state = searchParams.get('state');
-  console.log("state from URL to match CSRF:", state);
-  
+  const state = searchParams.get('state');  
   const code = searchParams.get('code');
-  console.log('callback code:', code);
-
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
-
   const goghMerchantId = searchParams.get('merchantId');
-  console.log('goghMerchantId:', goghMerchantId);
-
-  console.log('SQUARE_CLIENT_ID:', SQUARE_CLIENT_ID);
-  console.log('SQUARE_APP_SECRET:', SQUARE_APP_SECRET);
-  console.log('SQUARE_OBTAIN_TOKEN_URL:', SQUARE_OBTAIN_TOKEN_URL);
 
   // Parse the cookies from the request
   const csrfToken = cookies().get('csrfToken');
@@ -51,8 +41,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log("Authorization code received:", code);
-
     const redirectUri = `${baseUrl}/api/square/auth/callback?merchantId=${goghMerchantId}`;
     
     const response = await axios.post('https://connect.squareupsandbox.com/oauth2/token', {
@@ -96,8 +84,6 @@ export async function GET(request: NextRequest) {
     if (result.matchedCount === 0 && result.upsertedCount === 0) {
       return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Merchant+not+found+and+not+updated`);
     }
-
-    console.log('Updated merchants details with data:', data)
 
     return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=success`);
   } catch (err: any) {

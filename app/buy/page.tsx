@@ -22,6 +22,7 @@ import { Header } from "../components/Header";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import { createSmartAccount } from "../utils/createSmartAccount";
+import { checkAndRefreshToken } from "../lib/refresh-tokens";
 
 interface PurchaseParams {
   merchantId: string | null;
@@ -715,6 +716,14 @@ function BuyContent() {
       setShowCoinbaseOnramp(false);
     }
   },[balance, finalPrice]);
+
+  useEffect(() => {
+    if (merchant) {
+      checkAndRefreshToken(merchant._id)
+      console.log('Checking Square auth token with merchant:', merchant);
+
+    }
+  }, [merchant]);
 
   const copyToClipboard = useCallback(() => {
     if (walletForPurchase) {
