@@ -23,10 +23,35 @@ export async function GET(request: NextRequest) {
       environment: process.env.NEXT_PUBLIC_SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
     });
     const response = await client.locationsApi.listLocations();
+
     console.log(response.result);
     return new NextResponse(JSON.stringify(response.result), { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching locations:', error);
+
+    if (isApiErrorResponse(error)) {
+      const { status, errors } = error.response;
+
+      if (status === 401) {
+        if (errors.some((err: any) => err.code === 'ACCESS_TOKEN_EXPIRED')) {
+          return new NextResponse('Access token expired', { status: 401 });
+        } else if (errors.some((err: any) => err.code === 'ACCESS_TOKEN_REVOKED')) {
+          return new NextResponse('Access token revoked', { status: 401 });
+        } else {
+          return new NextResponse('Unauthorized', { status: 401 });
+        }
+      }
+
+      if (status === 403) {
+        return new NextResponse('Forbidden', { status: 403 });
+      }
+    }
+
     return new NextResponse('Internal Server Error', { status: 500 });
   }
+}
+
+// Type guard to check if error is an API error response
+function isApiErrorResponse(error: any): error is { response: { status: number; errors: { code: string }[] } } {
+  return error && typeof error === 'object' && 'response' in error && 'status' in error.response && Array.isArray(error.response.errors);
 }

@@ -3,7 +3,7 @@
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, User } from "@/app/types/types";
-import { Button, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
+import { AlertDialog, Box, Button, Dialog, Flex, Heading, Link, RadioGroup, Spinner, Strong, Text, VisuallyHidden } from "@radix-ui/themes";
 import * as Avatar from '@radix-ui/react-avatar';
 import { Suspense, useEffect, useState } from "react";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
@@ -11,21 +11,32 @@ import crypto from 'crypto';
 import { setCookie } from 'nookies';
 import { useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
+import NotificationMessage from "@/app/components/Notification";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
+interface Location {
+  id: string;
+  name: string;
+}
+
 function IntegrationsContent() {
   const [error, setError] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [revokeSuccess, setRevokeSuccess] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
   const [merchant, setMerchant] = useState<Merchant>();
   const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string>('');
-  const [locations, setLocations] = useState<any[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string | undefined>(undefined);
+  const [showLocationDialog, setShowLocationDialog] = useState<boolean>(false);
   // const [merchantSet, setMerchantSet] = useState<boolean>(false);
 
   const { login, user, ready, authenticated } = usePrivy();
@@ -41,6 +52,12 @@ function IntegrationsContent() {
     setStatus(statusParam);
     setMessage(decodeURIComponent(messageParam || ''));
   }, [searchParams]);
+
+  useEffect(() => {
+    if (status === 'success') {
+      setShowLocationDialog(true);
+    }
+  }, [status]);
 
   useEffect(() => {
     let token = Cookies.get('csrfToken');
@@ -62,6 +79,20 @@ function IntegrationsContent() {
       console.log('CSRF token retrieved from cookie:', token);
     }
   }, []);
+
+  const RedCircle = () => (
+    <svg width="16" height="16">
+      <circle cx="5" cy="5" r="5" fill="red" />
+    </svg>
+  );
+
+  const GreenCircle = () => (
+    <svg width="16" height="16">
+      <circle cx="5" cy="5" r="5" fill="green" />
+    </svg>
+  );
+
+  const selectedLocationDetails = locations.find(location => location.id === selectedLocation);
 
 
   const squareAppId = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
@@ -95,22 +126,81 @@ function IntegrationsContent() {
     setWalletForPurchase(wallet);
   };
 
-  const fetchLocations = async (merchantId: string) => {
+  const handleRevokeSquareAccess = async () => {
+    setRevokeError(null)
+    setRevokeSuccess(null)
+    if (!merchant) {
+      setRevokeError('Merchant not found');
+      return;
+    }
+
+    const accessToken = await getAccessToken();
     try {
-      const response = await fetch(`/api/square/locations?merchantId=${merchantId}`);
-      const data = await response.json();
-      setLocations(data.locations || []);
-    } catch (err) {
-      if (isError(err)) {
-        setError(`Error fetching locations: ${err.message}`);
-      } else {
-        setError('Error fetching locations');
+      const response = await fetch(`/api/square/auth/revokeAccess?merchantId=${merchant._id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to revoke Square access');
       }
+      const result = await response.json();
+      if (result.success) {
+        console.log('Square access successfully revoked');
+        setRevokeSuccess('Access revoked')
+
+        await fetchLocations(merchant._id);
+      } else {
+        setRevokeError('Failed to revoke Square access');
+      }
+    } catch (error) {
+      console.error('Error revoking Square access:', error);
+      setRevokeError('Failed to revoke Square access');
     }
   };
 
-  const handleLocationSelect = async (locationId: string) => {
-    setSelectedLocation(locationId);
+  const fetchLocations = async (merchantId: string) => {
+    setIsFetchingLocations(true);
+    try {
+      const response = await fetch(`/api/square/locations?merchantId=${merchantId}`);
+      if (response.status === 401) {
+        const errorText = await response.text();
+        if (errorText.includes('expired')) {
+          setLocationError('Token expired. Please reconnect.');
+        } else if (errorText.includes('revoked')) {
+          setLocationError('Token revoked. Please reconnect.');
+        } else {
+          setLocationError('Unauthorized. Please reconnect.');
+        }
+        setLocations([]);
+      } else if (response.status === 403) {
+        setLocationError('Insufficient permissions. Please contact us.');
+        setLocations([]);
+      } else if (response.ok) {
+        const data = await response.json();
+        setLocations(data.locations || []);
+      } else {
+        setLocationError('Process failed. Please try again.');
+        setLocations([]);
+      }
+    } catch (err) {
+      if (isError(err)) {
+        setLocationError(`Error fetching locations: ${err.message}`);
+      } else {
+        setLocationError('Error fetching locations. Please contact us.');
+      }
+    } finally {
+      setIsFetchingLocations(false);
+    }
+  };
+
+  const handleLocationSelect = async () => {
+    setRevokeError(null)
+    setRevokeSuccess(null)
+    if (!selectedLocation) return;
+    
     const accessToken = await getAccessToken();
     try {
       // Store selected location in the database for future use
@@ -120,7 +210,7 @@ function IntegrationsContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`, 
         },
-        body: JSON.stringify({ privyId: currentUser?.privyId, square_location_id: locationId })
+        body: JSON.stringify({ privyId: currentUser?.privyId, square_location_id: selectedLocation })
       });
       if (!response.ok) {
         throw new Error('Failed to update selected location');
@@ -132,6 +222,7 @@ function IntegrationsContent() {
   };
 
   useEffect(() => {
+    setIsFetchingLocations(true);
     const fetchMerchant = async (id: string) => {
       try {
         const privyId = id
@@ -185,8 +276,6 @@ function IntegrationsContent() {
 
     }
   }, [merchant]);
-
-
   
   return (
     <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
@@ -223,33 +312,130 @@ function IntegrationsContent() {
                       />
                     </Avatar.Root>
 
-                    <Button asChild size={'4'} style={{width: '250px'}}>
-                      <Link href={squareAuthUrl} target='_blank' rel='noopener noreferrer'>
-                        Connect Square
-                      </Link>
-                    </Button>
-
-
+                    {!locations && (
+                      <Button asChild size={'4'} style={{width: '250px'}} loading={isFetchingLocations}>
+                        <Link href={squareAuthUrl} target='_blank' rel='noopener noreferrer'>
+                          Connect Square
+                        </Link>
+                      </Button>
+                    )}
+                    
                     {/* Placeholder for error messaging */}
-                    {locations.length > 0 && (
-                      <div>
-                        <Text size={'4'} weight={'bold'}>Locations:</Text>
-                        <ul>
+
+
+                    <Dialog.Root open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+                      <Dialog.Trigger>
+                        <Button style={{ display: 'none' }} />
+                      </Dialog.Trigger>
+
+                      <Dialog.Content maxWidth="450px">
+                        <Dialog.Title>Select a location for inventory</Dialog.Title>
+                        <VisuallyHidden>
+                          <Dialog.Description size="2" mb="4">
+                            Select a location for inventory.
+                          </Dialog.Description>
+                        </VisuallyHidden>
+                        
+                        <RadioGroup.Root value={selectedLocation} onValueChange={(value) => setSelectedLocation(value)} name="locations">
                           {locations.map((location) => (
-                            <li key={location.id}>
-                              <Button onClick={() => handleLocationSelect(location.id)} disabled={!merchant}>
-                                {location.name}
-                              </Button>
-                            </li>
+                            <RadioGroup.Item key={location.id} value={location.id} disabled={!merchant}>
+                              <Text as='label'>{location.name}</Text>
+                            </RadioGroup.Item>
                           ))}
-                        </ul>
-                      </div>
+                        </RadioGroup.Root>
+
+                        <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                          <Dialog.Close>
+                            <Button variant="ghost">
+                              Skip
+                            </Button>
+                          </Dialog.Close>
+                          <Dialog.Close>
+                            <Button onClick={handleLocationSelect}>
+                                Continue
+                            </Button>
+                          </Dialog.Close>
+                        </Flex>
+                      </Dialog.Content>
+                    </Dialog.Root>
+
+
+
+
+                    <Flex direction={'column'}>
+                      {!isFetchingLocations ? (
+                        locationError ? (
+                          <Flex direction={'column'} gap={'2'}>
+                            <Flex direction={'row'} gap={'2'}>
+                              <Text><Strong>Status:</Strong> Not connected</Text>
+                              <RedCircle />
+                            </Flex>
+                            <Text>{locationError}</Text>
+                          </Flex>
+                          
+                        ) : (
+                          locations.length > 0 ? (
+                            <>
+                              <Flex direction={'row'} gap={'2'}>
+                                <Text><Strong>Status:</Strong> Connected</Text>
+                                <GreenCircle />
+                              </Flex>
+                              {selectedLocationDetails && (
+                                <Text><Strong>Location:</Strong> {selectedLocationDetails.name}</Text>
+                              )}
+                              <Button variant="ghost" my={'4'} onClick={() => setShowLocationDialog(true)}>
+                                Change location
+                              </Button>
+
+                              <AlertDialog.Root>
+                                <AlertDialog.Trigger>
+                                  <Button color="red">Revoke access</Button>
+                                </AlertDialog.Trigger>
+                                <AlertDialog.Content maxWidth="450px">
+                                  <AlertDialog.Title>Revoke access</AlertDialog.Title>
+                                  <AlertDialog.Description size="2">
+                                    Are you sure? Square will no longer be accessible and any
+                                    existing sessions will be expired.
+                                  </AlertDialog.Description>
+
+                                  <Flex gap="3" mt="4" justify="end">
+                                    <AlertDialog.Cancel>
+                                      <Button variant="soft" color="gray">
+                                        Cancel
+                                      </Button>
+                                    </AlertDialog.Cancel>
+                                    <AlertDialog.Action>
+                                      <Button variant="solid" color="red" onClick={handleRevokeSquareAccess}>
+                                        Revoke access
+                                      </Button>
+                                    </AlertDialog.Action>
+                                  </Flex>
+                                </AlertDialog.Content>
+                              </AlertDialog.Root>
+                            </>
+                          ) : (
+                            <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
+                              Select location
+                            </Button>
+                          )
+                        )
+                      ) : (
+                        <Spinner />
+                      )}
+                    </Flex>
+
+                    {revokeError && (
+                      <Box mx={'3'}>
+                        <NotificationMessage message={revokeError} type="error" />
+                      </Box>
+                    )}
+                    {revokeSuccess && (
+                      <Box mx={'3'}>
+                        <NotificationMessage message={revokeSuccess} type="success" />
+                      </Box>
                     )}
 
-                    {/* On success, show other components like a status indicator of "authenicated" or "connected" with a green check mark */}
-
-
-
+                    
 
                   </Flex>
                 </>
