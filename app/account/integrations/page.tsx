@@ -24,6 +24,8 @@ function IntegrationsContent() {
   const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string>('');
+  const [locations, setLocations] = useState<any[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   // const [merchantSet, setMerchantSet] = useState<boolean>(false);
 
   const { login, user, ready, authenticated } = usePrivy();
@@ -93,6 +95,42 @@ function IntegrationsContent() {
     setWalletForPurchase(wallet);
   };
 
+  const fetchLocations = async (merchantId: string) => {
+    try {
+      const response = await fetch(`/api/square/locations?merchantId=${merchantId}`);
+      const data = await response.json();
+      setLocations(data.locations || []);
+    } catch (err) {
+      if (isError(err)) {
+        setError(`Error fetching locations: ${err.message}`);
+      } else {
+        setError('Error fetching locations');
+      }
+    }
+  };
+
+  const handleLocationSelect = async (locationId: string) => {
+    setSelectedLocation(locationId);
+    const accessToken = await getAccessToken();
+    try {
+      // Store selected location in the database for future use
+      const response = await fetch(`/api/merchant/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({ privyId: currentUser?.privyId, square_location_id: locationId })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update selected location');
+      }
+    } catch (error) {
+      console.error('Error updating selected location:', error);
+      setError('Failed to update selected location');
+    }
+  };
+
   useEffect(() => {
     const fetchMerchant = async (id: string) => {
       try {
@@ -101,6 +139,7 @@ function IntegrationsContent() {
         const data = await response.json();
         console.log('Fetched merchant:', data);
         setMerchant(data);
+        fetchLocations(data._id);
       } catch (err) {
         if (isError(err)) {
           setError(`Error fetching merchant: ${err.message}`);
@@ -192,6 +231,20 @@ function IntegrationsContent() {
 
 
                     {/* Placeholder for error messaging */}
+                    {locations.length > 0 && (
+                      <div>
+                        <Text size={'4'} weight={'bold'}>Locations:</Text>
+                        <ul>
+                          {locations.map((location) => (
+                            <li key={location.id}>
+                              <Button onClick={() => handleLocationSelect(location.id)} disabled={!merchant}>
+                                {location.name}
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {/* On success, show other components like a status indicator of "authenicated" or "connected" with a green check mark */}
 

@@ -10,6 +10,7 @@ const merchantSchema = new mongoose.Schema({
   privyId: { type: String },
   stripeConnectedAccountId: { type: String },
   square_merchant_id: { type: String },
+  square_location_id: { type: String },
   square_access_token: { type: String },
   square_refresh_token: { type: String },
   square_token_expires_at: { type: Date },
