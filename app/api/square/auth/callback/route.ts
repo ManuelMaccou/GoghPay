@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     if (error === 'access_denied') {
-      return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Authorization+request+was+denied+by+the+seller`);
+      return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Authorization+request+was+denied`);
     } else {
       return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=${encodeURIComponent(errorDescription || 'An error occured.')}`);
     }

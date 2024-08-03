@@ -28,7 +28,6 @@ export async function POST(request: NextRequest) {
       {
         clientId: process.env.NEXT_PUBLIC_SQUARE_APP_ID,
         accessToken: decryptedAccessToken,
-        merchantId: merchantId,
         revokeOnlyAccessToken: false,
       },
       `Client ${squareAppSecret}`

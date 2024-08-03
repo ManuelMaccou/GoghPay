@@ -17,7 +17,13 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Merchant not found', { status: 404 });
     }
 
+    if (!merchant.square_access_token) {
+      return new NextResponse('No access token', { status: 401 });
+    }
+
     const decryptedAccessToken = decrypt(merchant.square_access_token);
+    console.log('decrypted access token:', decryptedAccessToken);
+
     const client = new Client({
       accessToken: decryptedAccessToken,
       environment: process.env.NEXT_PUBLIC_SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
