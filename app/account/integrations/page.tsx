@@ -2,7 +2,7 @@
 
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, User } from "@/app/types/types";
+import { Merchant, User, Location } from "@/app/types/types";
 import { AlertDialog, Box, Button, Dialog, Flex, Heading, Link, RadioGroup, Spinner, Strong, Text, VisuallyHidden } from "@radix-ui/themes";
 import * as Avatar from '@radix-ui/react-avatar';
 import { Suspense, useEffect, useState } from "react";
@@ -15,11 +15,6 @@ import NotificationMessage from "@/app/components/Notification";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
-}
-
-interface Location {
-  id: string;
-  name: string;
 }
 
 function IntegrationsContent() {
