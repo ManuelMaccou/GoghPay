@@ -31,7 +31,7 @@ export default function Home() {
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
   const { login } = useLogin({
-    onComplete: async (user, isNewUser) => {
+    onComplete: async (user: { id: any; wallet: { address: any; }; email: { address: any; }; google: { email: any; }; }, isNewUser: any) => {
       console.log('login successful');
 
       const embeddedWallet = getEmbeddedConnectedWallet(wallets);
