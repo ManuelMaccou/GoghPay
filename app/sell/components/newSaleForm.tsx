@@ -4,21 +4,52 @@ import React, { useEffect, useRef, useState } from 'react';
 import { generateQrCode } from "./generateQrCodeUrl";
 import Spinner from '../../components/Spinner';
 import { usePrivy } from '@privy-io/react-auth';
-import { Box, Button, Card, Container, Flex, Section, Text, TextField } from '@radix-ui/themes';
+import { Box, Button, Card, Container, Flex, Section, Select, Text, TextField } from '@radix-ui/themes';
 import styles from '../styles.module.css'
+import { Merchant } from '@/app/types/types';
 
 interface NewSaleFormProps {
   onQrCodeGenerated: (signedUrl: string) => void;
   onMessageUpdate: (msg: string) => void;
   userId: string;
+  merchantFromParent: Merchant;
 }
 
-export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewSaleFormProps) {
-  const [formData, setFormData] = useState({ product: "", price: "" });
+export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, merchantFromParent }: NewSaleFormProps) {
+  const [formData, setFormData] = useState({ product: "", price: "", merchant: "" });
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMEssage] = useState<String>("");
+  const [errorMessage, setErrorMessage] = useState<String>("");
   const priceInputRef = useRef<HTMLInputElement>(null);
-  const { user } =usePrivy();
+  const [ merchantsList, setMerchantsList] = useState<Merchant[]>([]);
+  const [sellerMerchant, setSellerMerchant] = useState<Merchant | null>(null);
+
+  useEffect(() => {
+    async function fetchAllMerchants() {
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/merchant/all');
+        if (!response.ok) {
+          throw new Error(`Error fetching merchants: ${response.statusText}`);
+        }
+        const data: Merchant[] = await response.json();
+        setMerchantsList(data);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage('An unknown error occurred');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (merchantFromParent.admin) {
+      fetchAllMerchants();
+    } else {
+      setSellerMerchant(merchantFromParent);
+    }
+  }, [merchantFromParent])
 
   useEffect(() => {
     if (priceInputRef.current) {
@@ -44,6 +75,12 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
     }
   };
 
+  const handleSelectChange = (value: string) => {
+    const selectedMerchant = merchantsList.find(merchant => merchant._id === value) || null;
+    setSellerMerchant(selectedMerchant);
+    setFormData(prevState => ({ ...prevState, merchant: value }));
+  };
+
   const validateAndFormatPrice = (price: string): string => {
     // Remove any dollar sign
     const cleanedPrice = price.replace(/\$/, '');
@@ -56,13 +93,13 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
     e.preventDefault();
     setIsLoading(true);
     onMessageUpdate("");
-    setErrorMEssage("")
+    setErrorMessage("")
 
     // Validate and format the price
     const formattedPrice = validateAndFormatPrice(formData.price);
     if (!formattedPrice) {
       setIsLoading(false);
-      setErrorMEssage("Invalid price format. Please enter a valid number with up to two decimals.");
+      setErrorMessage("Invalid price format. Please enter a valid number with up to two decimals.");
       return;
     }
     
@@ -71,7 +108,11 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
     form.append("price", formattedPrice);
     
     try {
-      const result = await generateQrCode({ message: "" }, userId, form);
+      if (!sellerMerchant) {
+        throw new Error("Seller merchant is not selected.");
+      }
+
+      const result = await generateQrCode({ message: "" }, userId, sellerMerchant, form);
       if (result.signedURL) {
         onQrCodeGenerated(result.signedURL);
       }
@@ -87,17 +128,34 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId }: NewS
     <Flex flexGrow={'1'} direction={'column'} align={'center'} justify={'between'} minWidth={'70%'}>
       <form onSubmit={handleSubmit} className={styles.formGroup}>
           <Flex direction={'column'} justify={'center'}>
+            {merchantFromParent.admin && (
+              <>
+                <label htmlFor="merchant" className={styles.formLabel}>Select Merchant</label>
+                <Select.Root onValueChange={handleSelectChange}>
+                  <Select.Trigger variant="surface" placeholder="Select a merchant" mb={'5'} mt={'1'} />
+                  <Select.Content>
+                    <Select.Group>
+                        {merchantsList.map(merchant => (
+                          <Select.Item key={merchant._id} value={merchant._id}>
+                            {merchant.name}
+                          </Select.Item>
+                        ))}
+                    </Select.Group>
+                  </Select.Content>
+                </Select.Root>
+              </>
+            )}
             <label htmlFor="product" className={styles.formLabel}>Product Name</label>
-            <TextField.Root
-              mb={'5'}
-              mt={'1'}
-              type="text"
-              size={'2'}
-              name="product"
-              value={formData.product}
-              onChange={handleChange}
-              required
-            />
+              <TextField.Root
+                mb={'5'}
+                mt={'1'}
+                type="text"
+                size={'2'}
+                name="product"
+                value={formData.product}
+                onChange={handleChange}
+                required
+              />
             <label htmlFor="price" className={styles.formLabel}>Price</label>
               <TextField.Root
                 mb={'5'}

@@ -18,6 +18,7 @@ export interface Merchant {
   privyId?: string;
   stripeConnectedAccountId?: string;
   promo?: boolean;
+  admin: boolean;
 }
 
 export interface Transaction {

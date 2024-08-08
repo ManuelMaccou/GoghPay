@@ -7,6 +7,7 @@ import { getAccessToken, useLogout, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text } from '@radix-ui/themes';
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { Merchant } from '../types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -17,6 +18,7 @@ export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
   const { ready, authenticated, user, login } = usePrivy();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
+  const [ merchant, setMerchant ] = useState<Merchant>();
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [message, setMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true); 
@@ -68,8 +70,9 @@ export default function Sell() {
           throw new Error(`Unexpected status: ${response.status}`);
         }
 
-        const data = await response.json();
-        console.log('data:', data);
+        const data: Merchant = await response.json();
+        setMerchant(data);
+
         setMerchantVerified(true);
 
       } catch (err) {
@@ -112,7 +115,7 @@ export default function Sell() {
       }}
     >
       <Flex direction={'row'} width={'100%'} pl={'6'} pt={'6'}>
-        <IconButton variant='ghost' style={{color: 'white'}} onClick={() => router.push(`/`)}>
+        <IconButton variant='ghost' style={{color: 'white'}} onClick={() => router.push(`/account/sales`)}>
           <ArrowLeftIcon width={'35px'} height={'35px'} />
         </IconButton>
       </Flex>
@@ -134,7 +137,7 @@ export default function Sell() {
         }}
       >
        {authenticated ? (
-          user ? (
+          user && merchant ? (
             isDeterminingMerchantStatus ? (
               <Spinner />
             ) : merchantVerified ? (
@@ -152,6 +155,7 @@ export default function Sell() {
                   onQrCodeGenerated={handleQrCodeGenerated}
                   onMessageUpdate={handleMessageUpdate}
                   userId={user.id}
+                  merchantFromParent={merchant}
                 />
               )
             ) : (

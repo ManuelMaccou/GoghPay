@@ -4,7 +4,7 @@ import Merchant from '../../models/Merchant';
 import connectToDatabase from '../../utils/mongodb';
 import { z } from "zod";
 import { createHmac } from 'crypto';
-import { User } from '@/app/types/types';
+import { Merchant as MerchantType } from '@/app/types/types'; 
 
 interface Params {
   merchantId: string;
@@ -35,6 +35,7 @@ export async function generateQrCode(
     message: string;
   },
   userId: string,
+  sellerMerchant: MerchantType,
   formData: FormData
 ): Promise<{ message: string; error?: unknown; signedURL?: string }> {
 
@@ -46,8 +47,8 @@ export async function generateQrCode(
     throw new Error('You are not authorized to generate QR Codes');
   }
 
-  if (!merchant.walletAddress) {
-    throw new Error('Required merchant wallet is missing from their account.');
+  if (!sellerMerchant.walletAddress) {
+    throw new Error('Seller merchant wallet is missing.');
   }
 
   const schema = z.object({
@@ -66,10 +67,10 @@ export async function generateQrCode(
   const data = parse.data;
 
   const params = {
-    walletAddress: merchant.walletAddress,
+    walletAddress: sellerMerchant.walletAddress,
     product: data.product,
     price: data.price,
-    merchantId: merchant._id,
+    merchantId: sellerMerchant._id,
   };
 
   const secretKey = process.env.SECURE_URL_KEY!;
