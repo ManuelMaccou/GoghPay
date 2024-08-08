@@ -16,5 +16,7 @@ export async function GET(request: Request, context: { params: Params }) {
     console.log("merchant not found");
     return NextResponse.json({ message: "Merchant not found." }, {status:404});
   }
+
+  console.log('merchant in the API:', merchant)
   return NextResponse.json(merchant);
 }

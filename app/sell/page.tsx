@@ -7,27 +7,22 @@ import { getAccessToken, useLogout, usePrivy } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text } from '@radix-ui/themes';
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { Location, Merchant, SquareCatalog } from '../types/types';
+import { Merchant } from '../types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
 
-
 export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
   const { ready, authenticated, user, login } = usePrivy();
-  const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [ merchant, setMerchant ] = useState<Merchant>();
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loadingCatelog, setLoadingCatalog] = useState<boolean>(false);
-  const [squareCatalog, setSquareCatalog] = useState<SquareCatalog[]>([]);
   const [message, setMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true); 
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   const router = useRouter();
 
@@ -73,21 +68,18 @@ export default function Sell() {
 
         if (!response.ok) {
           throw new Error(`Unexpected status: ${response.status}`);
-        } else {
-          const data = await response.json();
-          setMerchant(data);
-          setMerchantVerified(true);
         }
 
         const data: Merchant = await response.json();
         setMerchant(data);
+
         setMerchantVerified(true);
 
       } catch (err) {
         if (isError(err)) {
-          console.error(`Error fetching merchant: ${err.message}`);
+          setError(`Error fetching merchant: ${err.message}`);
         } else {
-          console.error('Error fetching merchant');
+          setError('Error fetching merchant');
         }
       } finally {
         setIsLoading(false);
@@ -97,63 +89,6 @@ export default function Sell() {
 
     verifyMerchantStatus();
   }, [user, ready, authenticated]);
-
-  useEffect(() => {
-    const fetchInventory = async () => {
-      if (merchant?.square_access_token) {
-        await fetchLocations(merchant._id);
-        if (locations) {
-          await fetchSquareCatelog();
-        }
-      }
-    }
-
-    fetchInventory();
-    
-  }, [merchant, locations]);
-
-  const fetchSquareCatelog = async () => {
-    setLoadingCatalog(true);
-    
-
-  } 
-
-  const fetchLocations = async (merchantId: string) => {
-    setIsFetchingLocations(true);
-    try {
-      const response = await fetch(`/api/square/locations?merchantId=${merchantId}`);
-      if (response.status === 401) {
-        const errorText = await response.text();
-        if (errorText.includes('expired')) {
-          setError('Token expired. Please reconnect.');
-        } else if (errorText.includes('revoked')) {
-          setError('Token revoked. Please reconnect.');
-        } else if (errorText.includes('No access token')) {
-          setError(null);
-        } else {
-          setError('Unauthorized. Please reconnect.');
-        }
-        setLocations([]);
-      } else if (response.status === 403) {
-        setError('Insufficient permissions. Please contact us.');
-        setLocations([]);
-      } else if (response.ok) {
-        const data = await response.json();
-        setLocations(data.locations || []);
-      } else {
-        setError('Process failed. Please try again.');
-        setLocations([]);
-      }
-    } catch (err) {
-      if (isError(err)) {
-        setLocationError(`Error fetching locations: ${err.message}`);
-      } else {
-        setLocationError('Error fetching locations. Please contact us.');
-      }
-    } finally {
-      setIsFetchingLocations(false);
-    }
-  };
 
   // Spinner shown during loading state
   if (isLoading) {
