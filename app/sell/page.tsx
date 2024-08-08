@@ -18,7 +18,6 @@ function isError(error: any): error is Error {
 export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
   const { ready, authenticated, user, login } = usePrivy();
-  const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [ merchant, setMerchant ] = useState<Merchant>();
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
