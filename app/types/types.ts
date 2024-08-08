@@ -19,6 +19,12 @@ export interface Merchant {
   stripeConnectedAccountId?: string;
   promo?: boolean;
   admin: boolean;
+  square_access_token: string;
+  square_merchant_id: string;
+  square_refresh_token: string;
+  square_token_expires_at: string;
+  square_location_id: string;
+  square_location_name: string;
 }
 
 export interface Transaction {
@@ -41,4 +47,14 @@ export interface Transfer {
   toCoinbaseAddress: string;
   transactionHash: string;
   createdAt: Date;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+}
+
+export interface SquareCatalog {
+  id: string;
+  name: string;
 }

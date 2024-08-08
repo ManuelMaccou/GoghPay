@@ -2,7 +2,7 @@
 
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, User, Transaction } from "@/app/types/types";
+import { User, Transaction } from "@/app/types/types";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, BellIcon } from "@radix-ui/react-icons";

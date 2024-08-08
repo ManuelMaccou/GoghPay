@@ -4,6 +4,7 @@ import User from '../models/User';
 import Transaction from '../models/Transaction';
 import Transfer from '../models/Transfer';
 import Subscription from '../models/Subscription';
+import AdminError from '../models/AdminError';
 
 const MONGODB_URI = process.env.MONGODB_URI as string;
 
@@ -36,6 +37,7 @@ async function connectToDatabase() {
       mongoose.model('Transfer', Transfer.schema);
       mongoose.model('Transaction', Transaction.schema);
       mongoose.model('Subscription', Subscription.schema);
+      mongoose.model('AdminError', AdminError.schema);
 
       return mongoose;
     }).catch((error) => {
