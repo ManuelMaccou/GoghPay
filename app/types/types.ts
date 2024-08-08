@@ -18,13 +18,13 @@ export interface Merchant {
   privyId?: string;
   stripeConnectedAccountId?: string;
   promo?: boolean;
+  admin: boolean;
   square_access_token: string;
   square_merchant_id: string;
   square_refresh_token: string;
   square_token_expires_at: string;
   square_location_id: string;
   square_location_name: string;
-
 }
 
 export interface Transaction {

@@ -982,6 +982,7 @@ function BuyContent() {
                   </AlertDialog.Content>
                 </AlertDialog.Root>
                 
+                {/*
                 {merchant && merchant.stripeConnectedAccountId && (
                   <Button size={'4'} variant="surface" loading={isLoading} style={{
                     width: '250px'
@@ -993,6 +994,7 @@ function BuyContent() {
                     Mobile pay
                 </Button>
                 )} 
+                */}
                 
 
                 {/*<div id="cbpay-container"></div>*/}
@@ -1094,6 +1096,7 @@ function BuyContent() {
                   </Dialog.Content>
                 </Dialog.Root>
 
+                {/*
                 {merchant && merchant.stripeConnectedAccountId && (
                   <Button size={'4'} variant="surface" loading={isLoading} style={{
                     width: '250px'
@@ -1105,6 +1108,7 @@ function BuyContent() {
                     Mobile pay
                 </Button>
                 )}
+                */}
                 
               </Flex>
             </>
@@ -1123,6 +1127,7 @@ function BuyContent() {
               Log in to pay with crypto
             </Button>
 
+            {/*
             <Button size={'4'} variant="surface" loading={isLoading} style={{
               width: '250px'
               }}
@@ -1132,6 +1137,8 @@ function BuyContent() {
               }}>
               Mobile pay
             </Button>
+            */}
+
             </Flex>
           </>
         )}

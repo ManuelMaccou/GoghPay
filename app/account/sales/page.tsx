@@ -363,12 +363,14 @@ export default function Sales({ params }: { params: { userId: string } }) {
               </Card>
               </Box>
             </Flex>
+            {/*}
             <Flex direction={'row'} gap={'2'} align={'center'}>
             <Link href="https://dashboard.stripe.com/payments" highContrast>
               View sales facilitated by Stripe
             </Link>
             <ArrowTopRightIcon />
           </Flex>
+          */}
           <Flex direction={'column'} gap={'4'} flexGrow={'1'} justify={'between'} width={'100%'}>
             <Box overflow={'scroll'} maxHeight={'50vh'}>
             <Table.Root size="1">

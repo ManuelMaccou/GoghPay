@@ -20,6 +20,7 @@ export default function Sell() {
   const { ready, authenticated, user, login } = usePrivy();
   const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
+  const [ merchant, setMerchant ] = useState<Merchant>();
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loadingCatelog, setLoadingCatalog] = useState<boolean>(false);
@@ -77,6 +78,10 @@ export default function Sell() {
           setMerchant(data);
           setMerchantVerified(true);
         }
+
+        const data: Merchant = await response.json();
+        setMerchant(data);
+        setMerchantVerified(true);
 
       } catch (err) {
         if (isError(err)) {
@@ -175,7 +180,7 @@ export default function Sell() {
       }}
     >
       <Flex direction={'row'} width={'100%'} pl={'6'} pt={'6'}>
-        <IconButton variant='ghost' style={{color: 'white'}} onClick={() => router.push(`/`)}>
+        <IconButton variant='ghost' style={{color: 'white'}} onClick={() => router.push(`/account/sales`)}>
           <ArrowLeftIcon width={'35px'} height={'35px'} />
         </IconButton>
       </Flex>
@@ -197,7 +202,7 @@ export default function Sell() {
         }}
       >
        {authenticated ? (
-          user ? (
+          user && merchant ? (
             isDeterminingMerchantStatus ? (
               <Spinner />
             ) : merchantVerified ? (
@@ -215,6 +220,7 @@ export default function Sell() {
                   onQrCodeGenerated={handleQrCodeGenerated}
                   onMessageUpdate={handleMessageUpdate}
                   userId={user.id}
+                  merchantFromParent={merchant}
                 />
               )
             ) : (

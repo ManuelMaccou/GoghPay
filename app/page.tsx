@@ -196,9 +196,9 @@ export default function Home() {
           </Flex>
         ))}
 
-        {!isLoading && (
+        {!isLoading && ready && (
           <Flex direction={'column'} justify={'center'} align={'center'}>
-            <Button highContrast size={'4'} style={{width: "300px"}} onClick={login}>
+            <Button highContrast size={'4'} style={{width: "300px"}} onClick={login} loading={authenticated}>
               Log in/Sign up
             </Button>
           </Flex>
