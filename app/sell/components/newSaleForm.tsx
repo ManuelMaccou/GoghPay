@@ -52,7 +52,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
       setSellerMerchant(merchantFromParent);
     }
     console.log("seller merchant1:", sellerMerchant);
-  }, [merchantFromParent])
+  }, [merchantFromParent, sellerMerchant])
 
   useEffect(() => {
     if (priceInputRef.current) {
