@@ -61,6 +61,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
   }, []);
 
   useEffect(() => {
+    setDefaultTax(null);
     const selectedTax = sellerMerchant?.taxes.find(tax => tax.default) || sellerMerchant?.taxes[0];
     if (selectedTax) {
       setDefaultTax(selectedTax)

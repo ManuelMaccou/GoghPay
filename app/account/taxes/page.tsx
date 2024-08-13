@@ -2,11 +2,12 @@
 
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, Tax, User } from "@/app/types/types";
+import { Merchant, Tax, Transaction, User } from "@/app/types/types";
+import { format } from 'date-fns';
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { Button, Callout, Dialog, Flex, Link, RadioGroup, Spinner, Strong, Text, VisuallyHidden } from "@radix-ui/themes";
+import { Badge, Box, Button, Callout, Dialog, Flex, Link, RadioGroup, Spinner, Strong, Table, Text, VisuallyHidden } from "@radix-ui/themes";
 
 import axios from "axios";
 import { useRouter } from 'next/navigation';
@@ -19,9 +20,12 @@ function isError(error: any): error is Error {
 
 export default function Taxes({ params }: { params: { userId: string } }) {
   const { ready, authenticated, user } = usePrivy();
+  const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(false);
   const [merchant, setMerchant] = useState<Merchant>();
+  const [transactiosnwithTaxes, setTransactiosnwithTaxes] = useState<Transaction[] | null>(null);
+  const [totalTaxAmount, setTotalTaxAmount] = useState<number>(0);
   const [taxes, setTaxes] = useState<Tax[] | null>(null);
   const [selectedTax, setSelectedTax] = useState<Tax | null>(null); 
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
@@ -179,6 +183,15 @@ export default function Taxes({ params }: { params: { userId: string } }) {
     }
   };
 
+  const getPaymentTypeInfo = (paymentType: string) => {
+    const types: { [key: string]: { label: string; color: string } } = {
+      'sponsored crypto': { label: 'Crypto', color: '#4CAF50' },
+      'crypto': { label: 'Crypto', color: '#4CAF50' },
+      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' }
+    };
+    return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       if (!user) return;
@@ -229,8 +242,52 @@ export default function Taxes({ params }: { params: { userId: string } }) {
 
   }, [ready, authenticated, user]); 
 
+  // Fetch taxes from transactions
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!merchant) return;
+      try {
+        const response = await fetch(`/api/transaction/merchant/${merchant._id}`);
+  
+        if (!response.ok) {
+          throw new Error(`Unexpected status: ${response.status}`);
+        }
+  
+        const { totalTransactions } = await response.json();
+  
+        // Sort totalTransactions by date in descending order
+        const sortedTotalTransactions = totalTransactions.slice().sort((a: Transaction, b: Transaction) => {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+        // Filter transactions to get all the taxes
+        console.log('sortedTotalTransactions', sortedTotalTransactions);
+        const transactionsWithTaxes = sortedTotalTransactions
+          .filter((transaction: Transaction) => transaction.salesTax !== undefined && transaction.salesTax !== null);
+
+        const totalTaxAmount = transactionsWithTaxes.reduce((sum: number, transaction: Transaction) => {
+          return sum + (transaction.salesTax || 0);
+        }, 0);
+
+        setTransactiosnwithTaxes(transactionsWithTaxes);
+        setTotalTaxAmount(totalTaxAmount);
+
+      } catch (err) {
+        if (isError(err)) {
+          setError(`Error fetching transactions: ${err.message}`);
+        } else {
+          setError('Error fetching transactions');
+        }
+      }
+    };
+  
+    if (merchant) {
+      fetchTransactions();
+    }
+  }, [merchant]);
+
   return (
-    <Flex direction={"column"} pt={"9"} pb={"4"} px={"4"} gap={"5"}>
+    <Flex direction={"column"} pt={"9"} pb={"4"} px={"4"} gap={"5"} maxHeight={'100vh'} overflow={'hidden'}>
       {ready && authenticated && currentUser && (
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
@@ -254,57 +311,105 @@ export default function Taxes({ params }: { params: { userId: string } }) {
 
       {ready && !isFetchingMerchant ? (
         authenticated && merchant ? (
-          <Flex
-            direction={"column"}
-            flexGrow={"1"}
-            gap={"4"}
-            align={"center"}
-            p={"4"}
-            style={{
-              boxShadow: "var(--shadow-2)",
-              borderRadius: "10px",
-            }}
-          >
-            {taxes && (
-              <RadioGroup.Root
-                size={'3'}
-                value={selectedTax?._id || ""}
-                onValueChange={handleTaxSelection}
-                name="taxes"
-              >
-                {taxes.map((tax) => (
-                  <RadioGroup.Item key={tax._id} value={tax._id} disabled={!merchant}>
-                    <Flex direction={'row'} gap={'4'} ml={'3'}>
-                      <Text size={'5'} as="label">{tax.name}</Text>
-                      <Text size={'5'}>{tax.rate}%</Text>
-                    </Flex>
-                  </RadioGroup.Item>
-                ))}
-              </RadioGroup.Root>
-            )}
+          <>
+            <Flex
+              direction={"column"}
+              gap={"4"}
+              align={"center"}
+              p={"4"}
+              style={{
+                boxShadow: "var(--shadow-2)",
+                borderRadius: "10px",
+              }}
+            >
+              {taxes && (
+                <RadioGroup.Root
+                  size={'3'}
+                  value={selectedTax?._id || ""}
+                  onValueChange={handleTaxSelection}
+                  name="taxes"
+                >
+                  {taxes.map((tax) => (
+                    <RadioGroup.Item key={tax._id} value={tax._id} disabled={!merchant}>
+                      <Flex direction={'row'} gap={'4'} ml={'3'}>
+                        <Text size={'5'} as="label">{tax.name}</Text>
+                        <Text size={'5'}>{tax.rate}%</Text>
+                      </Flex>
+                    </RadioGroup.Item>
+                  ))}
+                </RadioGroup.Root>
+              )}
 
-            {confirmMessage && <Text color="green">{confirmMessage}</Text>}
-         
-            <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}> 
-              <Dialog.Trigger>
-              <Button variant="ghost" onClick={() => setIsDialogOpen(true)}>+ Create New Tax</Button>
-              </Dialog.Trigger>
-                <Dialog.Content>
-                  <Dialog.Title>Create New Tax</Dialog.Title>
-                  <VisuallyHidden>
-                    <Dialog.Description>
-                      Create new sales tax
-                    </Dialog.Description>
-                  </VisuallyHidden>
-                  <NewTaxForm
-                    onMessageUpdate={() => {}} 
-                    onAddTax={handleAddTax}
-                    onCancel={() => setIsDialogOpen(false)}
-                  />
-                </Dialog.Content>
-            </Dialog.Root>
+              {confirmMessage && <Text color="green">{confirmMessage}</Text>}
+          
+              <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}> 
+                <Dialog.Trigger>
+                <Button variant="ghost" onClick={() => setIsDialogOpen(true)}>+ Create New Tax</Button>
+                </Dialog.Trigger>
+                  <Dialog.Content>
+                    <Dialog.Title>Create New Tax</Dialog.Title>
+                    <VisuallyHidden>
+                      <Dialog.Description>
+                        Create new sales tax
+                      </Dialog.Description>
+                    </VisuallyHidden>
+                    <NewTaxForm
+                      onMessageUpdate={() => {}} 
+                      onAddTax={handleAddTax}
+                      onCancel={() => setIsDialogOpen(false)}
+                    />
+                  </Dialog.Content>
+              </Dialog.Root>
 
-          </Flex>
+            </Flex>
+
+            <Flex direction={'column'} gap={'4'} flexGrow={'1'} justify={'between'} width={'100%'} maxHeight={'50vh'} overflow={'auto'}>
+              <Box>
+                <Table.Root size="1">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Tax amount</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+        
+                  <Table.Body>
+                    {transactiosnwithTaxes?.map((transaction) => {
+                      const { label, color } = getPaymentTypeInfo(transaction.paymentType);
+                      return (
+                        <Table.Row key={transaction._id}>
+                          <Table.RowHeaderCell>${transaction.salesTax}</Table.RowHeaderCell>
+                          <Table.Cell>
+                            <Text wrap={'nowrap'}>
+                              {transaction.productName}
+                            </Text>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <Badge radius="large" style={{ backgroundColor: color, color: 'white', padding: '3px 7px 3px 7px' }}>{label}</Badge>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <Text wrap={'nowrap'}>
+                              {transaction.createdAt ? format(new Date(transaction.createdAt), 'MMM dd, yyyy') : 'N/A'}
+                            </Text>
+                          </Table.Cell>
+                        </Table.Row>
+                      );
+                    })}
+                  </Table.Body>
+                </Table.Root>
+              </Box>
+            </Flex>
+            <Flex direction={'row'} justify={'between'} width={'100%'} mb={'4'}>
+              <Text weight={'bold'} size={'3'}>
+                Total sales tax collected:
+              </Text>
+              <Text>
+                ${totalTaxAmount.toFixed(2)}
+              </Text>
+            </Flex>
+          </>
         ) : authenticated && !merchant ? (
           <Flex direction={"column"} flexGrow={"1"} px={"5"} justify={"center"} align={"center"} gap={"9"}>
             <Callout.Root color="red" role="alert">

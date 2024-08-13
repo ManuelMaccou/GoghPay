@@ -264,7 +264,7 @@ function BuyContent() {
             'Authorization': `Bearer ${accessToken}`, 
           },
           body: JSON.stringify({
-            params: { merchantId, product, price, salesTax, walletAddress },
+            params: { merchantId, product, price: priceString, salesTax, walletAddress },
             signature: signature
           })
         });
@@ -558,6 +558,7 @@ function BuyContent() {
           productName: purchaseParams.product,
           productPrice: price,
           tipAmount: tipAmount,
+          salesTax: calculatedSalesTax,
           transactionHash: transactionHash,
           paymentType: 'sponsored crypto'
         });
@@ -617,6 +618,7 @@ function BuyContent() {
           productName: purchaseParams.product,
           productPrice: price,
           tipAmount: tipAmount,
+          salesTax: calculatedSalesTax,
           transactionHash: transactionHash,
           paymentType: 'crypto'
         });
@@ -806,7 +808,7 @@ function BuyContent() {
                       <Flex direction={'row'} gap={'3'}>
                         <Text align={'center'} size={'5'}>tip</Text>
                         <IconButton variant="ghost" color="red" onClick={resetTipAmount}>
-                          <TrashIcon width={'20'} height={'20'}/>
+                          <CrossCircledIcon width={'20'} height={'20'}/>
                         </IconButton>
                       </Flex>
                     </Flex>

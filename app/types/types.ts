@@ -29,6 +29,7 @@ export interface Transaction {
   productName: string;
   productPrice: number;
   tipAmount: number;
+  salesTax: number;
   transactionHash: string;
   paymentType: string; // 'sponsored crypto', 'crypto', 'mobile pay'
   createdAt: Date;
