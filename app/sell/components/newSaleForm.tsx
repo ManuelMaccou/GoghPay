@@ -4,9 +4,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { generateQrCode } from "./generateQrCodeUrl";
 import Spinner from '../../components/Spinner';
 import { usePrivy } from '@privy-io/react-auth';
-import { Box, Button, Card, Container, Flex, Section, Select, Text, TextField } from '@radix-ui/themes';
+import { Box, Button, Card, Checkbox, Container, Flex, Link, Section, Select, Text, TextField } from '@radix-ui/themes';
 import styles from '../styles.module.css'
-import { Merchant } from '@/app/types/types';
+import { Merchant, Tax } from '@/app/types/types';
 
 interface NewSaleFormProps {
   onQrCodeGenerated: (signedUrl: string) => void;
@@ -16,12 +16,14 @@ interface NewSaleFormProps {
 }
 
 export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, merchantFromParent }: NewSaleFormProps) {
-  const [formData, setFormData] = useState({ product: "", price: "", merchant: "" });
+  const [formData, setFormData] = useState({ product: "", price: "", tax: 0, merchant: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<String>("");
   const priceInputRef = useRef<HTMLInputElement>(null);
   const [ merchantsList, setMerchantsList] = useState<Merchant[]>([]);
-  const [sellerMerchant, setSellerMerchant] = useState<Merchant | null>(null);
+  const [ sellerMerchant, setSellerMerchant ] = useState<Merchant | null>(null);
+  const [ defaultTax, setDefaultTax ] = useState<Tax | null>(null);
+  const [isTaxChecked, setIsTaxChecked] = useState(true);
 
   useEffect(() => {
     async function fetchAllMerchants() {
@@ -49,6 +51,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
     } else {
       setSellerMerchant(merchantFromParent);
     }
+    console.log("seller merchant1:", sellerMerchant);
   }, [merchantFromParent])
 
   useEffect(() => {
@@ -56,6 +59,13 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
       priceInputRef.current.setSelectionRange(1, 1);
     }
   }, []);
+
+  useEffect(() => {
+    const selectedTax = sellerMerchant?.taxes.find(tax => tax.default) || sellerMerchant?.taxes[0];
+    if (selectedTax) {
+      setDefaultTax(selectedTax)
+    }
+  }, [sellerMerchant])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -78,6 +88,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
   const handleSelectChange = (value: string) => {
     const selectedMerchant = merchantsList.find(merchant => merchant._id === value) || null;
     setSellerMerchant(selectedMerchant);
+    console.log('seller merchant 2:', sellerMerchant);
     setFormData(prevState => ({ ...prevState, merchant: value }));
   };
 
@@ -102,10 +113,13 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
       setErrorMessage("Invalid price format. Please enter a valid number with up to two decimals.");
       return;
     }
+
+    const taxRate = isTaxChecked && defaultTax ? defaultTax.rate : 0;
     
     const form = new FormData();
     form.append("product", formData.product);
     form.append("price", formattedPrice);
+    form.append("tax", taxRate.toString());
     
     try {
       if (!sellerMerchant) {
@@ -123,6 +137,11 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
       setIsLoading(false);
     }
   };
+
+  const handleTaxCheckboxChange = () => {
+    setIsTaxChecked(!isTaxChecked);
+  };
+
 
   return (
     <Flex flexGrow={'1'} direction={'column'} align={'center'} justify={'between'} minWidth={'70%'}>
@@ -169,6 +188,32 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
                 onFocus={handleFocus}
                 required
               />
+            {defaultTax && (
+              <>
+              <Flex direction={'row'} gap={'4'}>
+                <label htmlFor="price" className={styles.formLabel}>Sales tax</label>
+                <Link href='/account/taxes'>Edit</Link>
+              </Flex>
+              
+                <Flex width={'100%'} justify={'between'} mb={'6'}>
+                  <Text weight={'bold'} as="label" size="4">
+                  {defaultTax.name}
+                  </Text>
+                  <Flex>
+                    <Text size={'4'}>
+                    {defaultTax.rate}%
+                      <Checkbox 
+                        checked={isTaxChecked}
+                        onCheckedChange={handleTaxCheckboxChange} 
+                        ml={'4'} 
+                        size={'3'}
+                      />
+                    </Text>
+                  </Flex>
+              </Flex>
+
+              </>
+            )}
           </Flex>
           <Flex direction={'column'}>
             <Button mb={'3'} type="submit" loading={isLoading}>

@@ -19,6 +19,7 @@ export interface Merchant {
   stripeConnectedAccountId?: string;
   promo?: boolean;
   admin: boolean;
+  taxes: Tax[];
 }
 
 export interface Transaction {
@@ -41,4 +42,11 @@ export interface Transfer {
   toCoinbaseAddress: string;
   transactionHash: string;
   createdAt: Date;
+}
+
+export interface Tax {
+  _id: string;
+  name: string;
+  rate: number;
+  default: boolean;
 }

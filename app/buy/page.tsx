@@ -15,7 +15,7 @@ import {signerToSafeSmartAccount} from 'permissionless/accounts';
 import {createPimlicoBundlerClient} from 'permissionless/clients/pimlico';
 import { base, baseSepolia } from "viem/chains";
 import axios from "axios";
-import { InfoCircledIcon, AvatarIcon, CopyIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, AvatarIcon, CopyIcon, CrossCircledIcon, TrashIcon } from "@radix-ui/react-icons";
 import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { BalanceProvider } from "../contexts/BalanceContext";
 import { Header } from "../components/Header";
@@ -82,7 +82,7 @@ function BuyContent() {
   // Get params to verify signed URL
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
-  const product = searchParams.get('product');    
+  const product = searchParams.get('product');   
   const walletAddress = searchParams.get('walletAddress');
   const signature = searchParams.get('signature')
 
@@ -93,14 +93,24 @@ function BuyContent() {
     setError('Provided price is invalid');
   }
 
+  const salesTax = searchParams.get('salesTax');
+
+  const salesTaxNum = parseFloat(salesTax || "0");
+  if (isNaN(salesTaxNum)) {
+    console.error('sales tax is not a valid number');
+    setError('Provided sales tax is invalid');
+  }
+
+  const calculatedSalesTax = (salesTaxNum/100) * price;  
+
   const [selectedTip, setSelectedTip] = useState<string>('0');
   const [tipAmount, setTipAmount] = useState(0);
   const [finalPrice, setFinalPrice] = useState(price);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    setFinalPrice(price + tipAmount);
-  }, [price, tipAmount]);
+    setFinalPrice(price + tipAmount + calculatedSalesTax);
+  }, [price, tipAmount, calculatedSalesTax]);
 
   const handleValueChange = (value:string) => {
     setError(null);
@@ -254,7 +264,7 @@ function BuyContent() {
             'Authorization': `Bearer ${accessToken}`, 
           },
           body: JSON.stringify({
-            params: { merchantId, product, price, walletAddress },
+            params: { merchantId, product, price, salesTax, walletAddress },
             signature: signature
           })
         });
@@ -279,7 +289,7 @@ function BuyContent() {
     }
 
     verify();
-  }, [merchantId, product, walletAddress, price, getAccessToken, signature]);
+  }, [merchantId, product, walletAddress, price, salesTax, getAccessToken, signature]);
 
   useEffect(() => {
     if (isValid && merchantId) {
@@ -748,7 +758,7 @@ function BuyContent() {
 
   return (
     <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
-      {ready && authenticated && (
+      {ready && authenticated && currentUser && (
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             merchant={currentUser?.merchant}
@@ -783,14 +793,25 @@ function BuyContent() {
                 <Text size={'9'} my={'4'}>
                   ${price.toFixed(2)}
                 </Text>
-                {tipAmount > 0 && (
-                  <Flex direction={'row'} justify={'center'} gap={'3'}>
-                    <Text align={'center'} size={'5'}>+ ${tipAmount.toFixed(2)} tip</Text>
-                    <IconButton variant="ghost" color="gray" onClick={resetTipAmount}>
-                      <CrossCircledIcon />
-                    </IconButton>
-                  </Flex>
-                )}
+                <Flex direction={'column'} gap={'4'} width={'100%'} mt={'3'}>
+                  {calculatedSalesTax > 0 && (
+                    <Flex direction={'row'} justify={'between'} width={'100%'}>
+                      <Text align={'center'} size={'5'}>+ ${calculatedSalesTax.toFixed(2)}</Text>
+                      <Text align={'center'} size={'5'}>sales tax</Text>
+                    </Flex>
+                  )}
+                  {tipAmount > 0 && (
+                    <Flex direction={'row'} justify={'between'} width={'100%'}>
+                      <Text align={'center'} size={'5'}>+ ${tipAmount.toFixed(2)}</Text>
+                      <Flex direction={'row'} gap={'3'}>
+                        <Text align={'center'} size={'5'}>tip</Text>
+                        <IconButton variant="ghost" color="red" onClick={resetTipAmount}>
+                          <TrashIcon width={'20'} height={'20'}/>
+                        </IconButton>
+                      </Flex>
+                    </Flex>
+                  )}
+                </Flex>
                 
               </Flex>
             </Box>

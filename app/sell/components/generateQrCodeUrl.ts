@@ -10,6 +10,7 @@ interface Params {
   merchantId: string;
   product: string;
   price: string;
+  salesTax: string;
   walletAddress: string;
 }
 
@@ -21,12 +22,15 @@ async function generateSignedURL(baseURL: string | URL, params: Params, secretKe
 
   const sortedParams = new URLSearchParams(Array.from(url.searchParams.entries()).sort());
   const sortedQueryString = sortedParams.toString();
+  console.log('first sorted query string:', sortedQueryString);
 
   const signature = createHmac('sha256', secretKey)
                           .update(sortedQueryString)
                           .digest('hex');
 
   sortedParams.append('signature', signature);
+  console.log('first signature:', signature);
+
   return `${url.origin}${url.pathname}?${sortedParams.toString()}`;
 }
 
@@ -51,13 +55,17 @@ export async function generateQrCode(
     throw new Error('Seller merchant wallet is missing.');
   }
 
+  console.log('qr seller merchant:', sellerMerchant);
+
   const schema = z.object({
     product: z.string().min(1),
     price: z.string().min(1),
+    salesTax: z.string().min(1),
   });
   const parse = schema.safeParse({
     product: formData.get("product"),
     price: formData.get("price"),
+    salesTax: formData.get("tax")
   });
 
   if (!parse.success) {
@@ -70,6 +78,7 @@ export async function generateQrCode(
     walletAddress: sellerMerchant.walletAddress,
     product: data.product,
     price: data.price,
+    salesTax: data.salesTax,
     merchantId: sellerMerchant._id,
   };
 

@@ -225,7 +225,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
   return (
     <>
       <Flex direction={'column'} pt={'9'} pb={'4'} px={'4'} gap={'5'}>
-        {ready && authenticated && (
+        {ready && authenticated && currentUser &&(
           <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             merchant={currentUser?.merchant}

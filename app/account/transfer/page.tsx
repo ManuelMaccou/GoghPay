@@ -756,7 +756,7 @@ function TransferContent() {
 
   return (
     <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
-      {ready && authenticated && (
+      {ready && authenticated && currentUser && (
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             merchant={currentUser?.merchant}

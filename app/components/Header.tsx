@@ -7,7 +7,7 @@ import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Sepa
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 import { User } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRightFromBracket, faEnvelope, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRightFromBracket, faEnvelope, faFile, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'next/navigation';
 import styles from './styles.module.css'
 
@@ -123,6 +123,11 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                             <FontAwesomeIcon style={{padding: '20px'}} icon={faSackDollar} />
                             <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/sales`)}>Sales</Button>
+                          </Flex>
+                          <Separator size={'4'} />
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faFile} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/taxes`)}>Taxes</Button>
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
