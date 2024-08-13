@@ -47,8 +47,8 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
         defaultNetwork: 'base',
         defaultExperience: 'buy',
       },
-      closeOnExit: false,
-      closeOnSuccess: false,
+      closeOnExit: true,
+      closeOnSuccess: true,
       onSuccess: () => {
         router.replace(redirectURL);
       },
