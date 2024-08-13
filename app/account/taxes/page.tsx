@@ -380,7 +380,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
                       const { label, color } = getPaymentTypeInfo(transaction.paymentType);
                       return (
                         <Table.Row key={transaction._id}>
-                          <Table.RowHeaderCell>${transaction.salesTax}</Table.RowHeaderCell>
+                          <Table.RowHeaderCell>${transaction.salesTax.toFixed(2)}</Table.RowHeaderCell>
                           <Table.Cell>
                             <Text wrap={'nowrap'}>
                               {transaction.productName}
