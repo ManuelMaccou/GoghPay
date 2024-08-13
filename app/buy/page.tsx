@@ -289,7 +289,7 @@ function BuyContent() {
     }
 
     verify();
-  }, [merchantId, product, walletAddress, price, salesTax, getAccessToken, signature]);
+  }, [merchantId, product, walletAddress, price, priceString, salesTax, getAccessToken, signature]);
 
   useEffect(() => {
     if (isValid && merchantId) {

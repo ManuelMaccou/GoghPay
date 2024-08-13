@@ -266,7 +266,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
                             const { label, color } = getPaymentTypeInfo(transaction.paymentType);
                             return (
                               <Table.Row key={transaction._id}>
-                                <Table.RowHeaderCell>${((transaction.productPrice)+(transaction.tipAmount || 0)).toFixed(2)}</Table.RowHeaderCell>
+                                <Table.RowHeaderCell>${((transaction.productPrice)+(transaction.tipAmount || 0)+(transaction.salesTax)).toFixed(2)}</Table.RowHeaderCell>
                                 <Table.Cell>
                                   <Text wrap={'nowrap'}>
                                     {transaction.merchant.name}: {transaction.productName}

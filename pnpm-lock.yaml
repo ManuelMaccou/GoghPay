@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@coinbase/cbpay-js':
-    specifier: ^2.2.0
-    version: 2.2.0
+    specifier: ^2.2.1
+    version: 2.2.1
   '@fortawesome/fontawesome-svg-core':
     specifier: ^6.5.2
     version: 6.5.2
@@ -367,8 +367,8 @@ packages:
       to-fast-properties: 2.0.0
     dev: false
 
-  /@coinbase/cbpay-js@2.2.0:
-    resolution: {integrity: sha512-axTmgdxj57OmLFDjiHmMfZe/kdntBPHRFUektvTZoH8fX94gslw0+WSZgOdrLGkxaOv1TEnJRg+p6xq5MI0uAA==}
+  /@coinbase/cbpay-js@2.2.1:
+    resolution: {integrity: sha512-u97f6RiS4XgO+GGMGc8OBMm+ZCJTtJrFym4z00jIj6uikU7af/YP+dFrlIfvBLy7Jt8xQzAoGU0Rzmz98DFWdg==}
     engines: {node: '>= 14'}
     peerDependencies:
       regenerator-runtime: ^0.13.9
