@@ -51,3 +51,7 @@ export interface Tax {
   rate: number;
   default: boolean;
 }
+
+export interface  CryptoElementsContextType {
+  onramp: any | null;
+};

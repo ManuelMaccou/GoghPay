@@ -336,8 +336,6 @@ function TransferContent() {
             },
           },
         })
-
-        
   
         const data = encodeFunctionData({
           abi: erc20Abi,

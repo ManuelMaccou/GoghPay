@@ -22,6 +22,7 @@ import { Header } from "../components/Header";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import { createSmartAccount } from "../utils/createSmartAccount";
+import StripeOnrampButton from "./components/stripeOnramp/stripeOnrampButton";
 
 interface PurchaseParams {
   merchantId: string | null;
@@ -64,7 +65,7 @@ function BuyContent() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
   const [purchaseStarted, setPurchaseStarted] = useState(false);
-  const [headerLoginClicked, setHeaderLoginClicked] = useState<string | null>(null);  
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -673,6 +674,33 @@ function BuyContent() {
     }
   }
 
+  // Stripe onramp
+  const createOnrampSession = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/stripe/createOnrampSession', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finalPrice + 1)
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create onramp session');
+      }
+      const data = await res.json();
+      const onrampUrl = data.redirect_url;
+      window.open(onrampUrl, '_blank');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if(ready && authenticated && isValid && walletForPurchase) {
       const fetchBalance = async () => {
@@ -775,6 +803,13 @@ function BuyContent() {
        )}
       {/* <Heading size={'7'} align={'center'}>Confirm details</Heading> */}
       <Flex height={'100%'} flexGrow={'1'} direction={'column'} justify={'center'} align={'center'}>
+       {/* The button to launch the embedded experience. Must not be in a dialog. It seems to not work. Maybe I can fix that?
+   
+      <Flex
+        <StripeOnrampButton />
+      </Flex>
+      */}
+
         {!isFetchingMerchant ? (
           <Box width={'100%'}>
             <Flex justify={'center'}>
@@ -958,7 +993,7 @@ function BuyContent() {
                     </AlertDialog.Description> */}
 
                     <AlertDialog.Description size="2">
-                      A minimum balance of $1 is required. Please transfer funds to your address below or from your Coinbase account.
+                      A minimum balance of $1 is required. Please transfer funds to your address below or buy crypto.
                     </AlertDialog.Description>
                     <Flex direction={'column'} py={'5'}>
                       <TextField.Root value={walletForPurchase || ''} disabled placeholder="Enter Base USDC address from Coinbase">
@@ -983,13 +1018,25 @@ function BuyContent() {
                           Cancel
                         </Button>
                       </AlertDialog.Cancel>
+
+                      {/* 
                       <AlertDialog.Action>
+                        temporarily removing Coinbase and doing Stripe onramp
                         <Flex>
                           <CoinbaseButton
                             destinationWalletAddress={walletForPurchase || ""}
                             price={finalPrice || 0}
                             redirectURL={redirectURL}
                           />
+                        </Flex>
+                      </AlertDialog.Action>
+                       */}
+
+                      <AlertDialog.Action>
+                        <Flex>
+                        <Button onClick={createOnrampSession} style={{backgroundColor: '#0051FD', width: '200px'}}>
+                          Buy crypto
+                        </Button>
                         </Flex>
                       </AlertDialog.Action>
                     </Flex>
