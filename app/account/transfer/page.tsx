@@ -73,7 +73,7 @@ function TransferContent() {
 
   const handleNewUserDialog = () => {
     // Open the new tab
-    window.open('https://www.coinbase.com/', '_blank', 'noopener,noreferrer');
+    createOnrampSession();
 
     // Remove the URL parameter
     router.replace('/account/transfer');
@@ -494,18 +494,11 @@ function TransferContent() {
     setRedirectURL(currentURL);
   }, []);
 
-  // Opens a dialog prompting the user to get a Coinbase account
-  // Removing this for now since Stripe is the main onboarding tool
-  /*
   useEffect(() => {
     if (stepParam && stepParam === 'new-user' && embeddedWallet) {
       setNewUserExperience(true);
     }
   }, [stepParam, embeddedWallet]);
-  */
-  
-  
-  
 
   useEffect(() => {
     const fetchMerchant = async (id: string) => {
@@ -566,7 +559,7 @@ function TransferContent() {
     }
 
     try {
-      const res = await fetch(`/api/stripe/createOnrampSession?address=${walletForPurchase}`, {
+      const res = await fetch(`/api/stripe/createOnrampSession?amount=50&address=${walletForPurchase}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -815,20 +808,20 @@ function TransferContent() {
                 </Dialog.Trigger>
 
                 <Dialog.Content maxWidth="450px">
-                  <Dialog.Title>Do you have Coinbase?</Dialog.Title>
+                  <Dialog.Title>Welcome to the Gogh community!</Dialog.Title>
                   <Dialog.Description size="2" mb="4">
-                    We use Coinbase to easily and safely convert dollars to crypto. If you don&apos;t have a Coinbase account, you&apos;ll need to create one. It&apos;s free and only takes 5 minutes.
+                    By making purchases in crypto, you&apos;re helping small businesses succeed by allowing them to keep more of their revenue instead of paying bank fees. Buy crypto below.
                   </Dialog.Description>
 
                   <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
                     <Dialog.Close>
                       <Button variant="ghost"  onClick={() => router.replace('/account/transfer')}>
-                        I have an account
+                        Close
                       </Button>
                     </Dialog.Close>
                     <Dialog.Close>
-                      <Button onClick={handleNewUserDialog}>
-                        Continue to Coinbase
+                      <Button onClick={handleNewUserDialog} style={{backgroundColor: '#0051FD', width: '200px'}}>
+                        Buy crypto
                       </Button>
                     </Dialog.Close>
                   </Flex>

@@ -29,7 +29,9 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
     async function fetchAllMerchants() {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/merchant/all');
+        const response = await fetch('/api/merchant/all', {
+          next: {revalidate: 1}
+        });
         if (!response.ok) {
           throw new Error(`Error fetching merchants: ${response.statusText}`);
         }
