@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Header } from "@/app/components/Header";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
-import { Badge, Box, Button, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
+import { Badge, Box, Button, Callout, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
 import { CopyIcon, ExclamationTriangleIcon, InfoCircledIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { CoinbaseButton } from "@/app/buy/components/coinbaseOnramp";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
@@ -27,6 +27,7 @@ function isError(error: any): error is Error {
 
 function TransferContent() {
   const [error, setError] = useState<string | null>(null);
+  const [onrampError, setOnrampError] = useState<string | null>(null);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [transferErrorMessage, setTransferErrorMessage] = useState<string | null>(null);
   const [tranferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
@@ -551,11 +552,17 @@ function TransferContent() {
 
   // Stripe onramp
   const createOnrampSession = async () => {
+    console.log('wallet for purchase:', walletForPurchase);
     setIsLoading(true);
-    setError(null);
+    setOnrampError(null);
+
+    if (!walletForPurchase) {
+      setOnrampError('Error: Destination account is missing. Try refreshing the page.')
+      return;
+    }
 
     try {
-      const res = await fetch('/api/stripe/createOnrampSession', {
+      const res = await fetch(`/api/stripe/createOnrampSession?address=${walletForPurchase}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -569,7 +576,7 @@ function TransferContent() {
       const onrampUrl = data.redirect_url;
       window.open(onrampUrl, '_blank');
     } catch (err: any) {
-      setError(err.message);
+      setOnrampError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -839,6 +846,16 @@ function TransferContent() {
                     <Text>
                       Buy crypto using our integration with Stripe. We will guide you through purchasing USDC, which has the same value as the US dollar. 
                     </Text>
+                    {onrampError && (
+                      <Callout.Root color="red">
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text>
+                        {onrampError}
+                      </Callout.Text>
+                    </Callout.Root>
+                    )}
                     <Button onClick={createOnrampSession} style={{backgroundColor: '#0051FD', width: '200px'}}>
                       Buy crypto
                     </Button>

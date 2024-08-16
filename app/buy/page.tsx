@@ -50,6 +50,7 @@ function BuyContent() {
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [onrampError, setOnrampError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
@@ -676,11 +677,17 @@ function BuyContent() {
 
   // Stripe onramp
   const createOnrampSession = async () => {
+    console.log('wallet for purchase:', walletForPurchase);
     setIsLoading(true);
-    setError(null);
+    setOnrampError(null);
+
+    if (!walletForPurchase) {
+      setOnrampError('Error: Destination account is missing. Try refreshing the page.')
+      return;
+    }
 
     try {
-      const res = await fetch(`/api/stripe/createOnrampSession?amount=${encodeURIComponent(finalPrice + 1)}`, {
+      const res = await fetch(`/api/stripe/createOnrampSession?amount=${encodeURIComponent(finalPrice + 1)}&address=${walletForPurchase}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -694,7 +701,7 @@ function BuyContent() {
       const onrampUrl = data.redirect_url;
       window.open(onrampUrl, '_blank');
     } catch (err: any) {
-      setError(err.message);
+      setOnrampError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -974,7 +981,17 @@ function BuyContent() {
               )}
               */}
 
-              <Flex direction={'column'} gap={'4'}>
+              <Flex direction={'column'} gap={'4'} align={'center'}>
+                {onrampError && (
+                  <Callout.Root color="red">
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text>
+                    {onrampError}
+                  </Callout.Text>
+                </Callout.Root>
+                )}
                 <AlertDialog.Root>
                   <AlertDialog.Trigger>
                     <Button size={'4'} style={{

@@ -6,10 +6,13 @@ export async function POST(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const purchaseAmount = searchParams.get('amount');
+  const address = searchParams.get('address');
   console.log("purchase amount:", purchaseAmount)
 
   const formData = new URLSearchParams();
-  formData.append('wallet_address', '0x4A6737Da9668D09aCE702c3ff5e0dA33a84d28F7');
+  if (address) {
+    formData.append('wallet_address', address);
+  }
   formData.append('source_currency', 'usd');
   formData.append('destination_currency', 'usdc');
   formData.append('destination_network', 'base');
