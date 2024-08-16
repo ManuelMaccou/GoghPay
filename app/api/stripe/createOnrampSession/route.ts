@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const apiKey = 'sk_test_51PUxbS2LxM74f3GjpDNRYyFWNUXcG2AJzvjTzyv9mVPq7gx2h2kEqjacRGNKsEQXhy1KYYNmvaggsHhV58223mHA00jMUPINPx';
+  const secret = process.env.STRIPE_SECRET;
   const url = 'https://api.stripe.com/v1/crypto/onramp_sessions';
 
-  const purchaseAmount = await request.json();
+  const { searchParams } = new URL(request.url);
+  const purchaseAmount = searchParams.get('amount');
   console.log("purchase amount:", purchaseAmount)
 
   const formData = new URLSearchParams();
@@ -12,7 +13,9 @@ export async function POST(request: Request) {
   formData.append('source_currency', 'usd');
   formData.append('destination_currency', 'usdc');
   formData.append('destination_network', 'base');
-  formData.append('destination_amount', purchaseAmount);
+  if (purchaseAmount) {
+    formData.append('destination_amount', purchaseAmount);
+  }
   formData.append('destination_currencies[]', 'usdc');
   formData.append('destination_networks[]', 'base');
 
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(apiKey + ':').toString('base64')}`,
+        'Authorization': `Basic ${Buffer.from(secret + ':').toString('base64')}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: formData.toString(),

@@ -680,12 +680,11 @@ function BuyContent() {
     setError(null);
 
     try {
-      const res = await fetch('/api/stripe/createOnrampSession', {
+      const res = await fetch(`/api/stripe/createOnrampSession?amount=${encodeURIComponent(finalPrice + 1)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(finalPrice + 1)
+        }
       });
 
       if (!res.ok) {

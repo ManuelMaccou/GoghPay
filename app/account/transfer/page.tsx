@@ -549,6 +549,32 @@ function TransferContent() {
     }
   }, [ready, authenticated, user?.id, editAddressMode]); 
 
+  // Stripe onramp
+  const createOnrampSession = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/stripe/createOnrampSession', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create onramp session');
+      }
+      const data = await res.json();
+      const onrampUrl = data.redirect_url;
+      window.open(onrampUrl, '_blank');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!embeddedWallet) return;
     if (!currentUser) return;
@@ -805,13 +831,26 @@ function TransferContent() {
 
               {currentUser && !currentUser.merchant && (
                 <>
-                 <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                  <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
                     boxShadow: 'var(--shadow-2)',
                     borderRadius: '10px'
                     }}>
-                    <Heading>Deposit into Gogh</Heading>
+                    <Heading>Buy crypto</Heading>
                     <Text>
-                      Move funds into your Gogh account using Coinbase so you can make purchases at your favorite vendors. 
+                      Buy crypto using our integration with Stripe. We will guide you through purchasing USDC, which has the same value as the US dollar. 
+                    </Text>
+                    <Button onClick={createOnrampSession} style={{backgroundColor: '#0051FD', width: '200px'}}>
+                      Buy crypto
+                    </Button>
+                  </Flex>
+
+                  <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                    boxShadow: 'var(--shadow-2)',
+                    borderRadius: '10px'
+                    }}>
+                    <Heading>Transfer from Coinbase into Gogh</Heading>
+                    <Text>
+                      If you have a Coinbase account, move funds into your Gogh account. 
                     </Text>
                     <CoinbaseButton
                       destinationWalletAddress={walletForPurchase || ""}
