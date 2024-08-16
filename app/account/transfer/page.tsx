@@ -494,11 +494,15 @@ function TransferContent() {
     setRedirectURL(currentURL);
   }, []);
 
+  // Opens a dialog prompting the user to get a Coinbase account
+  // Removing this for now since Stripe is the main onboarding tool
+  /*
   useEffect(() => {
     if (stepParam && stepParam === 'new-user' && embeddedWallet) {
       setNewUserExperience(true);
     }
   }, [stepParam, embeddedWallet]);
+  */
   
   
   
@@ -865,7 +869,7 @@ function TransferContent() {
                     boxShadow: 'var(--shadow-2)',
                     borderRadius: '10px'
                     }}>
-                    <Heading>Transfer from Coinbase into Gogh</Heading>
+                    <Heading align={'center'}>Transfer from Coinbase into Gogh</Heading>
                     <Text>
                       If you have a Coinbase account, move funds into your Gogh account. 
                     </Text>
