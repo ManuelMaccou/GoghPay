@@ -55,6 +55,7 @@ function TransferContent() {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [redirectURL, setRedirectURL] = useState('');
   const [newUserExperience, setNewUserExperience] = useState(false);
+  const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
   const { user, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
@@ -571,7 +572,12 @@ function TransferContent() {
       }
       const data = await res.json();
       const onrampUrl = data.redirect_url;
-      window.open(onrampUrl, '_blank');
+      const newTab = window.open(onrampUrl, '_blank');
+      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+        setOnrampError("Pop-up blocked. Please click the link below to proceed:");
+        setFallbackLink(onrampUrl);
+      }
+
     } catch (err: any) {
       setOnrampError(err.message);
     } finally {
@@ -850,6 +856,7 @@ function TransferContent() {
                       </Callout.Icon>
                       <Callout.Text>
                         {onrampError}
+                        {fallbackLink && <Link href={fallbackLink} target="_blank" rel="noopener noreferrer">{fallbackLink}</Link>}
                       </Callout.Text>
                     </Callout.Root>
                     )}
