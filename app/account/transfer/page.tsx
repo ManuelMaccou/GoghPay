@@ -553,7 +553,7 @@ function TransferContent() {
     console.log('wallet for purchase:', walletForPurchase);
     setIsLoading(true);
     setOnrampError(null);
-    setFallbackLink(null); // Clear previous fallback link
+    setFallbackLink(null);
 
     if (!walletForPurchase) {
       setOnrampError('Error: Destination account is missing. Try refreshing the page.');

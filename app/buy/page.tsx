@@ -67,6 +67,7 @@ function BuyContent() {
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
   const [purchaseStarted, setPurchaseStarted] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -680,6 +681,7 @@ function BuyContent() {
     console.log('wallet for purchase:', walletForPurchase);
     setIsLoading(true);
     setOnrampError(null);
+    setFallbackLink(null);
 
     if (!walletForPurchase) {
       setOnrampError('Error: Destination account is missing. Try refreshing the page.')
@@ -698,8 +700,36 @@ function BuyContent() {
         throw new Error('Failed to create onramp session');
       }
       const data = await res.json();
-      const onrampUrl = data.redirect_url;
-      window.open(onrampUrl, '_blank');
+      const onrampUrl = new URL(data.redirect_url);
+
+      // Create and submit a form to avoid pop-up blockers
+      const form = document.createElement('form');
+      form.method = 'GET';
+      form.action = onrampUrl.origin + onrampUrl.pathname;
+      form.target = '_blank';  // Opens in a new tab
+      console.log('onrampUrl:', onrampUrl.href);  // Log the full URL
+
+      // Append all query parameters as hidden fields
+      for (const [key, value] of onrampUrl.searchParams.entries()) {
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = key;
+        hiddenInput.value = value;
+        form.appendChild(hiddenInput);
+      }
+
+      document.body.appendChild(form);
+
+      try {
+        form.submit();
+      } catch (submitError) {
+        // If the form submission fails for any reason, set the fallback link
+        setOnrampError("Redirect failed. Please click the link below to proceed:");
+        setFallbackLink(onrampUrl.href);
+      } finally {
+        document.body.removeChild(form);  // Clean up
+      }
+
     } catch (err: any) {
       setOnrampError(err.message);
     } finally {
@@ -982,16 +1012,26 @@ function BuyContent() {
               */}
 
               <Flex direction={'column'} gap={'4'} align={'center'}>
-                {onrampError && (
-                  <Callout.Root color="red">
+              {onrampError && (
+                <Callout.Root color="red">
                   <Callout.Icon>
                     <InfoCircledIcon />
                   </Callout.Icon>
-                  <Callout.Text>
-                    {onrampError}
-                  </Callout.Text>
+                  <Flex direction={'column'} maxWidth={'100%'}>
+                    <Callout.Text mb={'4'} size={'3'}>
+                      {onrampError}
+                    </Callout.Text>
+                    {fallbackLink && (
+                      <Callout.Text size={'4'}>
+                        {/* Render as a link */}
+                        <Link wrap={'wrap'} href={fallbackLink} target="_blank" rel="noopener noreferrer">
+                          Continue to Stripe
+                        </Link>
+                        </Callout.Text>
+                    )}
+                  </Flex>
                 </Callout.Root>
-                )}
+              )}
                 <AlertDialog.Root>
                   <AlertDialog.Trigger>
                     <Button size={'4'} style={{
