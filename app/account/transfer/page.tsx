@@ -553,9 +553,10 @@ function TransferContent() {
     console.log('wallet for purchase:', walletForPurchase);
     setIsLoading(true);
     setOnrampError(null);
+    setFallbackLink(null); // Clear previous fallback link
 
     if (!walletForPurchase) {
-      setOnrampError('Error: Destination account is missing. Try refreshing the page.')
+      setOnrampError('Error: Destination account is missing. Try refreshing the page.');
       return;
     }
 
@@ -570,12 +571,36 @@ function TransferContent() {
       if (!res.ok) {
         throw new Error('Failed to create onramp session');
       }
+      
       const data = await res.json();
-      const onrampUrl = data.redirect_url;
-      const newTab = window.open(onrampUrl, '_blank');
-      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-        setOnrampError("Pop-up blocked. Please click the link below to proceed:");
-        setFallbackLink(onrampUrl);
+      const onrampUrl = new URL(data.redirect_url);  // Convert to a URL object
+
+      // Create and submit a form to avoid pop-up blockers
+      const form = document.createElement('form');
+      form.method = 'GET';
+      form.action = onrampUrl.origin + onrampUrl.pathname;
+      form.target = '_blank';  // Opens in a new tab
+      console.log('onrampUrl:', onrampUrl.href);  // Log the full URL
+
+      // Append all query parameters as hidden fields
+      for (const [key, value] of onrampUrl.searchParams.entries()) {
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = key;
+        hiddenInput.value = value;
+        form.appendChild(hiddenInput);
+      }
+
+      document.body.appendChild(form);
+
+      try {
+        form.submit();
+      } catch (submitError) {
+        // If the form submission fails for any reason, set the fallback link
+        setOnrampError("Redirect failed. Please click the link below to proceed:");
+        setFallbackLink(onrampUrl.href);
+      } finally {
+        document.body.removeChild(form);  // Clean up
       }
 
     } catch (err: any) {
@@ -583,7 +608,7 @@ function TransferContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+};
 
   useEffect(() => {
     if (!embeddedWallet) return;
@@ -851,14 +876,23 @@ function TransferContent() {
                     </Text>
                     {onrampError && (
                       <Callout.Root color="red">
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text>
-                        {onrampError}
-                        {fallbackLink && <Link href={fallbackLink} target="_blank" rel="noopener noreferrer">{fallbackLink}</Link>}
-                      </Callout.Text>
-                    </Callout.Root>
+                        <Callout.Icon>
+                          <InfoCircledIcon />
+                        </Callout.Icon>
+                        <Flex direction={'column'} maxWidth={'100%'}>
+                          <Callout.Text mb={'4'} size={'3'}>
+                            {onrampError}
+                          </Callout.Text>
+                          {fallbackLink && (
+                            <Callout.Text size={'4'}>
+                              {/* Render as a link */}
+                              <Link wrap={'wrap'} href={fallbackLink} target="_blank" rel="noopener noreferrer">
+                                Continue to Stripe
+                              </Link>
+                              </Callout.Text>
+                          )}
+                        </Flex>
+                      </Callout.Root>
                     )}
                     <Button onClick={createOnrampSession} style={{backgroundColor: '#0051FD', width: '200px'}}>
                       Buy crypto
