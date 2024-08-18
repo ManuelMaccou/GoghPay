@@ -577,16 +577,6 @@ function TransferContent() {
       const data = await res.json();
       const onrampUrl = new URL(data.redirect_url); 
 
-      let navigationHappened = false;
-
-      // Use a timeout to detect if the navigation is blocked
-      const timeoutId = setTimeout(() => {
-        if (!navigationHappened) {
-          setOnrampError("Pop-up blocked or navigation failed. Please click the link below to proceed:");
-          setFallbackLink(onrampUrl.href);
-        }
-      }, 4000); // 4 seconds
-
       const form = document.createElement('form');
       form.method = 'GET';
       form.action = onrampUrl.origin + onrampUrl.pathname;
@@ -605,8 +595,6 @@ function TransferContent() {
 
       try {
         form.submit();
-        navigationHappened = true;
-        clearTimeout(timeoutId);
         setOnrampLoading(false);
 
       } catch (submitError) {
