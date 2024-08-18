@@ -75,25 +75,49 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                   <Flex direction={'row'} justify={'between'} flexGrow={'1'}>
                     {embeddedWallet && authenticated ? (
                       <Card variant="ghost" mb={'3'}>
-                        <Flex gap="3" align="center" justify={'end'}>
-                          <AvatarIcon />
-                          <Box>
-                            <Text as="div" size="2" color="gray">
-                              {user?.email?.address || user?.google?.name}
-                            </Text>
-                          </Box>
+                        <Flex direction={'column'} gap={'3'}>
+                          <Flex direction={'row'} gap="3" align="center" justify={'end'}>
+                            <AvatarIcon />
+                            <Box>
+                              <Text as="div" size="2" color="gray">
+                                {user?.email?.address || user?.google?.name}
+                              </Text>
+                            </Box>
+                          </Flex>
+                          <Dialog.Root>
+                              <Dialog.Trigger>
+                                <Button variant="ghost">Show address</Button>
+                              </Dialog.Trigger>
+                              <Dialog.Content size={'3'} maxWidth={'300px'}>
+                                <Text as="p" trim="both" size="1">
+                                  {currentUser?.smartAccountAddress}
+                                </Text>
+                              </Dialog.Content>
+                            </Dialog.Root>
                         </Flex>
                       </Card>
                     ) : (
                       !embeddedWallet && authenticated && (
                         <Card variant="ghost" mb={'3'}>
-                          <Flex gap="3" align="center" justify={'end'}>
-                            <AvatarIcon />
-                            <Box>
-                              <Text as="div" size="2" color="gray">
-                                {walletForPurchase?.slice(0, 6)}
-                              </Text>
-                            </Box>
+                          <Flex direction={'column'} gap={'3'}>
+                            <Flex direction={'row'} gap="3" align="center" justify={'end'}>
+                              <AvatarIcon />
+                              <Box>
+                                <Text as="div" size="2" color="gray">
+                                  {walletForPurchase?.slice(0, 6)}
+                                </Text>
+                              </Box>
+                            </Flex>
+                            <Dialog.Root>
+                              <Dialog.Trigger>
+                                <Button variant="ghost">Show address</Button>
+                              </Dialog.Trigger>
+                              <Dialog.Content size={'3'} maxWidth={'300px'}>
+                                <Text as="p" trim="both" size="1">
+                                  {walletForPurchase}
+                                </Text>
+                              </Dialog.Content>
+                            </Dialog.Root>
                           </Flex>
                         </Card>
                       )
