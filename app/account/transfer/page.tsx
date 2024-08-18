@@ -55,6 +55,7 @@ function TransferContent() {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [redirectURL, setRedirectURL] = useState('');
   const [newUserExperience, setNewUserExperience] = useState(false);
+  const [onrampLoading, setOnrampLoading] = useState<boolean>(false);
   const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
   const { user, ready, authenticated } = usePrivy();
@@ -554,6 +555,7 @@ function TransferContent() {
     setIsLoading(true);
     setOnrampError(null);
     setFallbackLink(null);
+    setOnrampLoading(true);
 
     if (!walletForPurchase) {
       setOnrampError('Error: Destination account is missing. Try refreshing the page.');
@@ -573,14 +575,22 @@ function TransferContent() {
       }
       
       const data = await res.json();
-      const onrampUrl = new URL(data.redirect_url);  // Convert to a URL object
+      const onrampUrl = new URL(data.redirect_url); 
 
-      // Create and submit a form to avoid pop-up blockers
+      let navigationHappened = false;
+
+      // Use a timeout to detect if the navigation is blocked
+      const timeoutId = setTimeout(() => {
+        if (!navigationHappened) {
+          setOnrampError("Pop-up blocked or navigation failed. Please click the link below to proceed:");
+          setFallbackLink(onrampUrl.href);
+        }
+      }, 4000); // 4 seconds
+
       const form = document.createElement('form');
       form.method = 'GET';
       form.action = onrampUrl.origin + onrampUrl.pathname;
       form.target = '_blank';  // Opens in a new tab
-      console.log('onrampUrl:', onrampUrl.href);  // Log the full URL
 
       // Append all query parameters as hidden fields
       for (const [key, value] of onrampUrl.searchParams.entries()) {
@@ -595,18 +605,26 @@ function TransferContent() {
 
       try {
         form.submit();
+        navigationHappened = true;
+        clearTimeout(timeoutId);
+        setOnrampLoading(false);
+
       } catch (submitError) {
         // If the form submission fails for any reason, set the fallback link
         setOnrampError("Redirect failed. Please click the link below to proceed:");
         setFallbackLink(onrampUrl.href);
+        setOnrampLoading(false);
       } finally {
         document.body.removeChild(form);  // Clean up
+        setOnrampLoading(false);
       }
 
     } catch (err: any) {
       setOnrampError(err.message);
+      setOnrampLoading(false);
     } finally {
       setIsLoading(false);
+      setOnrampLoading(false);
     }
 };
 
@@ -894,7 +912,7 @@ function TransferContent() {
                         </Flex>
                       </Callout.Root>
                     )}
-                    <Button onClick={createOnrampSession} style={{backgroundColor: '#0051FD', width: '200px'}}>
+                    <Button onClick={createOnrampSession} loading={onrampLoading} style={{backgroundColor: '#0051FD', width: '200px'}}>
                       Buy crypto
                     </Button>
                   </Flex>
