@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
 
     const client = new Client({
       accessToken: decryptedAccessToken,
-      environment: process.env.NEXT_PUBLIC_SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+      // environment: process.env.NEXT_PUBLIC_SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+      environment: Environment.Production,
     });
     const response = await client.locationsApi.listLocations();
 
