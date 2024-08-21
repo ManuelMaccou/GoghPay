@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       grant_type: 'authorization_code',
     }, {
       headers: {
-        'Square-Version': '2021-05-13',
+        'Square-Version': '2024-07-17',
         'Content-Type': 'application/json',
       },
     });
