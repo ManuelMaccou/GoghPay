@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   try {
     const redirectUri = `${baseUrl}/api/square/auth/callback?merchantId=${goghMerchantId}`;
     
-    const response = await axios.post('https://connect.squareupsandbox.com/oauth2/token', {
+    const response = await axios.post(`https://connect.${SQUARE_ENV}.com/oauth2/token`, {
       client_id: SQUARE_CLIENT_ID,
       client_secret: SQUARE_APP_SECRET,
       code: code,
