@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
     }
 
     const decryptedAccessToken = decrypt(merchant.square_access_token);
-    console.log('decrypted access token:', decryptedAccessToken);
 
     const client = new Client({
       accessToken: decryptedAccessToken,
