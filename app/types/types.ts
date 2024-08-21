@@ -20,6 +20,12 @@ export interface Merchant {
   promo?: boolean;
   admin: boolean;
   taxes: Tax[];
+  square_access_token: string;
+  square_merchant_id: string;
+  square_refresh_token: string;
+  square_token_expires_at: string;
+  square_location_id: string;
+  square_location_name: string;
 }
 
 export interface Transaction {
@@ -55,3 +61,12 @@ export interface Tax {
 export interface  CryptoElementsContextType {
   onramp: any | null;
 };
+export interface Location {
+  id: string;
+  name: string;
+}
+
+export interface SquareCatalog {
+  id: string;
+  name: string;
+}

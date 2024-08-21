@@ -69,7 +69,6 @@ function TransferContent() {
   // Get params for new user experience
   const searchParams = useSearchParams();
   const stepParam = searchParams.get('step');
-  console.log(stepParam);
 
   const { fetchBalance } = useBalance();
 

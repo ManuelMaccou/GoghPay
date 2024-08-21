@@ -17,6 +17,13 @@ const merchantSchema = new mongoose.Schema({
   admin: { type: Boolean },
   stripeConnectedAccountId: { type: String },
   taxes: { type: [taxSchema] },
+  promo: { type: Boolean },
+  square_merchant_id: { type: String },
+  square_location_id: { type: String },
+  square_location_name: { type: String },
+  square_access_token: { type: String },
+  square_refresh_token: { type: String },
+  square_token_expires_at: { type: Date },
 
 }, { timestamps: true });
 
