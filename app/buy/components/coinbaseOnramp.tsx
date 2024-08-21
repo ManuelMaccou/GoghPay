@@ -40,6 +40,7 @@ export function CoinbaseButton({ destinationWalletAddress, price, redirectURL }:
     const options: InitOnRampOptions = {
       appId: process.env.NEXT_PUBLIC_COINBASE_APP_ID!,
       widgetParameters: {
+        redirectUrl: redirectURL,
         addresses: { [destinationWalletAddress]: ['base'] },
         assets: ['USDC'],
         presetCryptoAmount: onrampAmount,

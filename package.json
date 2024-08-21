@@ -10,8 +10,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@coinbase/cbpay-js": "^2.2.1",
     "@auth/mongodb-adapter": "^3.4.1",
-    "@coinbase/cbpay-js": "^2.2.0",
     "@fortawesome/fontawesome-svg-core": "^6.5.2",
     "@fortawesome/free-regular-svg-icons": "^6.5.2",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
@@ -26,6 +26,8 @@
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/themes": "^3.0.5",
     "@stitches/react": "^1.2.8",
+    "@stripe/crypto": "^0.0.4",
+    "@stripe/stripe-js": "^4.3.0",
     "@types/node-fetch": "^2.6.11",
     "alchemy-sdk": "^3.3.1",
     "axios": "^1.7.0",

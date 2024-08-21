@@ -9,8 +9,8 @@ dependencies:
     specifier: ^3.4.1
     version: 3.4.1(mongodb@6.6.2)
   '@coinbase/cbpay-js':
-    specifier: ^2.2.0
-    version: 2.2.0
+    specifier: ^2.2.1
+    version: 2.2.1
   '@fortawesome/fontawesome-svg-core':
     specifier: ^6.5.2
     version: 6.5.2
@@ -53,6 +53,12 @@ dependencies:
   '@stitches/react':
     specifier: ^1.2.8
     version: 1.2.8(react@18.3.1)
+  '@stripe/crypto':
+    specifier: ^0.0.4
+    version: 0.0.4(@stripe/stripe-js@4.3.0)
+  '@stripe/stripe-js':
+    specifier: ^4.3.0
+    version: 4.3.0
   '@types/node-fetch':
     specifier: ^2.6.11
     version: 2.6.11
@@ -548,8 +554,8 @@ packages:
       to-fast-properties: 2.0.0
     dev: false
 
-  /@coinbase/cbpay-js@2.2.0:
-    resolution: {integrity: sha512-axTmgdxj57OmLFDjiHmMfZe/kdntBPHRFUektvTZoH8fX94gslw0+WSZgOdrLGkxaOv1TEnJRg+p6xq5MI0uAA==}
+  /@coinbase/cbpay-js@2.2.1:
+    resolution: {integrity: sha512-u97f6RiS4XgO+GGMGc8OBMm+ZCJTtJrFym4z00jIj6uikU7af/YP+dFrlIfvBLy7Jt8xQzAoGU0Rzmz98DFWdg==}
     engines: {node: '>= 14'}
     peerDependencies:
       regenerator-runtime: ^0.13.9
@@ -3650,6 +3656,19 @@ packages:
       react: '>= 16.3.0'
     dependencies:
       react: 18.3.1
+    dev: false
+
+  /@stripe/crypto@0.0.4(@stripe/stripe-js@4.3.0):
+    resolution: {integrity: sha512-gcD/aG0N90ZrNVppWYf9ADPECptw6PVtF67VIeaFP7fhgd2NvNx8erkzlcvk3VIVSY+bZ6YGX7c7cASoySX74Q==}
+    peerDependencies:
+      '@stripe/stripe-js': ^1.46.0
+    dependencies:
+      '@stripe/stripe-js': 4.3.0
+    dev: false
+
+  /@stripe/stripe-js@4.3.0:
+    resolution: {integrity: sha512-bf8MxzzgD3dybtyIJUQSDMqxjEkJfsmj9IdRqDv609Zw08R41O7eoIy0f8KY41u8MbaFOYsn+XGJZtg1xwR2wQ==}
+    engines: {node: '>=12.16'}
     dev: false
 
   /@swc/counter@0.1.3:

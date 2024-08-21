@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Header } from "@/app/components/Header";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
-import { Badge, Box, Button, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
+import { Badge, Box, Button, Callout, Dialog, Flex, Heading, IconButton, Link, Separator, Spinner, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
 import { CopyIcon, ExclamationTriangleIcon, InfoCircledIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { CoinbaseButton } from "@/app/buy/components/coinbaseOnramp";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
@@ -27,6 +27,7 @@ function isError(error: any): error is Error {
 
 function TransferContent() {
   const [error, setError] = useState<string | null>(null);
+  const [onrampError, setOnrampError] = useState<string | null>(null);
   const [criticalError, setCriticalError] = useState<string | null>(null);
   const [transferErrorMessage, setTransferErrorMessage] = useState<string | null>(null);
   const [tranferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
@@ -54,6 +55,8 @@ function TransferContent() {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [redirectURL, setRedirectURL] = useState('');
   const [newUserExperience, setNewUserExperience] = useState(false);
+  const [onrampLoading, setOnrampLoading] = useState<boolean>(false);
+  const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
   const { user, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
@@ -71,7 +74,7 @@ function TransferContent() {
 
   const handleNewUserDialog = () => {
     // Open the new tab
-    window.open('https://www.coinbase.com/', '_blank', 'noopener,noreferrer');
+    createOnrampSession();
 
     // Remove the URL parameter
     router.replace('/account/transfer');
@@ -335,8 +338,6 @@ function TransferContent() {
             },
           },
         })
-
-        
   
         const data = encodeFunctionData({
           abi: erc20Abi,
@@ -499,9 +500,6 @@ function TransferContent() {
       setNewUserExperience(true);
     }
   }, [stepParam, embeddedWallet]);
-  
-  
-  
 
   useEffect(() => {
     const fetchMerchant = async (id: string) => {
@@ -549,6 +547,73 @@ function TransferContent() {
       fetchUser();
     }
   }, [ready, authenticated, user?.id, editAddressMode]); 
+
+  // Stripe onramp
+  const createOnrampSession = async () => {
+    console.log('wallet for purchase:', walletForPurchase);
+    setIsLoading(true);
+    setOnrampError(null);
+    setFallbackLink(null);
+    setOnrampLoading(true);
+
+    if (!walletForPurchase) {
+      setOnrampError('Error: Destination account is missing. Try refreshing the page.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/stripe/createOnrampSession?amount=50&address=${walletForPurchase}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create onramp session');
+      }
+      
+      const data = await res.json();
+      const onrampUrl = new URL(data.redirect_url); 
+
+      const form = document.createElement('form');
+      form.method = 'GET';
+      form.action = onrampUrl.origin + onrampUrl.pathname;
+      form.target = '_blank';  // Opens in a new tab
+
+      // Append all query parameters as hidden fields
+      for (const [key, value] of onrampUrl.searchParams.entries()) {
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = key;
+        hiddenInput.value = value;
+        form.appendChild(hiddenInput);
+      }
+
+      document.body.appendChild(form);
+
+      try {
+        form.submit();
+        setOnrampLoading(false);
+
+      } catch (submitError) {
+        // If the form submission fails for any reason, set the fallback link
+        setOnrampError("Redirect failed. Please click the link below to proceed:");
+        setFallbackLink(onrampUrl.href);
+        setOnrampLoading(false);
+      } finally {
+        document.body.removeChild(form);  // Clean up
+        setOnrampLoading(false);
+      }
+
+    } catch (err: any) {
+      setOnrampError(err.message);
+      setOnrampLoading(false);
+    } finally {
+      setIsLoading(false);
+      setOnrampLoading(false);
+    }
+};
 
   useEffect(() => {
     if (!embeddedWallet) return;
@@ -755,7 +820,7 @@ function TransferContent() {
 
   return (
     <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
-      {ready && authenticated && (
+      {ready && authenticated && currentUser && (
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             merchant={currentUser?.merchant}
@@ -779,20 +844,20 @@ function TransferContent() {
                 </Dialog.Trigger>
 
                 <Dialog.Content maxWidth="450px">
-                  <Dialog.Title>Do you have Coinbase?</Dialog.Title>
+                  <Dialog.Title>Welcome to the Gogh community!</Dialog.Title>
                   <Dialog.Description size="2" mb="4">
-                    We use Coinbase to easily and safely convert dollars to crypto. If you don&apos;t have a Coinbase account, you&apos;ll need to create one. It&apos;s free and only takes 5 minutes.
+                    By making purchases in crypto, you&apos;re helping small businesses succeed by allowing them to keep more of their revenue instead of paying bank fees. Buy crypto below.
                   </Dialog.Description>
 
                   <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
                     <Dialog.Close>
                       <Button variant="ghost"  onClick={() => router.replace('/account/transfer')}>
-                        I have an account
+                        Close
                       </Button>
                     </Dialog.Close>
                     <Dialog.Close>
-                      <Button onClick={handleNewUserDialog}>
-                        Continue to Coinbase
+                      <Button onClick={handleNewUserDialog} style={{backgroundColor: '#0051FD', width: '200px'}}>
+                        Buy crypto
                       </Button>
                     </Dialog.Close>
                   </Flex>
@@ -806,13 +871,46 @@ function TransferContent() {
 
               {currentUser && !currentUser.merchant && (
                 <>
-                 <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                  <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
                     boxShadow: 'var(--shadow-2)',
                     borderRadius: '10px'
                     }}>
-                    <Heading>Deposit into Gogh</Heading>
+                    <Heading>Buy crypto</Heading>
                     <Text>
-                      Move funds into your Gogh account using Coinbase so you can make purchases at your favorite vendors. 
+                      Buy crypto using our integration with Stripe. We will guide you through purchasing USDC, which has the same value as the US dollar. 
+                    </Text>
+                    {onrampError && (
+                      <Callout.Root color="red">
+                        <Callout.Icon>
+                          <InfoCircledIcon />
+                        </Callout.Icon>
+                        <Flex direction={'column'} maxWidth={'100%'}>
+                          <Callout.Text mb={'4'} size={'3'}>
+                            {onrampError}
+                          </Callout.Text>
+                          {fallbackLink && (
+                            <Callout.Text size={'4'}>
+                              {/* Render as a link */}
+                              <Link wrap={'wrap'} href={fallbackLink} target="_blank" rel="noopener noreferrer">
+                                Continue to Stripe
+                              </Link>
+                              </Callout.Text>
+                          )}
+                        </Flex>
+                      </Callout.Root>
+                    )}
+                    <Button onClick={createOnrampSession} loading={onrampLoading} style={{backgroundColor: '#0051FD', width: '200px'}}>
+                      Buy crypto
+                    </Button>
+                  </Flex>
+
+                  <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
+                    boxShadow: 'var(--shadow-2)',
+                    borderRadius: '10px'
+                    }}>
+                    <Heading align={'center'}>Transfer from Coinbase into Gogh</Heading>
+                    <Text>
+                      If you have a Coinbase account, move funds into your Gogh account. 
                     </Text>
                     <CoinbaseButton
                       destinationWalletAddress={walletForPurchase || ""}

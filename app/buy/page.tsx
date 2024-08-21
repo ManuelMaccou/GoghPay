@@ -15,13 +15,14 @@ import {signerToSafeSmartAccount} from 'permissionless/accounts';
 import {createPimlicoBundlerClient} from 'permissionless/clients/pimlico';
 import { base, baseSepolia } from "viem/chains";
 import axios from "axios";
-import { InfoCircledIcon, AvatarIcon, CopyIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, AvatarIcon, CopyIcon, CrossCircledIcon, TrashIcon } from "@radix-ui/react-icons";
 import { pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { BalanceProvider } from "../contexts/BalanceContext";
 import { Header } from "../components/Header";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWallet } from "@fortawesome/free-solid-svg-icons";
 import { createSmartAccount } from "../utils/createSmartAccount";
+import StripeOnrampButton from "./components/stripeOnramp/stripeOnrampButton";
 import { checkAndRefreshToken } from "../lib/refresh-tokens";
 
 interface PurchaseParams {
@@ -50,6 +51,7 @@ function BuyContent() {
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [onrampError, setOnrampError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [prettyAlert, setPrettyAlert] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
@@ -65,7 +67,8 @@ function BuyContent() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isFetchingMerchant, setIsFetchingMerchant] = useState(true);
   const [purchaseStarted, setPurchaseStarted] = useState(false);
-  const [headerLoginClicked, setHeaderLoginClicked] = useState<string | null>(null);  
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -83,7 +86,7 @@ function BuyContent() {
   // Get params to verify signed URL
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
-  const product = searchParams.get('product');    
+  const product = searchParams.get('product');   
   const walletAddress = searchParams.get('walletAddress');
   const signature = searchParams.get('signature')
 
@@ -94,14 +97,24 @@ function BuyContent() {
     setError('Provided price is invalid');
   }
 
+  const salesTax = searchParams.get('salesTax');
+
+  const salesTaxNum = parseFloat(salesTax || "0");
+  if (isNaN(salesTaxNum)) {
+    console.error('sales tax is not a valid number');
+    setError('Provided sales tax is invalid');
+  }
+
+  const calculatedSalesTax = (salesTaxNum/100) * price;  
+
   const [selectedTip, setSelectedTip] = useState<string>('0');
   const [tipAmount, setTipAmount] = useState(0);
   const [finalPrice, setFinalPrice] = useState(price);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    setFinalPrice(price + tipAmount);
-  }, [price, tipAmount]);
+    setFinalPrice(price + tipAmount + calculatedSalesTax);
+  }, [price, tipAmount, calculatedSalesTax]);
 
   const handleValueChange = (value:string) => {
     setError(null);
@@ -255,7 +268,7 @@ function BuyContent() {
             'Authorization': `Bearer ${accessToken}`, 
           },
           body: JSON.stringify({
-            params: { merchantId, product, price, walletAddress },
+            params: { merchantId, product, price: priceString, salesTax, walletAddress },
             signature: signature
           })
         });
@@ -280,7 +293,7 @@ function BuyContent() {
     }
 
     verify();
-  }, [merchantId, product, walletAddress, price, getAccessToken, signature]);
+  }, [merchantId, product, walletAddress, price, priceString, salesTax, getAccessToken, signature]);
 
   useEffect(() => {
     if (isValid && merchantId) {
@@ -549,6 +562,7 @@ function BuyContent() {
           productName: purchaseParams.product,
           productPrice: price,
           tipAmount: tipAmount,
+          salesTax: calculatedSalesTax,
           transactionHash: transactionHash,
           paymentType: 'sponsored crypto'
         });
@@ -608,6 +622,7 @@ function BuyContent() {
           productName: purchaseParams.product,
           productPrice: price,
           tipAmount: tipAmount,
+          salesTax: calculatedSalesTax,
           transactionHash: transactionHash,
           paymentType: 'crypto'
         });
@@ -661,6 +676,67 @@ function BuyContent() {
       console.error('Error saving transaction:', error);
     }
   }
+
+  // Stripe onramp
+  const createOnrampSession = async () => {
+    console.log('wallet for purchase:', walletForPurchase);
+    setIsLoading(true);
+    setOnrampError(null);
+    setFallbackLink(null);
+
+    if (!walletForPurchase) {
+      setOnrampError('Error: Destination account is missing. Try refreshing the page.')
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/stripe/createOnrampSession?amount=${encodeURIComponent(finalPrice + 1)}&address=${walletForPurchase}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create onramp session');
+      }
+      const data = await res.json();
+      const onrampUrl = new URL(data.redirect_url);
+
+      // Create and submit a form to avoid pop-up blockers
+      const form = document.createElement('form');
+      form.method = 'GET';
+      form.action = onrampUrl.origin + onrampUrl.pathname;
+      form.target = '_blank';  // Opens in a new tab
+      console.log('onrampUrl:', onrampUrl.href);  // Log the full URL
+
+      // Append all query parameters as hidden fields
+      for (const [key, value] of onrampUrl.searchParams.entries()) {
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = key;
+        hiddenInput.value = value;
+        form.appendChild(hiddenInput);
+      }
+
+      document.body.appendChild(form);
+
+      try {
+        form.submit();
+      } catch (submitError) {
+        // If the form submission fails for any reason, set the fallback link
+        setOnrampError("Redirect failed. Please click the link below to proceed:");
+        setFallbackLink(onrampUrl.href);
+      } finally {
+        document.body.removeChild(form);  // Clean up
+      }
+
+    } catch (err: any) {
+      setOnrampError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if(ready && authenticated && isValid && walletForPurchase) {
@@ -757,7 +833,7 @@ function BuyContent() {
 
   return (
     <Flex direction={'column'} minHeight={'100vh'} width={'100%'} align={'center'} justify={'between'} pb={'9'} pt={'6'} px={'5'}>
-      {ready && authenticated && (
+      {ready && authenticated && currentUser && (
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             merchant={currentUser?.merchant}
@@ -772,6 +848,13 @@ function BuyContent() {
        )}
       {/* <Heading size={'7'} align={'center'}>Confirm details</Heading> */}
       <Flex height={'100%'} flexGrow={'1'} direction={'column'} justify={'center'} align={'center'}>
+       {/* The button to launch the embedded experience. Must not be in a dialog. It seems to not work. Maybe I can fix that?
+   
+      <Flex
+        <StripeOnrampButton />
+      </Flex>
+      */}
+
         {!isFetchingMerchant ? (
           <Box width={'100%'}>
             <Flex justify={'center'}>
@@ -792,14 +875,25 @@ function BuyContent() {
                 <Text size={'9'} my={'4'}>
                   ${price.toFixed(2)}
                 </Text>
-                {tipAmount > 0 && (
-                  <Flex direction={'row'} justify={'center'} gap={'3'}>
-                    <Text align={'center'} size={'5'}>+ ${tipAmount.toFixed(2)} tip</Text>
-                    <IconButton variant="ghost" color="gray" onClick={resetTipAmount}>
-                      <CrossCircledIcon />
-                    </IconButton>
-                  </Flex>
-                )}
+                <Flex direction={'column'} gap={'4'} width={'100%'} mt={'3'}>
+                  {calculatedSalesTax > 0 && (
+                    <Flex direction={'row'} justify={'between'} width={'100%'}>
+                      <Text align={'center'} size={'5'}>+ ${calculatedSalesTax.toFixed(2)}</Text>
+                      <Text align={'center'} size={'5'}>sales tax</Text>
+                    </Flex>
+                  )}
+                  {tipAmount > 0 && (
+                    <Flex direction={'row'} justify={'between'} width={'100%'}>
+                      <Text align={'center'} size={'5'}>+ ${tipAmount.toFixed(2)}</Text>
+                      <Flex direction={'row'} gap={'3'}>
+                        <Text align={'center'} size={'5'}>tip</Text>
+                        <IconButton variant="ghost" color="red" onClick={resetTipAmount}>
+                          <CrossCircledIcon width={'20'} height={'20'}/>
+                        </IconButton>
+                      </Flex>
+                    </Flex>
+                  )}
+                </Flex>
                 
               </Flex>
             </Box>
@@ -926,7 +1020,27 @@ function BuyContent() {
               )}
               */}
 
-              <Flex direction={'column'} gap={'4'}>
+              <Flex direction={'column'} gap={'4'} align={'center'}>
+              {onrampError && (
+                <Callout.Root color="red">
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Flex direction={'column'} maxWidth={'100%'}>
+                    <Callout.Text mb={'4'} size={'3'}>
+                      {onrampError}
+                    </Callout.Text>
+                    {fallbackLink && (
+                      <Callout.Text size={'4'}>
+                        {/* Render as a link */}
+                        <Link wrap={'wrap'} href={fallbackLink} target="_blank" rel="noopener noreferrer">
+                          Continue to Stripe
+                        </Link>
+                        </Callout.Text>
+                    )}
+                  </Flex>
+                </Callout.Root>
+              )}
                 <AlertDialog.Root>
                   <AlertDialog.Trigger>
                     <Button size={'4'} style={{
@@ -944,7 +1058,7 @@ function BuyContent() {
                     </AlertDialog.Description> */}
 
                     <AlertDialog.Description size="2">
-                      A minimum balance of $1 is required. Please transfer funds to your address below or from your Coinbase account.
+                      A minimum balance of $1 is required. Please transfer funds to your address below or buy crypto.
                     </AlertDialog.Description>
                     <Flex direction={'column'} py={'5'}>
                       <TextField.Root value={walletForPurchase || ''} disabled placeholder="Enter Base USDC address from Coinbase">
@@ -969,13 +1083,25 @@ function BuyContent() {
                           Cancel
                         </Button>
                       </AlertDialog.Cancel>
+
+                      {/* 
                       <AlertDialog.Action>
+                        temporarily removing Coinbase and doing Stripe onramp
                         <Flex>
                           <CoinbaseButton
                             destinationWalletAddress={walletForPurchase || ""}
                             price={finalPrice || 0}
                             redirectURL={redirectURL}
                           />
+                        </Flex>
+                      </AlertDialog.Action>
+                       */}
+
+                      <AlertDialog.Action>
+                        <Flex>
+                        <Button onClick={createOnrampSession} style={{backgroundColor: '#0051FD', width: '200px'}}>
+                          Buy crypto
+                        </Button>
                         </Flex>
                       </AlertDialog.Action>
                     </Flex>
