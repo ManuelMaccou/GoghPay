@@ -111,7 +111,7 @@ export default function Sell() {
 
     fetchInventory();
     
-  }, [merchant, locations]);
+  }, [locations, merchant?._id, merchant?.square_access_token]);
 
   const fetchSquareCatelog = async () => {
     setLoadingCatalog(true);
