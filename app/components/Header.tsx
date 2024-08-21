@@ -7,11 +7,11 @@ import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Sepa
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 import { User } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRightFromBracket, faEnvelope, faGear, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRightFromBracket, faEnvelope, faGear, faFile, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'next/navigation';
 import styles from './styles.module.css'
 
-
+//
 
 
 interface HeaderProps {
@@ -75,25 +75,49 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                   <Flex direction={'row'} justify={'between'} flexGrow={'1'}>
                     {embeddedWallet && authenticated ? (
                       <Card variant="ghost" mb={'3'}>
-                        <Flex gap="3" align="center" justify={'end'}>
-                          <AvatarIcon />
-                          <Box>
-                            <Text as="div" size="2" color="gray">
-                              {user?.email?.address || user?.google?.name}
-                            </Text>
-                          </Box>
+                        <Flex direction={'column'} gap={'3'}>
+                          <Flex direction={'row'} gap="3" align="center" justify={'end'}>
+                            <AvatarIcon />
+                            <Box>
+                              <Text as="div" size="2" color="gray">
+                                {user?.email?.address || user?.google?.name}
+                              </Text>
+                            </Box>
+                          </Flex>
+                          <Dialog.Root>
+                              <Dialog.Trigger>
+                                <Button variant="ghost">Show address</Button>
+                              </Dialog.Trigger>
+                              <Dialog.Content size={'3'} maxWidth={'300px'}>
+                                <Text as="p" trim="both" size="1">
+                                  {currentUser?.smartAccountAddress}
+                                </Text>
+                              </Dialog.Content>
+                            </Dialog.Root>
                         </Flex>
                       </Card>
                     ) : (
                       !embeddedWallet && authenticated && (
                         <Card variant="ghost" mb={'3'}>
-                          <Flex gap="3" align="center" justify={'end'}>
-                            <AvatarIcon />
-                            <Box>
-                              <Text as="div" size="2" color="gray">
-                                {walletForPurchase?.slice(0, 6)}
-                              </Text>
-                            </Box>
+                          <Flex direction={'column'} gap={'3'}>
+                            <Flex direction={'row'} gap="3" align="center" justify={'end'}>
+                              <AvatarIcon />
+                              <Box>
+                                <Text as="div" size="2" color="gray">
+                                  {walletForPurchase?.slice(0, 6)}
+                                </Text>
+                              </Box>
+                            </Flex>
+                            <Dialog.Root>
+                              <Dialog.Trigger>
+                                <Button variant="ghost">Show address</Button>
+                              </Dialog.Trigger>
+                              <Dialog.Content size={'3'} maxWidth={'300px'}>
+                                <Text as="p" trim="both" size="1">
+                                  {walletForPurchase}
+                                </Text>
+                              </Dialog.Content>
+                            </Dialog.Root>
                           </Flex>
                         </Card>
                       )
@@ -123,6 +147,11 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                             <FontAwesomeIcon style={{padding: '20px'}} icon={faSackDollar} />
                             <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/sales`)}>Sales</Button>
+                          </Flex>
+                          <Separator size={'4'} />
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faFile} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/taxes`)}>Taxes</Button>
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>

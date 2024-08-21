@@ -19,6 +19,7 @@ export interface Merchant {
   stripeConnectedAccountId?: string;
   promo?: boolean;
   admin: boolean;
+  taxes: Tax[];
   square_access_token: string;
   square_merchant_id: string;
   square_refresh_token: string;
@@ -34,6 +35,7 @@ export interface Transaction {
   productName: string;
   productPrice: number;
   tipAmount: number;
+  salesTax: number;
   transactionHash: string;
   paymentType: string; // 'sponsored crypto', 'crypto', 'mobile pay'
   createdAt: Date;
@@ -49,6 +51,16 @@ export interface Transfer {
   createdAt: Date;
 }
 
+export interface Tax {
+  _id: string;
+  name: string;
+  rate: number;
+  default: boolean;
+}
+
+export interface  CryptoElementsContextType {
+  onramp: any | null;
+};
 export interface Location {
   id: string;
   name: string;

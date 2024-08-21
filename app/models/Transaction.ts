@@ -8,6 +8,7 @@ const transactionSchema = new Schema({
   productName: { type: String, required: true },
   productPrice: { type: Number, required: true },
   tipAmount: { type: Number },
+  salesTax: { type: Number },
   paymentType: { type: String, required: true }, // 'sponsored crypto', 'crypto', 'mobile pay'
   transactionHash: { type: String },
 }, { timestamps: true });

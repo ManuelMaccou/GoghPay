@@ -317,7 +317,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
   return (
     <>
     <Flex direction={'column'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'}>
-      {ready && authenticated && (
+      {ready && authenticated && currentUser && (
         <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           merchant={currentUser?.merchant}
@@ -372,7 +372,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
           </Flex>
           */}
           <Flex direction={'column'} gap={'4'} flexGrow={'1'} justify={'between'} width={'100%'}>
-            <Box overflow={'scroll'} maxHeight={'50vh'}>
+            <Box overflow={'scroll'} maxHeight={'calc(100vh - 300px)'}>
             <Table.Root size="1">
               <Table.Header>
                 <Table.Row>

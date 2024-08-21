@@ -19,7 +19,6 @@ export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
   const { ready, authenticated, user, login } = usePrivy();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
-  const [ merchant, setMerchant ] = useState<Merchant>();
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loadingCatelog, setLoadingCatalog] = useState<boolean>(false);
