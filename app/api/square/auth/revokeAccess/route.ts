@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const decryptedAccessToken = decrypt(merchant.square_access_token);
     const client = new Client({
       accessToken: decryptedAccessToken,
-      environment: process.env.NEXT_PUBLIC_SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+      environment: process.env.SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
     });
 
     const squareAppSecret =process.env.SQUARE_APP_SECRET;
