@@ -18,7 +18,6 @@ function isError(error: any): error is Error {
 export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
   const { ready, authenticated, user, login } = usePrivy();
-  const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -27,8 +26,8 @@ export default function Sell() {
   const [message, setMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const router = useRouter();
 

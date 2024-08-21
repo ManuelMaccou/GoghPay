@@ -101,6 +101,8 @@ function IntegrationsContent() {
   const squareEnv = process.env.NEXT_PUBLIC_SQUARE_ENV;
 
   const squareScopes = [
+    'CUSTOMERS_READ',
+    'CUSTOMERS_WRITE',
     'ITEMS_WRITE',
     'ITEMS_READ',
     'INVENTORY_WRITE',
