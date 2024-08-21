@@ -18,6 +18,7 @@ function isError(error: any): error is Error {
 export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
   const { ready, authenticated, user, login } = usePrivy();
+  const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -110,7 +111,7 @@ export default function Sell() {
 
     fetchInventory();
     
-  }, [locations, merchant?._id, merchant?.square_access_token]);
+  }, [locations, merchant]);
 
   const fetchSquareCatelog = async () => {
     setLoadingCatalog(true);
