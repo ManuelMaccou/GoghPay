@@ -41,10 +41,20 @@ const SquarePayment: React.FC<SquarePaymentProps> = ({
     window.location.href = url;
   };
 
+  const handlePayment2 = () => {
+    // Test with a simple URL first
+    window.location.href = 'https://www.google.com';
+  };
+
   return (
-    <div>
-      <button onClick={handlePayment}>Pay with Square</button>
-    </div>
+    <>
+      <div>
+        <button onClick={handlePayment}>Pay with Square</button>
+      </div>
+      <div>
+        <button onClick={handlePayment2}>Test</button>
+      </div>
+    </>
   );
 };
 
