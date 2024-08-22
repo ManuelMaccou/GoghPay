@@ -37,6 +37,8 @@ const SquarePayment: React.FC<SquarePaymentProps> = ({
       JSON.stringify(dataParameter)
     )}`;
 
+    console.log("url:", url);
+
     // Redirect to Square Point of Sale app
     window.location.href = url;
   };
