@@ -26,7 +26,7 @@ const SquarePayment: React.FC<SquarePaymentProps> = ({
       },
       callback_url: callbackUrl,
       client_id: clientId,
-      version: "1.3",
+      version: "6.5",
       notes,
       options: {
         supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
