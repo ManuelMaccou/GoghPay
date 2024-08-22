@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 export default function SquarePaymentPage() {
   const router = useRouter();
   const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback`;
-  const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
+  // const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
+  const squareClientId = 'sq0idp-Zy45WMkZUPguS3T00fiL7g'
 
   return (
     <SquarePayment
