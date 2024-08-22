@@ -1,8 +1,8 @@
 "use client"
 
+import { Merchant, User, Transaction } from "@/app/types/types";
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, User, Transaction } from "@/app/types/types";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon } from "@radix-ui/react-icons";
@@ -11,12 +11,13 @@ import axios from "axios";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
+import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Sales({ params }: { params: { userId: string } }) {
+export default function Sales({ params }: { params: { userId: string } }) {  
   const { ready, authenticated, user } = usePrivy();
   const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
@@ -121,6 +122,14 @@ export default function Sales({ params }: { params: { userId: string } }) {
     };
     return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
   };
+
+  useEffect(() => {
+    if (merchant) {
+      checkAndRefreshToken(merchant._id)
+      console.log('Checking Square auth token with merchant:', merchant);
+
+    }
+  }, [merchant]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -308,7 +317,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
   return (
     <>
     <Flex direction={'column'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'}>
-      {ready && authenticated && (
+      {ready && authenticated && currentUser && (
         <BalanceProvider walletForPurchase={walletForPurchase}>
         <Header
           merchant={currentUser?.merchant}
@@ -354,14 +363,16 @@ export default function Sales({ params }: { params: { userId: string } }) {
               </Card>
               </Box>
             </Flex>
+            {/*}
             <Flex direction={'row'} gap={'2'} align={'center'}>
             <Link href="https://dashboard.stripe.com/payments" highContrast>
               View sales facilitated by Stripe
             </Link>
             <ArrowTopRightIcon />
           </Flex>
+          */}
           <Flex direction={'column'} gap={'4'} flexGrow={'1'} justify={'between'} width={'100%'}>
-            <Box overflow={'scroll'} maxHeight={'50vh'}>
+            <Box overflow={'scroll'} maxHeight={'calc(100vh - 300px)'}>
             <Table.Root size="1">
               <Table.Header>
                 <Table.Row>

@@ -379,7 +379,7 @@ function SuccessContent() {
           ) : (
             <>
               <Text size={"5"}>
-                We hope you enjoy your purchase. We may offer exclusive deals to our supporters.
+                We hope you enjoy your purchase. We may offer exclusive deals to our supporters. {" "}
                 <Strong>That&apos;s you!</Strong> We would love to share them with you.
               </Text>
               <Text size={"5"} weight={"bold"}>

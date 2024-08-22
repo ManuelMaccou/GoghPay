@@ -1,0 +1,16 @@
+.boxTest {
+  background-color: #f3fffe;
+}
+
+.formGroup {
+  width: 100%;
+}
+
+.formLabel {
+  font-weight: bold;
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.5rem;
+}

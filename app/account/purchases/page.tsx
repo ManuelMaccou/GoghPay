@@ -2,7 +2,7 @@
 
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, User, Transaction } from "@/app/types/types";
+import { User, Transaction } from "@/app/types/types";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, BellIcon } from "@radix-ui/react-icons";
@@ -225,7 +225,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
   return (
     <>
       <Flex direction={'column'} pt={'9'} pb={'4'} px={'4'} gap={'5'}>
-        {ready && authenticated && (
+        {ready && authenticated && currentUser &&(
           <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             merchant={currentUser?.merchant}
@@ -266,7 +266,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
                             const { label, color } = getPaymentTypeInfo(transaction.paymentType);
                             return (
                               <Table.Row key={transaction._id}>
-                                <Table.RowHeaderCell>${((transaction.productPrice)+(transaction.tipAmount || 0)).toFixed(2)}</Table.RowHeaderCell>
+                                <Table.RowHeaderCell>${((transaction.productPrice)+(transaction.tipAmount || 0)+(transaction.salesTax)).toFixed(2)}</Table.RowHeaderCell>
                                 <Table.Cell>
                                   <Text wrap={'nowrap'}>
                                     {transaction.merchant.name}: {transaction.productName}
