@@ -23,8 +23,6 @@ export async function POST(req: NextRequest) {
       resultString += `Transaction ID: ${transactionInfo[transactionId]}<br>`;
     }
 
-    // Optionally, you could log this to a database or take other actions.
-
     return NextResponse.json({ result: resultString }, { status: 200 });
 
   } catch (error) {
