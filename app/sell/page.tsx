@@ -115,8 +115,6 @@ export default function Sell() {
 
   const fetchSquareCatelog = async () => {
     setLoadingCatalog(true);
-    
-
   } 
 
   const fetchLocations = async (merchantId: string) => {
