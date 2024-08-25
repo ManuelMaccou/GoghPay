@@ -10,7 +10,7 @@ interface SquarePaymentProps {
   notes?: string;
 }
 
-const SquarePayment: React.FC<SquarePaymentProps> = ({
+const SquarePaymentButton: React.FC<SquarePaymentProps> = ({
   amount,
   currency,
   callbackUrl,
@@ -60,4 +60,4 @@ const SquarePayment: React.FC<SquarePaymentProps> = ({
   );
 };
 
-export default SquarePayment;
+export default SquarePaymentButton;

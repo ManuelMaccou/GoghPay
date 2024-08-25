@@ -1,6 +1,6 @@
 'use client';
 
-import SquarePayment from '../components/SquarePayment';
+import SquarePaymentButton from '../components/SquarePaymentButton';
 import { useRouter } from 'next/navigation';
 
 export default function SquarePaymentPage() {
@@ -10,7 +10,7 @@ export default function SquarePaymentPage() {
   const squareClientId = 'sq0idp-Zy45WMkZUPguS3T00fiL7g'
 
   return (
-    <SquarePayment
+    <SquarePaymentButton
       amount={500} // Example amount in cents
       currency="USD"
       callbackUrl={callbackUrl}
