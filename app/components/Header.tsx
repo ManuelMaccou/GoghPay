@@ -41,10 +41,10 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
 
   return (
     <Box width={'100%'}>
-      <Flex justify={'between'} direction={'row'} pb={'4'}>
+      <Flex justify={'end'} direction={'row'}>
         {authenticated && (
           <>
-          {!merchant ? (
+          {!merchant && (
             !isBalanceLoading ? (
               <Badge size={'3'}>USDC Balance: ${balance.toFixed(2)}</Badge>
             ) : (
@@ -53,13 +53,16 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
                 <Spinner />
               </Badge>
             )
-          ) : (
+          )} 
+          
+          {/* : (
             <Badge size={'3'}>
               <Link href='https://www.coinbase.com/assets' target='_blank' rel='noopener noreferrer'>
                 View balance on Coinbase
               </Link>
             </Badge>
           )}
+            */}
     
             <Dialog.Root>
               <Dialog.Trigger>
