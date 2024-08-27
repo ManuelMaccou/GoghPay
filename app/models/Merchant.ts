@@ -5,27 +5,29 @@ const taxSchema = new mongoose.Schema({
   rate: { type: Number, required: true },
   name: { type: String, required: true },
   default: { type: Boolean, required: true },
-});
+}, { timestamps: true });
 
 const LoyaltyTierSchema = new mongoose.Schema({
   name: { type: String, required: true },
   discount: { type: Number, required: true }, // Can be dollars or percent off
   milestone: { type: Number, required: true },  // Milestone can be dollars or visits
-});
+}, { timestamps: true });
 
 const LoyaltySchema = new mongoose.Schema({
   discount_type: {
     type: String,
     enum: ['dollar', 'percent'],
+    default: 'percent',
     required: true,
   },
   milestone_type: {
     type: String,
     enum: ['dollars_spent', 'number_of_visits'],
+    default: 'dollars_spent',
     required: true,
   },
-  tiers: { type: [LoyaltyTierSchema]},  // Array of LoyaltyTier
-});
+  tiers: { type: [LoyaltyTierSchema]},
+}, { timestamps: true });
 
 const merchantSchema = new mongoose.Schema({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
