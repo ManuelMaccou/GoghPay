@@ -1,3 +1,13 @@
+enum DiscountType {
+  Dollar = 'dollar',
+  Percent = 'percent',
+}
+
+enum MilestoneType {
+  DollarsSpent = 'dollars_spent',
+  NumberOfVisits = 'number_of_visits',
+}
+
 export interface User {
   _id: string;
   privyId?: string;
@@ -20,12 +30,14 @@ export interface Merchant {
   promo?: boolean;
   admin: boolean;
   taxes: Tax[];
-  square_access_token: string;
-  square_merchant_id: string;
-  square_refresh_token: string;
-  square_token_expires_at: string;
-  square_location_id: string;
-  square_location_name: string;
+  shopify?: Shopify;
+  square_access_token?: string;
+  square_merchant_id?: string;
+  square_refresh_token?: string;
+  square_token_expires_at?: string;
+  square_location_id?: string;
+  square_location_name?: string;
+  loyalty?: Loyalty;
 }
 
 export interface Transaction {
@@ -69,4 +81,21 @@ export interface Location {
 export interface SquareCatalog {
   id: string;
   name: string;
+}
+
+export interface Shopify {
+  shopName: string;
+  accessToken: string;
+}
+
+export interface LoyaltyTier {
+  name: string;
+  discount: number;
+  milestone: number; // dollars or visits
+}
+
+export interface Loyalty {
+  discount_type: DiscountType;  // Using enum
+  milestone_type: MilestoneType;  // Using enum
+  tiers: LoyaltyTier[];  // Array of LoyaltyTier objects
 }
