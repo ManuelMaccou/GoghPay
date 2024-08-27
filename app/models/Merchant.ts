@@ -24,7 +24,7 @@ const LoyaltySchema = new mongoose.Schema({
     enum: ['dollars_spent', 'number_of_visits'],
     required: true,
   },
-  tiers: { type: [LoyaltyTierSchema], required: true },  // Array of LoyaltyTier
+  tiers: { type: [LoyaltyTierSchema]},  // Array of LoyaltyTier
 });
 
 const merchantSchema = new mongoose.Schema({
