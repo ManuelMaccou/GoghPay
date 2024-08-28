@@ -36,14 +36,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   const router = useRouter();
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
 
@@ -233,8 +225,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
         </BalanceProvider>
         )}

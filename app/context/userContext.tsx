@@ -1,51 +1,66 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+"use client"
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import axios from 'axios';
 import { User } from '../types/types';
 
 interface UserContextType {
-    user: User | null;
-    setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  appUser: User | null;
+  setAppUser: (user: User | null) => void;
+  isFetchingUser: boolean;
+  setIsFetchingUser: (isFetchingUser: boolean) => void;
 }
 
+// Create the context
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+// Provide the context to the app
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const { ready, authenticated, getAccessToken } = usePrivy();
+    const { user } = usePrivy();
+    
+    const [appUser, setAppUser] = useState<User | null>(null);
+    const [isFetchingUser, setIsFetchingUser] = useState<boolean>(false);
+    const [isUserFetched, setIsUserFetched] = useState<boolean>(false);
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            if (ready && authenticated) {
-                try {
-                    const accessToken = await getAccessToken();
-                    const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, {
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                        },
-                    });
-                    const userData = response.data;
-                    setUser(userData);
-                } catch (error) {
-                    console.error('Error fetching user data:', error);
-                }
-            }
-        };
+    const fetchUserData = async () => {
+      if (!user) return;
 
-        fetchUserData();
-    }, [ready, authenticated, getAccessToken]);
+      setIsFetchingUser(true);
+        try {
+            const response = await fetch(`/api/user/me/${user.id}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch user data: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setAppUser(data.user);
+            setIsUserFetched(true);
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+        } finally {
+          setIsFetchingUser(false);
+        }
+    };
+
+    // Fetch merchant data only if it's not already in state
+    if (user && !isUserFetched) {
+      fetchUserData();
+    }
+  }, [user, isUserFetched]);
 
     return (
-        <UserContext.Provider value={{ user, setUser }}>
-            {children}
+        <UserContext.Provider value={{ appUser, setAppUser, isFetchingUser, setIsFetchingUser }}>
+          {children}
         </UserContext.Provider>
     );
 };
 
+// Custom hook to use the Merchant context
 export const useUser = () => {
     const context = useContext(UserContext);
-    if (context === undefined) {
-        throw new Error('useUser must be used within a UserProvider');
+    if (!context) {
+        throw new Error('useUser must be used within a MerchantProvider');
     }
     return context;
 };

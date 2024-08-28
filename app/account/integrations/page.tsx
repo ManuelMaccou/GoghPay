@@ -122,14 +122,6 @@ function IntegrationsContent() {
   const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
   const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=${csrfToken}&redirect_uri=${redirectUri}`
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   const handleRevokeSquareAccess = async () => {
     setError(null)
     setRevokeError(null)
@@ -309,8 +301,6 @@ function IntegrationsContent() {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
         </BalanceProvider>
       )}

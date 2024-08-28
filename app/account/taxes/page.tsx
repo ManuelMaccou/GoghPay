@@ -41,14 +41,6 @@ export default function Taxes({ params }: { params: { userId: string } }) {
 
   const router = useRouter();
 
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
 
@@ -296,8 +288,6 @@ export default function Taxes({ params }: { params: { userId: string } }) {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
         </BalanceProvider>
       )}

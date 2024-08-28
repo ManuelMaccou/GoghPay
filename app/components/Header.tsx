@@ -11,24 +11,19 @@ import { faArrowRightFromBracket, faEnvelope, faGear, faFile, faMoneyBillTransfe
 import { useRouter } from 'next/navigation';
 import styles from './styles.module.css'
 
-//
-
-
 interface HeaderProps {
   merchant: boolean | undefined;
   embeddedWallet: ConnectedWallet | null;
   authenticated: boolean;
   currentUser?: User;
   walletForPurchase?: string | null;
-  setCurrentUser: (user: User) => void;
-  setWalletForPurchase: (wallet: string | null) => void;
 }
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authenticated, currentUser, walletForPurchase, setCurrentUser, setWalletForPurchase }) => {
+export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
   const { user, ready } = usePrivy();
   const { balance, isBalanceLoading } = useBalance();
   const router = useRouter();
@@ -41,14 +36,14 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
 
   return (
     <Box width={'100%'}>
-      <Flex justify={'end'} direction={'row'}>
-        {authenticated && (
+      <Flex direction={'row'} justify={'end'}>
+        {ready && authenticated && (
           <>
           {!merchant && (
             !isBalanceLoading ? (
-              <Badge size={'3'}>USDC Balance: ${balance.toFixed(2)}</Badge>
+              <Badge size={'3'} style={{ marginRight: 'auto' }}>USDC Balance: ${balance.toFixed(2)}</Badge>
             ) : (
-              <Badge size={'3'}>
+              <Badge size={'3'} style={{ marginRight: 'auto' }}>
                 USDC balance: 
                 <Spinner />
               </Badge>
@@ -66,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
     
             <Dialog.Root>
               <Dialog.Trigger>
-                <IconButton variant='ghost'>
+                <IconButton variant='ghost' style={{ marginLeft: 'auto' }}>
                   <HamburgerMenuIcon width={'35px'} height={'35px'} style={{color: 'black'}} />
                 </IconButton>
               </Dialog.Trigger>

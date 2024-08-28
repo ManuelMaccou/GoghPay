@@ -75,14 +75,6 @@ function BuyContent() {
   const {user} = usePrivy();
   const {getAccessToken} = usePrivy();
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   // Get params to verify signed URL
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
@@ -841,8 +833,6 @@ function BuyContent() {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
           </BalanceProvider>
        )}
