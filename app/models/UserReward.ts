@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 
-const UserLoyaltyStateSchema = new Schema({
+const UserRewardSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   merchantId: { type: Schema.Types.ObjectId, ref: 'Merchant', required: true },
   totalSpent: { type: Number, default: 0 }, 
@@ -9,4 +9,4 @@ const UserLoyaltyStateSchema = new Schema({
   currentTier: { type: String },
 });
 
-export const UserLoyaltyState = mongoose.model('UserLoyaltyState', UserLoyaltyStateSchema);
+export const UserReward = mongoose.model('UserRewardState', UserRewardSchema);

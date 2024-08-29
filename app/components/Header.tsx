@@ -39,6 +39,8 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
       <Flex direction={'row'} justify={'end'}>
         {ready && authenticated && (
           <>
+          {/*
+          }
           {!merchant && (
             !isBalanceLoading ? (
               <Badge size={'3'} style={{ marginRight: 'auto' }}>USDC Balance: ${balance.toFixed(2)}</Badge>
@@ -50,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
             )
           )} 
           
-          {/* : (
+          : (
             <Badge size={'3'}>
               <Link href='https://www.coinbase.com/assets' target='_blank' rel='noopener noreferrer'>
                 View balance on Coinbase

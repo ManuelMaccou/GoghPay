@@ -154,7 +154,7 @@ function IntegrationsContent() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`, 
           },
-          body: JSON.stringify({ privyId: currentUser?.privyId, square_access_token: null })
+          body: JSON.stringify({ privyId: currentUser?.privyId, square_access_token: "" })
         });
 
         await fetchLocations(merchant._id);
@@ -221,7 +221,11 @@ function IntegrationsContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`, 
         },
-        body: JSON.stringify({ privyId: currentUser?.privyId, square_location_id: selectedLocation.id, square_location_name: selectedLocation.name })
+        body: JSON.stringify({
+          privyId: currentUser?.privyId,
+          square_location_id: selectedLocation.id,
+          square_location_name: selectedLocation.name
+        })
       });
       if (!response.ok) {
         throw new Error('Failed to update selected location');

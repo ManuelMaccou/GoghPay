@@ -37,7 +37,7 @@ export interface Merchant {
   square_token_expires_at?: string;
   square_location_id?: string;
   square_location_name?: string;
-  loyalty?: Loyalty;
+  rewards?: Rewards;
 }
 
 export interface Transaction {
@@ -88,14 +88,15 @@ export interface Shopify {
   accessToken: string;
 }
 
-export interface LoyaltyTier {
+export interface RewardsTier {
+  _id?: string;
   name: string;
   discount: number;
   milestone: number; // dollars or visits
 }
 
-export interface Loyalty {
+export interface Rewards {
   discount_type: DiscountType;  // Using enum
   milestone_type: MilestoneType;  // Using enum
-  tiers: LoyaltyTier[];  // Array of LoyaltyTier objects
+  tiers: RewardsTier[];  // Array of RewardsTier objects
 }

@@ -23,6 +23,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [isUserFetched, setIsUserFetched] = useState<boolean>(false);
 
     useEffect(() => {
+      // Reset user data on user logout
+      if (!user) {
+        setAppUser(null);
+        setIsUserFetched(false);
+      }
+    }, [user]);
+
+    useEffect(() => {
     const fetchUserData = async () => {
       if (!user) return;
 

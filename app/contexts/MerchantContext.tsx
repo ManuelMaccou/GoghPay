@@ -46,6 +46,14 @@ export const MerchantProvider = ({ children }: { children: ReactNode }) => {
     }
     }, [user, isMerchantFetched]);
 
+    useEffect(() => {
+        // Reset merchant data on user logout
+        if (!user) {
+            setMerchant(null);
+            setIsMerchantFetched(false);
+        }
+    }, [user]);
+
     return (
         <MerchantContext.Provider value={{ merchant, setMerchant, isFetchingMerchant, setIsFetchingMerchant }}>
         {children}

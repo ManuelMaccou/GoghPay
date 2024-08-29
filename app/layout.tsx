@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import PrivyUserProvider from './providers/PrivyUserProvider';
-import { UserProvider } from './context/UserContext';
+import { UserProvider } from './contexts/UserContext';
 import { BalanceProvider } from './contexts/BalanceContext';
-import { MerchantProvider } from './context/MerchantContext';
+import { MerchantProvider } from './contexts/MerchantContext';
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 
