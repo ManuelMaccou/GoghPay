@@ -9,4 +9,9 @@ const UserRewardSchema = new Schema({
   currentTier: { type: String },
 });
 
-export const UserReward = mongoose.model('UserRewardState', UserRewardSchema);
+// Create indexes
+UserRewardSchema.index({ userId: 1 });
+UserRewardSchema.index({ merchantId: 1 });
+UserRewardSchema.index({ userId: 1, merchantId: 1 }, { unique: true }); // Compound index, with a unique constraint if each user-merchant pair should be unique
+
+export const UserReward = mongoose.models.UserRewardState || mongoose.model('UserRewardState', UserRewardSchema);

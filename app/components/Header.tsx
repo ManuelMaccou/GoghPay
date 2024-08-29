@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import styles from './styles.module.css'
 
 interface HeaderProps {
+  color?: string | null;
   merchant: boolean | undefined;
   embeddedWallet: ConnectedWallet | null;
   authenticated: boolean;
@@ -23,7 +24,7 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
+export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
   const { user, ready } = usePrivy();
   const { balance, isBalanceLoading } = useBalance();
   const router = useRouter();
@@ -64,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ merchant, embeddedWallet, authen
             <Dialog.Root>
               <Dialog.Trigger>
                 <IconButton variant='ghost' style={{ marginLeft: 'auto' }}>
-                  <HamburgerMenuIcon width={'35px'} height={'35px'} style={{color: 'black'}} />
+                  <HamburgerMenuIcon width={'35px'} height={'35px'} style={{color: color? color : 'black'}} />
                 </IconButton>
               </Dialog.Trigger>
               <Dialog.Content className={styles.content}>

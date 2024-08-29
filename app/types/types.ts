@@ -38,6 +38,7 @@ export interface Merchant {
   square_location_id?: string;
   square_location_name?: string;
   rewards?: Rewards;
+  branding: Branding;
 }
 
 export interface Transaction {
@@ -99,4 +100,19 @@ export interface Rewards {
   discount_type: DiscountType;  // Using enum
   milestone_type: MilestoneType;  // Using enum
   tiers: RewardsTier[];  // Array of RewardsTier objects
+}
+
+export interface Branding {
+  primary_color: string;
+  secondary_color: string;
+  logo: string;
+}
+
+export interface UserReward {
+  userId: string;
+  merchantId: string;
+  totalSpent: number;
+  visitsCount: number;
+  lastVisit: Date;
+  currentTier: string;
 }
