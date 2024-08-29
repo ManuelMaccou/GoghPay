@@ -80,14 +80,6 @@ function TransferContent() {
     router.replace('/account/transfer');
   };
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
       setTransferSuccessMessage(null);
@@ -828,8 +820,6 @@ function TransferContent() {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
         </BalanceProvider>
       )}

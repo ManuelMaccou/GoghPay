@@ -3,8 +3,10 @@ import { Theme, ThemePanel } from '@radix-ui/themes'
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import UserProvider from './providers/userProvider';
+import PrivyUserProvider from './providers/PrivyUserProvider';
+import { UserProvider } from './contexts/UserContext';
 import { BalanceProvider } from './contexts/BalanceContext';
+import { MerchantProvider } from './contexts/MerchantContext';
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
 
@@ -28,13 +30,17 @@ export default function RootLayout({
         <script src="https://crypto-js.stripe.com/crypto-onramp-outer.js" async></script>
       </head>
       <body className={inter.className}>
-        <BalanceProvider>
+        <PrivyUserProvider>
           <UserProvider>
-            <Theme accentColor="indigo" grayColor="slate" radius="medium" scaling="100%" appearance='light' panelBackground='translucent'>
-              {children}
-            </Theme>
+            <BalanceProvider>
+              <MerchantProvider>
+                <Theme accentColor="indigo" grayColor="slate" radius="medium" scaling="100%" appearance='light' panelBackground='translucent'>
+                  {children}
+                </Theme>
+              </MerchantProvider>
+            </BalanceProvider>
           </UserProvider>
-        </BalanceProvider>
+        </PrivyUserProvider>
       </body>
     </html>
   );

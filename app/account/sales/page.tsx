@@ -38,14 +38,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
   const chainId = wallet?.chainId;
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   const { logout } = useLogout ({
     onSuccess: async () => {
       router.push('/');
@@ -325,8 +317,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
           authenticated={authenticated}
           walletForPurchase={walletForPurchase}
           currentUser={currentUser}
-          setCurrentUser={handleSetCurrentUser}
-          setWalletForPurchase={handleSetWalletForPurchase}
         />
       </BalanceProvider>
       )}

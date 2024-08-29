@@ -122,14 +122,6 @@ function IntegrationsContent() {
   const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
   const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=${csrfToken}&redirect_uri=${redirectUri}`
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   const handleRevokeSquareAccess = async () => {
     setError(null)
     setRevokeError(null)
@@ -162,7 +154,7 @@ function IntegrationsContent() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`, 
           },
-          body: JSON.stringify({ privyId: currentUser?.privyId, square_access_token: null })
+          body: JSON.stringify({ privyId: currentUser?.privyId, square_access_token: "" })
         });
 
         await fetchLocations(merchant._id);
@@ -229,7 +221,11 @@ function IntegrationsContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`, 
         },
-        body: JSON.stringify({ privyId: currentUser?.privyId, square_location_id: selectedLocation.id, square_location_name: selectedLocation.name })
+        body: JSON.stringify({
+          privyId: currentUser?.privyId,
+          square_location_id: selectedLocation.id,
+          square_location_name: selectedLocation.name
+        })
       });
       if (!response.ok) {
         throw new Error('Failed to update selected location');
@@ -309,8 +305,6 @@ function IntegrationsContent() {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
         </BalanceProvider>
       )}
