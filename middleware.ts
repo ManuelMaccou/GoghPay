@@ -11,6 +11,7 @@ export async function middleware(req: NextRequest) {
 
       // If there is no Authorization header or it doesn't start with 'Bearer ', return an unauthorized response.
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.error("No authentication token provided or invalid format:", { authHeader });
         return NextResponse.json({ message: "No authentication token provided." }, { status: 401 });
       }
 
@@ -32,7 +33,11 @@ export async function middleware(req: NextRequest) {
       });
     } catch (error) {
       // Log the error to the console for debugging purposes
-      console.error("Authentication error:", error);
+      console.error("Authentication error:", {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error,
+      });
 
       // Return an unauthorized response with an appropriate message
       return NextResponse.json({ message: "Invalid or expired token." }, { status: 401 });
@@ -45,7 +50,8 @@ export const config = {
     '/api/user/update',
     '/api/transfer',
     '/api/merchant/update',
-    '/api/rewards/milestone'
+    '/api/rewards/milestone',
+    '/api/rewards/userRewards/:path*'
   ]
 };
 

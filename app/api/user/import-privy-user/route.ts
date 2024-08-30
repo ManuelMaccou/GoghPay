@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
 
     /*
     const userIdFromToken = req.headers.get('x-user-id');
-    console.log('userIdFromToken:', userIdFromToken);
 
     if (!userIdFromToken) {
       return NextResponse.json({ message: "Unauthorized" }, {status: 401});

@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
+const BrandingSchema = new mongoose.Schema({
+  primary_color: { type: String, default: "#FFFFFF", required: true },
+  seconday_color: { type: String, default: "#000000", required: true },
+  logo: { type: String, required: true },
+});
+
 const taxSchema = new mongoose.Schema({
   rate: { type: Number, required: true },
   name: { type: String, required: true },
@@ -51,6 +57,7 @@ const merchantSchema = new mongoose.Schema({
   square_refresh_token: { type: String },
   square_token_expires_at: { type: Date },
   rewards: { type: RewardsSchema },
+  branding: { type: BrandingSchema }
 
 }, { timestamps: true });
 

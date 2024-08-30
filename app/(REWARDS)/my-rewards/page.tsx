@@ -1,1 +1,0 @@
-// List all signed up rewards

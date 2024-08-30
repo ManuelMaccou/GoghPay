@@ -57,7 +57,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     if (merchant.rewards?.tiers) {
       setCurrentRewardsTiers(merchant.rewards.tiers);
     }
-  }, [merchant?.rewards?.tiers]);
+  }, [merchant]);
 
   const validateDiscount = (value: string): boolean => { 
     return /^[1-9]\d*$|^0$/.test(value) && parseInt(value, 10) <= 100;
