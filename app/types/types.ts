@@ -115,4 +115,5 @@ export interface UserReward {
   visitsCount: number;
   lastVisit: Date;
   currentTier: string;
+  nextTier: string;
 }

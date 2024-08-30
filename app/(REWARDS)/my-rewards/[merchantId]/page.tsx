@@ -2,11 +2,11 @@
 
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, User, UserReward } from "@/app/types/types";
+import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
-import { Button, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
+import { Button, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import axios from "axios";
@@ -26,8 +26,10 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
   const [currentUser, setCurrentUser] = useState<User>();
   const [isFetchingMerchant, setIsFetchingMerchant] = useState<boolean>(true);
-  const [currentUserRewards, setCurrentUserMerchantRewards] = useState<UserReward | null>(null);
+  const [currentUserMerchantRewards, setCurrentUserMerchantRewards] = useState<UserReward | null>(null);
   const [isFetchingCurrentUserRewards, setIsFetchingCurrentUserRewards] = useState<boolean>(true);
+  const [usersCurrentRewardsTier, setUsersCurrentRewardsTier] = useState<RewardsTier | null>(null);
+  const [amountToNextRewardsTier, setAmountToNextRewardsTier] = useState<number | null>(null);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
 
@@ -77,6 +79,44 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         console.error("Privy login error:", error);
     },
   });
+
+  useEffect(() => {
+    if (appUser && !currentUser) {
+      setCurrentUser(appUser);
+    }
+  }, [appUser, currentUser]);
+
+  useEffect(() => {
+    if (appUser) {
+      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress;
+      setWalletForPurchase(walletAddress);
+    }
+  }, [appUser]);
+  
+  useEffect(() => {
+    if (merchantId) {
+      setIsFetchingMerchant(true);
+      const fetchMerchant = async () => {
+        try {
+          const response = await fetch(`/api/merchant/${merchantId}`);
+          const data:Merchant = await response.json();
+          setMerchant(data);
+          setPrimaryColor(data.branding.primary_color);
+          setSecondaryColor(data.branding.secondary_color);
+        } catch (err) {
+          if (isError(err)) {
+            setError(`Error fetching merchant: ${err.message}`);
+          } else {
+            setError('Error fetching merchant');
+          }
+        } finally {
+          setIsFetchingMerchant(false);
+        }
+      };
+      
+      fetchMerchant();
+    }
+  }, [merchantId]);
 
   useEffect(() => {
     const createNewRewards = async () => {
@@ -157,113 +197,174 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
     if (ready && authenticated && currentUser) {
       fetchCurrentUserMerchantRewards();
     }
-  }, [authenticated, ready, currentUser]);
+  }, [authenticated, ready, currentUser, merchantId]);
 
-  useEffect(() => {
-    if (appUser && !currentUser) {
-      setCurrentUser(appUser);
+  useEffect (() => {
+    const checkMilestone = () => {
+    if (!currentUserMerchantRewards) {
+      console.error('No user rewards available.');
+      return null;
     }
-  }, [appUser, currentUser]);
-
-  useEffect(() => {
-    if (appUser) {
-      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress;
-      setWalletForPurchase(walletAddress);
-    }
-  }, [appUser]);
-  
-  useEffect(() => {
-    if (merchantId) {
-      setIsFetchingMerchant(true);
-      const fetchMerchant = async () => {
-        try {
-          const response = await fetch(`/api/merchant/${merchantId}`);
-          const data:Merchant = await response.json();
-          setMerchant(data);
-          setPrimaryColor(data.branding.primary_color);
-          setSecondaryColor(data.branding.secondary_color);
-        } catch (err) {
-        if (isError(err)) {
-          setError(`Error fetching merchant: ${err.message}`);
-        } else {
-          setError('Error fetching merchant');
-        }
-      } finally {
-        setIsFetchingMerchant(false);
-      }
-    };
+      const { totalSpent } = currentUserMerchantRewards;
     
-    fetchMerchant();
-  }
-}, [merchantId]);
+      const tiers = merchant?.rewards?.tiers || [];
+    
+      if (!tiers.length || typeof totalSpent !== 'number') {
+        console.error('No tiers configured or invalid totalSpent')
+        return null;
+      }
+    
+      const sortedTiers = tiers.sort((a, b) => a.milestone - b.milestone);
+    
+      let highestTier = null;
+      let nextMilestone = null;
+    
+      for (const tier of sortedTiers) {
+        if (totalSpent >= tier.milestone) {
+          highestTier = tier;
+        } else {
+          nextMilestone = tier.milestone;
+          break; 
+        }
+      }
+      console.log('Highest tier met:', highestTier);
+      console.log('Next milestone:', nextMilestone);
+
+      const amountToNextTier = nextMilestone ? nextMilestone - totalSpent : null;
+
+      setUsersCurrentRewardsTier(highestTier);
+      setAmountToNextRewardsTier(amountToNextTier)
+    };
+
+    checkMilestone();  
+  }, [currentUserMerchantRewards, merchant])
+
+  const rewardsContainerRef = useRef<HTMLDivElement>(null);
+  const targetCardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Scroll to the bottom when the component mounts or updates
+    if (rewardsContainerRef.current) {
+      rewardsContainerRef.current.scrollTop = rewardsContainerRef.current.scrollHeight;
+    }
+  }, [merchant?.rewards?.tiers]); 
+
+  useEffect(() => {
+    // Scroll to the specific card when the component mounts or updates
+    if (targetCardRef.current) {
+      targetCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [usersCurrentRewardsTier, merchant?.rewards?.tiers]);
 
   return (
     <>
-      <Flex
-        direction={'column'}
-        justify={authenticated ? 'start' : 'center'}
-        align={authenticated ? 'start' : 'center' }
-        pt={'6'} pb={'4'} px={'4'} gap={'5'}
-        height={ (!authenticated || isFetchingCurrentUserRewards) ? '100vh' : 'auto'}
-        style={{backgroundColor: primaryColor }}
-      >
-        {isFetchingCurrentUserRewards && <Spinner style={{color: isFetchingCurrentUserRewards ? secondaryColor : primaryColor}} />}
-        
-        {ready && !authenticated ? (
-          <>
-            {isFetchingMerchant && <Spinner />}
-            
-            <Avatar.Root>
-              <Avatar.Image 
-              className="MerchantLogo"
-              src={merchant?.branding.logo }
-              alt="Merchant Logo"
-              style={{objectFit: "contain", maxWidth: '200px'}}
-              />
-            </Avatar.Root>
+      {ready ? (
+        !authenticated ? (
+          !isFetchingMerchant ? (
+            <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{backgroundColor: primaryColor }}>
+              <Avatar.Root>
+                <Avatar.Image 
+                className="MerchantLogo"
+                src={merchant?.branding.logo }
+                alt="Merchant Logo"
+                style={{objectFit: "contain", maxWidth: '200px'}}
+                />
+              </Avatar.Root>
 
-            <Button style={{
-                width: "250px",
-                backgroundColor: secondaryColor,
-                color: primaryColor,
-              }} 
-              onClick={login}>
-              Contiue
-            </Button>
-          </>
-        ) : ready && authenticated && (
-          <Flex direction={'row'} justify={'between'} width={'100%'}>
-            <Avatar.Root>
-              <Avatar.Image 
-              className="MerchantLogo"
-              src={merchant?.branding.logo }
-              alt="Merchant Logo"
-              style={{objectFit: "contain", maxWidth: '200px'}}
-              />
-            </Avatar.Root>
-            <BalanceProvider walletForPurchase={walletForPurchase}>
-              <Header
-                color={secondaryColor}
-                merchant={currentUser?.merchant}
-                embeddedWallet={embeddedWallet}
-                authenticated={authenticated}
-                walletForPurchase={walletForPurchase}
-                currentUser={currentUser}
-              />
-            </BalanceProvider>
-          </Flex>
-        )}
-      </Flex>
-
-      {ready && authenticated && !isFetchingCurrentUserRewards && !isFetchingMerchant && (
-        <Flex direction={'column'} align={'center'} mt={'6'}>
-          {currentUserRewards?.currentTier ? (
-            <Heading>{currentUserRewards.currentTier}</Heading>
+              <Button style={{
+                  width: "250px",
+                  backgroundColor: secondaryColor,
+                  color: primaryColor,
+                }} 
+                onClick={login}>
+                Contiue
+              </Button>
+            </Flex>
           ) : (
-            <Heading>Welcome</Heading>
-          )}
+            <Flex justify={'center'} align={'center'} height={'100vh'}>
+              <Spinner />
+            </Flex>
+          )
+          
+        ) : ( !isFetchingMerchant && !isFetchingCurrentUserRewards ) ? (
+          <>
+            <Flex direction={'column'} gap={'5'} height={'100vh'}>
+              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'} style={{ backgroundColor: primaryColor }}>
+                <Avatar.Root>
+                  <Avatar.Image 
+                  className="MerchantLogo"
+                  src={merchant?.branding.logo }
+                  alt="Merchant Logo"
+                  style={{objectFit: "contain", maxWidth: '200px'}}
+                  />
+                </Avatar.Root>
+                <BalanceProvider walletForPurchase={walletForPurchase}>
+                  <Header
+                    color={secondaryColor}
+                    merchant={currentUser?.merchant}
+                    embeddedWallet={embeddedWallet}
+                    authenticated={authenticated}
+                    walletForPurchase={walletForPurchase}
+                    currentUser={currentUser}
+                  />
+                </BalanceProvider>
+              </Flex>
+
+              <Flex direction={'column'} justify={'between'} align={'center'} height={'100%'} gap={'4'} px={'6'} mb={'9'}>
+                <Flex direction={'column'} align={'center'} gap={'4'} width={'100%'}>
+                  {usersCurrentRewardsTier ? (
+                    <Heading>{usersCurrentRewardsTier.name}</Heading>
+                  ) : (
+                    <Heading size={'8'}>Welcome</Heading>
+                  )}
+                  <Flex direction={'row'} width={'100%'} justify={'between'} align={'center'}>
+                    <Text wrap={'wrap'} size={'5'} weight={'bold'} style={{maxWidth: '200px'}}>Remaining until next upgrade:</Text>
+                    <Text size={'8'}>${amountToNextRewardsTier}</Text>
+                  </Flex>
+                 </Flex> 
+                <Flex direction={'column'} align={'end'} width={'100vw'} maxHeight={'50vh'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
+                  {merchant?.rewards?.tiers
+                  .sort((a, b) => b.milestone - a.milestone)
+                  .map((tier) => (
+                    <Card key={tier._id}
+                    ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
+                    variant='classic'
+                      style={{
+                        flexShrink: 0,
+                        width: tier._id === usersCurrentRewardsTier?._id ? '85%' : '70%',
+                        backgroundColor: tier._id === usersCurrentRewardsTier?._id ? primaryColor : 'transparent'
+                      }}
+                    >
+                      <Flex direction={'row'} gap={'3'} width={'100%'} justify={'between'} align={'center'} height={'80px'} pr={'4'}>
+                        <Text size={'5'} weight="bold">
+                          {tier.name}
+                        </Text>
+                        <Text size={'5'}>
+                          {tier.discount}% off
+                        </Text>
+                      </Flex>
+                    </Card>
+                  ))}
+                </Flex>
+                <Flex>
+                 {usersCurrentRewardsTier ? (
+                  <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
+                 ) : (
+                  <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
+                 )}
+                </Flex>
+              </Flex>
+            </Flex>
+          </>
+        ) : (
+          <Flex justify={'center'} align={'center'} height={'100vh'}>
+            <Spinner />
+          </Flex>
+        )
+      ) : (
+        <Flex justify={'center'} align={'center'} height={'100vh'}>
+          <Spinner />
         </Flex>
       )}
     </>
-  );
+  )
 }

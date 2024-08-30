@@ -7,6 +7,7 @@ const UserRewardSchema = new Schema({
   visitsCount: { type: Number, default: 0 },
   lastVisit: { type: Date },
   currentTier: { type: String },
+  nextTier: { type: String },
 });
 
 // Create indexes
