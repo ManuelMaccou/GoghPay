@@ -6,12 +6,13 @@ import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
-import { Button, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Button, Callout, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
+import { InfoCircledIcon } from '@radix-ui/react-icons';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -33,7 +34,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
   const [isCheckingMerchantToken, setIsCheckingMerchantToken] = useState<boolean>(true);
   const [currentUserMerchantRewards, setCurrentUserMerchantRewards] = useState<UserReward | null>(null);
   const [isFetchingCurrentUserRewards, setIsFetchingCurrentUserRewards] = useState<boolean>(true);
-  const [isCheckingSquareDirectory, setIsCheckingSquareDirectory] =  useState<string | null>(null);
+  const [isCheckingSquareDirectory, setIsCheckingSquareDirectory] =  useState<boolean | null>(null);
   const [hasSynced, setHasSynced] = useState(false);
   const [usersCurrentRewardsTier, setUsersCurrentRewardsTier] = useState<RewardsTier | null>(null);
   const [amountToNextRewardsTier, setAmountToNextRewardsTier] = useState<number | null>(null);
@@ -100,48 +101,42 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
     }
   }, [appUser]);
 
-  // Checking if currentUser has a squareID, if their email exists in square, then adding them to square, then adding the customer_id to Gogh
 
-  const findExistingSquareCustomer = useCallback(async () => {
-    console.log('findExistingSquareCustomer called');
-
+  const updateGoghUserWithSquareId = useCallback(async (squareCustomerId: string) => {
     try {
-      if (!currentUser?.email) return
-      
-      const encodedEmail = encodeURIComponent(currentUser?.email);
-      const response = await fetch(`/api/square/user?email=${encodedEmail}&merchantId=${merchant?._id}`)
+      const accessToken = await getAccessToken();
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({
+          squareCustomerId: squareCustomerId,
+        }),
+      });
+
       if (response.ok) {
         const data = await response.json();
-        // Update the user with the returned customer ID
-        if (data.customers.length > 0) {
-          await updateGoghUserWithSquareId(data.customers[0].id);
-        } else {
-          await createNewSquareCustomer();
-        }
-
-      } else if (response.status === 404) {
-        // Add the user to Square.
-        await createNewSquareCustomer();
+        setAppUser(data.updatedUser);
       } else {
-        const errorMessage = await response.text(); // Capture error details from server
+        const errorMessage = await response.text();
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
-        console.error(`Error searching Square directory: ${errorMessage}`);
+        console.error(`Failed to update Gogh user: ${errorMessage}`);
       }
 
     } catch (err) {
       if (isError(err)) {
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
-        console.error(`Error searching Square directory: ${err.message}`);
+        console.error(`Error syncing Square customer with Gogh: ${err.message}`);
       } else {
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
-        console.error('Error searching Square directory');
+        console.error('Error syncing Square customer with Gogh');
       }
-    } finally {
-      setIsCheckingSquareDirectory('false');
     }
-  }, [currentUser]);
+  }, [setAppUser]);
 
-  const createNewSquareCustomer = async () => {
+  const createNewSquareCustomer = useCallback(async () => {
     try {
       const accessToken = await getAccessToken();
       const response = await fetch('/api/square/user', {
@@ -174,41 +169,44 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
       }
     }
-  }
+  }, [currentUser?.email, currentUser?._id, merchant?._id, updateGoghUserWithSquareId]); 
 
-  const updateGoghUserWithSquareId = async (squareCustomerId: string) => {
+  const findExistingSquareCustomer = useCallback(async () => {
+    if (!currentUser?.email) return
+
     try {
-      const accessToken = await getAccessToken();
-      const response = await fetch('/api/user/update', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`, 
-        },
-        body: JSON.stringify({
-          squareCustomerId: squareCustomerId,
-        }),
-      });
-
+      const encodedEmail = encodeURIComponent(currentUser?.email);
+      const response = await fetch(`/api/square/user?email=${encodedEmail}&merchantId=${merchant?._id}`)
       if (response.ok) {
         const data = await response.json();
-        setAppUser(data.updatedUser);
+        // Update the user with the returned customer ID
+        if (data.customers.length > 0) {
+          await updateGoghUserWithSquareId(data.customers[0].id);
+        } else {
+          await createNewSquareCustomer();
+        }
+
+      } else if (response.status === 404) {
+        // Add the user to Square.
+        await createNewSquareCustomer();
       } else {
-        const errorMessage = await response.text();
+        const errorMessage = await response.text(); // Capture error details from server
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
-        console.error(`Failed to update Gogh user: ${errorMessage}`);
+        console.error(`Error searching Square directory: ${errorMessage}`);
       }
 
     } catch (err) {
       if (isError(err)) {
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
-        console.error(`Error syncing Square customer with Gogh: ${err.message}`);
+        console.error(`Error searching Square directory: ${err.message}`);
       } else {
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
-        console.error('Error syncing Square customer with Gogh');
+        console.error('Error searching Square directory');
       }
+    } finally {
+      setIsCheckingSquareDirectory(false);
     }
-  }
+  }, [currentUser, merchant, createNewSquareCustomer, updateGoghUserWithSquareId]);
   
   useEffect(() => {
     console.log('Running useEffect...');
@@ -224,23 +222,19 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       return;
     }
 
-    if (!currentUser?.squareCustomerId && !hasSynced && isCheckingSquareDirectory !== 'true') {
-      if (!isCheckingMerchantToken) {
-        if (!merchantTokenIsValid ) {
-          console.error('There was an error. Please have the seller reconnect to Square from their Gogh account.')
-
-          setErrorCheckingSquareDirectory('There was an error. Please have the seller reconnect to Square from their Gogh account.')
-          return;
-        } 
-        
+    if (!currentUser?.squareCustomerId && !hasSynced && !isCheckingSquareDirectory) {
+      if (!isCheckingMerchantToken && merchantTokenIsValid) {
+        setIsCheckingSquareDirectory(true);
+        findExistingSquareCustomer().then(() => {
+          setHasSynced(true);
+        });
+      } else if (!isCheckingMerchantToken && !merchantTokenIsValid) {
+        console.error('There was an error. Please have the seller reconnect to Square from their Gogh account.')
+        setErrorCheckingSquareDirectory('There was an error. Please have the seller reconnect to Square from their Gogh account.')
       }
-
-      setIsCheckingSquareDirectory('true');
-      //findExistingSquareCustomer().then(() => {
-     //   setHasSynced(true);
-     // });
+      
     }
-  }, [currentUser, hasSynced, isCheckingSquareDirectory, findExistingSquareCustomer, merchantTokenIsValid]);
+  }, [currentUser, hasSynced, isCheckingSquareDirectory, findExistingSquareCustomer, merchantTokenIsValid, isCheckingMerchantToken]);
     
   useEffect(() => {
     if (merchantId) {
@@ -513,15 +507,27 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   ))}
                 </Flex>
                 <Flex>
-                  { isCheckingSquareDirectory !== 'true' ? (
-                    usersCurrentRewardsTier ? (
+                  {!errorCheckingSquareDirectory ? (
+                   isCheckingSquareDirectory === false ? (
+                    usersCurrentRewardsTier && !errorCheckingSquareDirectory ? (
                       <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
                     ) : (
                       <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
                     )
-                  ) : (
+                  ) :  (
                     <Text align={'center'} weight={'bold'} size={'7'}>Checking in...</Text>
-                  )}
+                  )
+                ) : (
+                  <Callout.Root color='red'>
+                    <Callout.Icon>
+                      <InfoCircledIcon />
+                    </Callout.Icon>
+                    <Callout.Text>
+                      {errorCheckingSquareDirectory}
+                    </Callout.Text>
+                  </Callout.Root>
+                )}
+                  
                   
                 </Flex>
               </Flex>
