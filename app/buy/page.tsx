@@ -788,8 +788,6 @@ function BuyContent() {
   useEffect(() => {
     if (merchant) {
       checkAndRefreshToken(merchant._id)
-      console.log('Checking Square auth token with merchant:', merchant);
-
     }
   }, [merchant]);
 

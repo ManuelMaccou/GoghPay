@@ -1,15 +1,17 @@
 "use client"
 
+import { debounce } from 'lodash';
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
 import { Button, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import axios from "axios";
+import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -20,14 +22,19 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   
-  const { appUser, setIsFetchingUser } = useUser();
+  const { appUser, setIsFetchingUser, setAppUser } = useUser();
 
   const [error, setError] = useState<string | null>(null);
+  const [errorCheckingSquareDirectory, setErrorCheckingSquareDirectory] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<User>();
   const [isFetchingMerchant, setIsFetchingMerchant] = useState<boolean>(true);
+  const [merchantTokenIsValid, setMerchantTokenIsValid] = useState<boolean>(false);
+  const [isCheckingMerchantToken, setIsCheckingMerchantToken] = useState<boolean>(true);
   const [currentUserMerchantRewards, setCurrentUserMerchantRewards] = useState<UserReward | null>(null);
   const [isFetchingCurrentUserRewards, setIsFetchingCurrentUserRewards] = useState<boolean>(true);
+  const [isCheckingSquareDirectory, setIsCheckingSquareDirectory] =  useState<string | null>(null);
+  const [hasSynced, setHasSynced] = useState(false);
   const [usersCurrentRewardsTier, setUsersCurrentRewardsTier] = useState<RewardsTier | null>(null);
   const [amountToNextRewardsTier, setAmountToNextRewardsTier] = useState<number | null>(null);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
@@ -92,7 +99,149 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       setWalletForPurchase(walletAddress);
     }
   }, [appUser]);
+
+  // Checking if currentUser has a squareID, if their email exists in square, then adding them to square, then adding the customer_id to Gogh
+
+  const findExistingSquareCustomer = useCallback(async () => {
+    console.log('findExistingSquareCustomer called');
+
+    try {
+      if (!currentUser?.email) return
+      
+      const encodedEmail = encodeURIComponent(currentUser?.email);
+      const response = await fetch(`/api/square/user?email=${encodedEmail}&merchantId=${merchant?._id}`)
+      if (response.ok) {
+        const data = await response.json();
+        // Update the user with the returned customer ID
+        if (data.customers.length > 0) {
+          await updateGoghUserWithSquareId(data.customers[0].id);
+        } else {
+          await createNewSquareCustomer();
+        }
+
+      } else if (response.status === 404) {
+        // Add the user to Square.
+        await createNewSquareCustomer();
+      } else {
+        const errorMessage = await response.text(); // Capture error details from server
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+        console.error(`Error searching Square directory: ${errorMessage}`);
+      }
+
+    } catch (err) {
+      if (isError(err)) {
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+        console.error(`Error searching Square directory: ${err.message}`);
+      } else {
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+        console.error('Error searching Square directory');
+      }
+    } finally {
+      setIsCheckingSquareDirectory('false');
+    }
+  }, [currentUser]);
+
+  const createNewSquareCustomer = async () => {
+    try {
+      const accessToken = await getAccessToken();
+      const response = await fetch('/api/square/user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({
+          email: currentUser?.email,
+          merchantId: merchant?._id,
+          goghUserId: currentUser?._id, // saved in Square as a referenceID
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        await updateGoghUserWithSquareId(data.id) // The returned customer ID
+      } else {
+        const errorMessage = await response.text();
+        console.error(`Failed to create Square customer: ${errorMessage}`)
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+      }
+    } catch (err) {
+      if (isError(err)) {
+        console.error(`Error creating new square customer: ${err.message}`);
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+      } else {
+        console.error('Error creating new square customer.');
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+      }
+    }
+  }
+
+  const updateGoghUserWithSquareId = async (squareCustomerId: string) => {
+    try {
+      const accessToken = await getAccessToken();
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({
+          squareCustomerId: squareCustomerId,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAppUser(data.updatedUser);
+      } else {
+        const errorMessage = await response.text();
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+        console.error(`Failed to update Gogh user: ${errorMessage}`);
+      }
+
+    } catch (err) {
+      if (isError(err)) {
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+        console.error(`Error syncing Square customer with Gogh: ${err.message}`);
+      } else {
+        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+        console.error('Error syncing Square customer with Gogh');
+      }
+    }
+  }
   
+  useEffect(() => {
+    console.log('Running useEffect...');
+    console.log('merchantTokenIsValid:', merchantTokenIsValid);
+    console.log('isCheckingMerchantToken:', isCheckingMerchantToken);
+    console.log('currentUser:', currentUser);
+    console.log('hasSynced:', hasSynced);
+    console.log('isCheckingSquareDirectory:', isCheckingSquareDirectory);
+
+    // Run the API sync only if `currentUser` is available and has not been synced yet
+    if (!currentUser?.email) {
+      setErrorCheckingSquareDirectory('Please connect using an email address to participate in Rewards')
+      return;
+    }
+
+    if (!currentUser?.squareCustomerId && !hasSynced && isCheckingSquareDirectory !== 'true') {
+      if (!isCheckingMerchantToken) {
+        if (!merchantTokenIsValid ) {
+          console.error('There was an error. Please have the seller reconnect to Square from their Gogh account.')
+
+          setErrorCheckingSquareDirectory('There was an error. Please have the seller reconnect to Square from their Gogh account.')
+          return;
+        } 
+        
+      }
+
+      setIsCheckingSquareDirectory('true');
+      //findExistingSquareCustomer().then(() => {
+     //   setHasSynced(true);
+     // });
+    }
+  }, [currentUser, hasSynced, isCheckingSquareDirectory, findExistingSquareCustomer, merchantTokenIsValid]);
+    
   useEffect(() => {
     if (merchantId) {
       setIsFetchingMerchant(true);
@@ -117,6 +266,23 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       fetchMerchant();
     }
   }, [merchantId]);
+
+  useEffect(() => {
+    const debouncedCheck = debounce(async () => {
+      if (merchant) {
+        setIsCheckingMerchantToken(true);
+        const isValid = await checkAndRefreshToken(merchant._id);
+        setMerchantTokenIsValid(isValid);
+        setIsCheckingMerchantToken(false);
+      }
+    }, 500); // 500ms debounce time
+  
+    debouncedCheck();
+  
+    return () => {
+      debouncedCheck.cancel(); // Clean up debounce on component unmount or merchant change
+    };
+  }, [merchant]);
 
   useEffect(() => {
     const createNewRewards = async () => {
@@ -241,6 +407,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
   const rewardsContainerRef = useRef<HTMLDivElement>(null);
   const targetCardRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     // Scroll to the bottom when the component mounts or updates
     if (rewardsContainerRef.current) {
@@ -346,11 +513,16 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   ))}
                 </Flex>
                 <Flex>
-                 {usersCurrentRewardsTier ? (
-                  <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
-                 ) : (
-                  <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
-                 )}
+                  { isCheckingSquareDirectory !== 'true' ? (
+                    usersCurrentRewardsTier ? (
+                      <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
+                    ) : (
+                      <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
+                    )
+                  ) : (
+                    <Text align={'center'} weight={'bold'} size={'7'}>Checking in...</Text>
+                  )}
+                  
                 </Flex>
               </Flex>
             </Flex>

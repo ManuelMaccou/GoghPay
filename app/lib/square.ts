@@ -1,24 +1,22 @@
 import { Client, Environment } from 'square';
 
-const squareEnv = process.env.SQUARE_ENV!;
-const accessToken = process.env.SQUARE_ACCESS_TOKEN!;
+// Function to create and configure the Square client
+export function createSquareClient(accessToken: string): Client {
+  if (!accessToken) {
+    throw new Error('Access token is required to create a Square client');
+  }
 
-let environment: Environment;
-
-switch (squareEnv) {
-  case 'production':
-    environment = Environment.Production;
-    break;
-  case 'sandbox':
-    environment = Environment.Sandbox;
-    break;
-  default:
-    throw new Error('Invalid SQUARE_ENV value. Must be either "production" or "sandbox".');
+  return new Client({
+    bearerAuthCredentials: {
+      accessToken: accessToken
+    },
+    environment: process.env.SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+    httpClientOptions: {
+      timeout: 5000, // 5 seconds timeout for requests
+      retryConfig: {
+        maxNumberOfRetries: 3,  // Retry up to 3 times
+        maximumRetryWaitTime: 20000, // Maximum retry wait time of 20 seconds
+      },
+    },
+  });
 }
-
-const squareClient = new Client({
-  accessToken,
-  environment
-});
-
-export default squareClient;

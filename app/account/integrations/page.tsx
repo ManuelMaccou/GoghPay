@@ -154,7 +154,15 @@ function IntegrationsContent() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`, 
           },
-          body: JSON.stringify({ privyId: currentUser?.privyId, square_access_token: "" })
+          body: JSON.stringify({ 
+            privyId: currentUser?.privyId,
+            square_access_token: "",
+            square_refresh_token: "",
+            square_merchant_id: "",
+            square_token_expires_at: "",
+            square_location_id: "",
+            square_location_name: "",
+          })
         });
 
         await fetchLocations(merchant._id);
@@ -284,16 +292,6 @@ function IntegrationsContent() {
       fetchUser();
     }
   }, [ready, authenticated, user?.id]); 
-
-  console.log('location name:', squareLocationName);
-
-  useEffect(() => {
-    if (merchant) {
-      // setMerchantSet(true);
-      console.log('Checking Square auth token with merchant:', merchant);
-
-    }
-  }, [merchant]);
   
   return (
     <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  

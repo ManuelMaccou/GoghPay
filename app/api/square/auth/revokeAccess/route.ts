@@ -21,9 +21,16 @@ export async function POST(request: NextRequest) {
     const client = new Client({
       accessToken: decryptedAccessToken,
       environment: process.env.SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+      httpClientOptions: {
+        timeout: 5000, // 5 seconds
+        retryConfig: {
+          maxNumberOfRetries: 3,
+          maximumRetryWaitTime: 20000, // 20 seconds
+        }
+      }
     });
 
-    const squareAppSecret =process.env.SQUARE_APP_SECRET;
+    const squareAppSecret = process.env.SQUARE_APP_SECRET;
     const response = await client.oAuthApi.revokeToken(
       {
         clientId: process.env.NEXT_PUBLIC_SQUARE_APP_ID,
