@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSquareClient } from '@/app/lib/square';
-import { Client, Environment } from 'square';
 import { v4 as uuidv4 } from 'uuid';
 import Merchant from '@/app/models/Merchant';
 import { decrypt } from '@/app/lib/encrypt-decrypt';
@@ -46,7 +45,10 @@ export async function GET(request: NextRequest) {
     const customers = response.result.customers;
 
     if (customers && customers.length > 0) {
-      return new NextResponse(JSON.stringify({ customers }), { status: 200 });
+      // Convert BigInt values to strings for JSON serialization
+      const sanitizedCustomers = customers.map(({ version, ...rest }) => rest);
+
+      return new NextResponse(JSON.stringify({ customers: sanitizedCustomers }), { status: 200 });
     } else {
       return new NextResponse('No customers found', { status: 404 });
     }
@@ -90,13 +92,16 @@ export async function POST(req: NextRequest) {
     const newSquareCustomer = response.result.customer;
 
     if (newSquareCustomer) {
-      return new NextResponse(JSON.stringify({ newSquareCustomer }), { status: 200 });
+
+      const { version, ...sanitizedCustomer } = newSquareCustomer;
+      
+      return new NextResponse(JSON.stringify({ newSquareCustomer: sanitizedCustomer }), { status: 200 });
     } else {
       return new NextResponse('Error creating customer', { status: 404 });
     }
 
   } catch (error) {
-    console.error('Error with Square API:', error);
-    return new NextResponse('Internal server error', { status: 500 });
+    console.error('Error creating customer:', error);
+    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
   }
 }

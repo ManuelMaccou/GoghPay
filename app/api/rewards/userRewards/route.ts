@@ -6,7 +6,6 @@ import { UserReward } from '@/app/models/UserReward';
 export async function POST(req: NextRequest) {
   try {
     const userRewardData = await req.json();
-    console.log("user reward data:", userRewardData);
 
     if (!userRewardData) {
       console.error('Missing user reward data from the request body.')

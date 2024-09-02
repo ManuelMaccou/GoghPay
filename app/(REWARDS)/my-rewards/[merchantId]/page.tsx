@@ -89,6 +89,9 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
   });
 
   useEffect(() => {
+    console.log('app user:', appUser);
+    console.log('current user:', currentUser);
+
     if (appUser && !currentUser) {
       setCurrentUser(appUser);
     }
@@ -113,6 +116,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         },
         body: JSON.stringify({
           squareCustomerId: squareCustomerId,
+          privyId: currentUser?.privyId,
         }),
       });
 
@@ -134,7 +138,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         console.error('Error syncing Square customer with Gogh');
       }
     }
-  }, [setAppUser]);
+  }, [setAppUser, currentUser]);
 
   const createNewSquareCustomer = useCallback(async () => {
     try {
@@ -154,10 +158,15 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
       if (response.ok) {
         const data = await response.json();
-        await updateGoghUserWithSquareId(data.id) // The returned customer ID
+
+        console.log('square data:', data)
+
+        await updateGoghUserWithSquareId(data.newSquareCustomer.id)
+      } else if (response.status === 503) {
+        setErrorCheckingSquareDirectory('The was an error with Square. Please wait a few minutes and try again.');
       } else {
         const errorMessage = await response.text();
-        console.error(`Failed to create Square customer: ${errorMessage}`)
+        console.error(`Failed to create Square customer: ${errorMessage}`);
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
       }
     } catch (err) {
@@ -169,13 +178,15 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
       }
     }
-  }, [currentUser?.email, currentUser?._id, merchant?._id, updateGoghUserWithSquareId]); 
+  }, [currentUser, merchant?._id, updateGoghUserWithSquareId]);
 
   const findExistingSquareCustomer = useCallback(async () => {
-    if (!currentUser?.email) return
+    console.log("is finding existing customer")
+
+    if (!currentUser || !currentUser?.email) return
 
     try {
-      const encodedEmail = encodeURIComponent(currentUser?.email);
+      const encodedEmail = encodeURIComponent(currentUser.email);
       const response = await fetch(`/api/square/user?email=${encodedEmail}&merchantId=${merchant?._id}`)
       if (response.ok) {
         const data = await response.json();
@@ -190,7 +201,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         // Add the user to Square.
         await createNewSquareCustomer();
       } else {
-        const errorMessage = await response.text(); // Capture error details from server
+        const errorMessage = await response.text();
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
         console.error(`Error searching Square directory: ${errorMessage}`);
       }
@@ -209,24 +220,27 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
   }, [currentUser, merchant, createNewSquareCustomer, updateGoghUserWithSquareId]);
   
   useEffect(() => {
-    console.log('Running useEffect...');
-    console.log('merchantTokenIsValid:', merchantTokenIsValid);
-    console.log('isCheckingMerchantToken:', isCheckingMerchantToken);
-    console.log('currentUser:', currentUser);
-    console.log('hasSynced:', hasSynced);
-    console.log('isCheckingSquareDirectory:', isCheckingSquareDirectory);
-
+    console.log('ischeckingsquaredirectory:', isCheckingSquareDirectory)
     // Run the API sync only if `currentUser` is available and has not been synced yet
-    if (!currentUser?.email) {
+    if (!currentUser) return;
+    if (currentUser && !currentUser?.email) {
       setErrorCheckingSquareDirectory('Please connect using an email address to participate in Rewards')
       return;
     }
 
-    if (!currentUser?.squareCustomerId && !hasSynced && !isCheckingSquareDirectory) {
+    if (currentUser?.squareCustomerId) {
+      setIsCheckingSquareDirectory(false);
+      return;
+    }
+
+    if (!hasSynced && !isCheckingSquareDirectory) {
       if (!isCheckingMerchantToken && merchantTokenIsValid) {
         setIsCheckingSquareDirectory(true);
+
         findExistingSquareCustomer().then(() => {
           setHasSynced(true);
+          setIsCheckingSquareDirectory(false);
+          
         });
       } else if (!isCheckingMerchantToken && !merchantTokenIsValid) {
         console.error('There was an error. Please have the seller reconnect to Square from their Gogh account.')
@@ -303,7 +317,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
         if (response.ok) {
           const userRewardsData = await response.json();
-          setCurrentUserMerchantRewards(userRewardsData);
+          setCurrentUserMerchantRewards(userRewardsData.userReward);
+          console.log('user rewards after creating new one:', userRewardsData.userReward);
         } else {
           console.error('Failed to create new reward:', response.statusText);
         }
@@ -333,6 +348,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
         if (response.ok) {
           const userRewardsData = await response.json();
+          console.log('rewards datat from get:', userRewardsData)
           setCurrentUserMerchantRewards(userRewardsData);
         } else {
           if (response.status === 404) {
@@ -361,18 +377,35 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
   useEffect (() => {
     const checkMilestone = () => {
-    if (!currentUserMerchantRewards) {
-      console.error('No user rewards available.');
-      return null;
-    }
-      const { totalSpent } = currentUserMerchantRewards;
+
+      console.log('checking milestones')
+      console.log('CurrentUserMerchantRewards:', currentUserMerchantRewards);
+      console.log('CurrentUserMerchantRewards total spent:', currentUserMerchantRewards?.totalSpent);
+
+      if (!merchant) return;
+      console.log('checkpoint 1')
+
+      if (!currentUserMerchantRewards) {
+        console.log('No user rewards available.');
+        return null;
+      }
+      console.log('checkpoint 2')
+
+      const totalSpent = currentUserMerchantRewards.totalSpent;
+      console.log('total spent after definition:', totalSpent)
+
+      if (totalSpent === null || totalSpent === undefined) return;
+      console.log('checkpoint 3')
+      console.log ('total spent is null/undefined')
     
       const tiers = merchant?.rewards?.tiers || [];
     
-      if (!tiers.length || typeof totalSpent !== 'number') {
-        console.error('No tiers configured or invalid totalSpent')
+      if (!tiers.length) {
+        console.log('No tiers configured')
+        setErrorCheckingSquareDirectory("Seller does not have rewards available.")
         return null;
       }
+      console.log('checkpoint 4')
     
       const sortedTiers = tiers.sort((a, b) => a.milestone - b.milestone);
     
@@ -509,7 +542,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                 <Flex>
                   {!errorCheckingSquareDirectory ? (
                    isCheckingSquareDirectory === false ? (
-                    usersCurrentRewardsTier && !errorCheckingSquareDirectory ? (
+                    usersCurrentRewardsTier ? (
                       <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
                     ) : (
                       <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
