@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Merchant not found', { status: 404 });
     }
 
-    if (!merchant.square_access_token) {
+    if (!merchant.square.access_token) {
       return new NextResponse('No access token', { status: 401 });
     }
 
-    const decryptedAccessToken = decrypt(merchant.square_access_token);
+    const decryptedAccessToken = decrypt(merchant.square.access_token);
 
     const client = new Client({
       accessToken: decryptedAccessToken,

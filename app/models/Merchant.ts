@@ -1,6 +1,15 @@
 import mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
+const SquareSchema = new mongoose.Schema({
+  merchant_id: { type: String },
+  location_id: { type: String },
+  location_name: { type: String },
+  access_token: { type: String },
+  refresh_token: { type: String },
+  token_expires_at: { type: Date },
+}, { timestamps: true });
+
 const BrandingSchema = new mongoose.Schema({
   primary_color: { type: String, default: "#FFFFFF", required: true },
   seconday_color: { type: String, default: "#000000", required: true },
@@ -47,15 +56,10 @@ const merchantSchema = new mongoose.Schema({
   taxes: { type: [taxSchema] },
   promo: { type: Boolean },
   shopify: {
-    shopName: { type: String, required: true },
-    accessToken: { type: String, required: true },
+    shopName: { type: String },
+    accessToken: { type: String },
   },
-  square_merchant_id: { type: String },
-  square_location_id: { type: String },
-  square_location_name: { type: String },
-  square_access_token: { type: String },
-  square_refresh_token: { type: String },
-  square_token_expires_at: { type: Date },
+  square: { type: SquareSchema },
   rewards: { type: RewardsSchema },
   branding: { type: BrandingSchema }
 
