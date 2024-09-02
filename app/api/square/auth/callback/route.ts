@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
 
     const data = await response.data;
     const { access_token, refresh_token, expires_at, merchant_id } = data;
-    console.log('Authorized merchant with data:', data);
 
     await connectToDatabase();
 
@@ -71,10 +70,10 @@ export async function GET(request: NextRequest) {
       { _id: goghMerchantId },
       {
         $set: {
-          square_access_token: encrypt(access_token),
-          square_refresh_token: encrypt(refresh_token),
-          square_token_expires_at: new Date(expires_at),
-          square_merchant_id: merchant_id,
+          'square.access_token': encrypt(access_token),
+          'square.refresh_token': encrypt(refresh_token),
+          'square.token_expires_at': new Date(expires_at),
+          'square.merchant_id': merchant_id,
         },
       },
       { upsert: true }

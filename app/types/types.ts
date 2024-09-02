@@ -33,14 +33,18 @@ export interface Merchant {
   admin: boolean;
   taxes: Tax[];
   shopify?: Shopify;
-  square_access_token?: string;
-  square_merchant_id?: string;
-  square_refresh_token?: string;
-  square_token_expires_at?: string;
-  square_location_id?: string;
-  square_location_name?: string;
+  square?: Square;
   rewards?: Rewards;
   branding: Branding;
+}
+
+export interface Square {
+  access_token?: string;
+  merchant_id?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  location_id?: string;
+  location_name?: string;
 }
 
 export interface Transaction {

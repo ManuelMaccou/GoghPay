@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Merchant not found', { status: 404 });
   }
 
-  const decryptedAccessToken = decrypt(merchant.square_access_token);
+  const decryptedAccessToken = decrypt(merchant.square.access_token);
   
   try {
     const client = createSquareClient(decryptedAccessToken);
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse('Merchant not found in db', { status: 404 });
   }
 
-  const decryptedAccessToken = decrypt(merchant.square_access_token);
+  const decryptedAccessToken = decrypt(merchant.square.access_token);
 
   try {
     const client = createSquareClient(decryptedAccessToken);

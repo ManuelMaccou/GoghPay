@@ -101,7 +101,7 @@ export default function Sell() {
 
   useEffect(() => {
     const fetchInventory = async () => {
-      if (merchant?.square_access_token) {
+      if (merchant?.square?.access_token) {
         await fetchLocations(merchant._id);
         if (locations) {
           await fetchSquareCatelog();

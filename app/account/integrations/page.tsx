@@ -156,12 +156,14 @@ function IntegrationsContent() {
           },
           body: JSON.stringify({ 
             privyId: currentUser?.privyId,
-            square_access_token: "",
-            square_refresh_token: "",
-            square_merchant_id: "",
-            square_token_expires_at: "",
-            square_location_id: "",
-            square_location_name: "",
+            square: {
+              access_token: "",
+              refresh_token: "",
+              merchant_id: "",
+              token_expires_at: "",
+              location_id: "",
+              location_name: "",
+            }
           })
         });
 
@@ -212,8 +214,6 @@ function IntegrationsContent() {
     }
   };
 
-  console.log('locations:', locations);
-
   const handleLocationSelect = async () => {
     setError(null);
     setRevokeError(null);
@@ -231,8 +231,10 @@ function IntegrationsContent() {
         },
         body: JSON.stringify({
           privyId: currentUser?.privyId,
-          square_location_id: selectedLocation.id,
-          square_location_name: selectedLocation.name
+          square: {
+            location_id: selectedLocation.id,
+            location_name: selectedLocation.name
+          },
         })
       });
       if (!response.ok) {
@@ -256,7 +258,7 @@ function IntegrationsContent() {
         console.log('Fetched merchant:', data);
         setMerchant(data);
         fetchLocations(data._id);
-        setSquareLocationName(data.square_location_name);
+        setSquareLocationName(data.square.location_name);
       } catch (err) {
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);

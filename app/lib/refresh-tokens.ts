@@ -10,7 +10,7 @@ const SQUARE_OBTAIN_TOKEN_URL = `https://connect.${process.env.NEXT_PUBLIC_SQUAR
 const SQUARE_CLIENT_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
 const SQUARE_APP_SECRET = process.env.SQUARE_APP_SECRET;
 
-const DAYS_TO_REFRESH = [22, 14, 7]; // Days before expiration to attempt token refresh
+const DAYS_TO_REFRESH = [42, 14, 7]; // Days before expiration to attempt token refresh
 
 export const checkAndRefreshToken = async (merchantId: string): Promise<boolean> => {
   try {
@@ -22,15 +22,20 @@ export const checkAndRefreshToken = async (merchantId: string): Promise<boolean>
       return false;
     }
 
-    const { square_refresh_token, square_token_expires_at, square_merchant_id } = merchant;
+    if (!merchant.square) {
+      console.log('Square details missing for merchant');
+      return false;
+    }
 
-    if (!square_refresh_token || !square_token_expires_at) {
+    const { refresh_token, token_expires_at, merchant_id } = merchant.square;
+
+    if (!refresh_token || !token_expires_at) {
       console.log('Missing refresh token or token expiration date');
       return false;
     }
 
     const today = new Date();
-    const tokenExpiresAt = new Date(square_token_expires_at);
+    const tokenExpiresAt = new Date(token_expires_at);
     const daysUntilExpiration = Math.floor((tokenExpiresAt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     // Check if daysUntilExpiration is less than or equal to any value in DAYS_TO_REFRESH
@@ -45,7 +50,7 @@ export const checkAndRefreshToken = async (merchantId: string): Promise<boolean>
           client_id: SQUARE_CLIENT_ID,
           client_secret: SQUARE_APP_SECRET,
           grant_type: 'refresh_token',
-          refresh_token: decrypt(square_refresh_token),
+          refresh_token: decrypt(refresh_token),
         }, {
           headers: {
             'Square-Version': '2022-04-20',
@@ -55,26 +60,16 @@ export const checkAndRefreshToken = async (merchantId: string): Promise<boolean>
 
         const data = response.data;
 
-        merchant.square_access_token = encrypt(data.access_token);
-        merchant.square_token_expires_at = new Date(data.expires_at);
-        merchant.square_merchant_id = data.merchant_id;
-        merchant.square_refresh_token = encrypt(data.refresh_token);
+        merchant.square.access_token = encrypt(data.access_token);
+        merchant.square.token_expires_at = new Date(data.expires_at);
+        merchant.square.merchant_id = data.merchant_id;
+        merchant.square.refresh_token = encrypt(data.refresh_token);
         await merchant.save();
-
-        console.log('Token refreshed successfully for merchant:', square_merchant_id);
-
-        // Remove this after testing
-        await AdminError.create({
-          merchantId: square_merchant_id,
-          attemptedTask: 'Check refresh token',
-          errorMessage: 'Token refresh successful',
-          timestamp: new Date(),
-        });
 
         return true;
 
       } catch (error) {
-        logAdminError(square_merchant_id, 'Check refresh token', error);
+        logAdminError(merchant_id, 'Check refresh token', error);
         return false;
       }
     } else {

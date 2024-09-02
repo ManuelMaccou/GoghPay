@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return new NextResponse('Merchant not found', { status: 404 });
     }
 
-    const decryptedAccessToken = decrypt(merchant.square_access_token);
+    const decryptedAccessToken = decrypt(merchant.square.access_token);
     const client = new Client({
       accessToken: decryptedAccessToken,
       environment: process.env.SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
