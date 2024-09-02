@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { debounce } from 'lodash';
 import { Header } from "@/app/components/Header";
