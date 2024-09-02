@@ -151,6 +151,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
           email: currentUser?.email,
           merchantId: merchant?._id,
           goghUserId: currentUser?._id, // saved in Square as a referenceID
+          privyId: currentUser?.privyId,
         }),
       });
 
@@ -160,6 +161,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         await updateGoghUserWithSquareId(data.newSquareCustomer.id)
       } else if (response.status === 503) {
         setErrorCheckingSquareDirectory('The was an error with Square. Please wait a few minutes and try again.');
+      } else if (response.status === 401) {
+        setErrorCheckingSquareDirectory('Unauthorized.');
       } else {
         const errorMessage = await response.text();
         console.error(`Failed to create Square customer: ${errorMessage}`);
@@ -183,7 +186,14 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
     try {
       const encodedEmail = encodeURIComponent(currentUser.email);
-      const response = await fetch(`/api/square/user?email=${encodedEmail}&merchantId=${merchant?._id}`)
+      const accessToken = await getAccessToken();
+      const response = await fetch(`/api/square/user?email=${encodedEmail}&merchantId=${merchant?._id}&privyId=${currentUser.privyId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         // Update the user with the returned customer ID

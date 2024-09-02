@@ -51,7 +51,8 @@ export const config = {
     '/api/transfer',
     '/api/merchant/update',
     '/api/rewards/milestone',
-    '/api/rewards/userRewards/:path*'
+    '/api/rewards/userRewards/:path*',
+    '/api/square/user',
   ]
 };
 

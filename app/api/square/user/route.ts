@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get('email');
   const merchantId = searchParams.get('merchantId');
+  const privyId = searchParams.get('privyId');
 
   if (!email) {
     return new NextResponse('Missing email', { status: 400 });
@@ -15,6 +16,16 @@ export async function GET(request: NextRequest) {
 
   if (!merchantId) {
     return new NextResponse('Missing merchantId', { status: 400 });
+  }
+
+  if (!privyId) {
+    return new NextResponse('Missing privyId for auth', { status: 400 });
+  }
+
+  const userIdFromToken = request.headers.get('x-user-id');
+
+  if (!userIdFromToken || userIdFromToken !== privyId) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   const merchant = await Merchant.findById(merchantId);
@@ -61,16 +72,28 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: NextRequest) {
 
-  const { email, merchantId, goghUserId } = await req.json();
+  console.log("creating new square user");
+
+  const { email, merchantId, goghUserId, privyId } = await req.json();
   const idempotencyKey = uuidv4();
 
   if (!merchantId) {
-    return new NextResponse('Missing merchantId', { status: 400 });
+    return new NextResponse('Missing merchantId for auth', { status: 400 });
+  }
+
+  if (!privyId) {
+    return new NextResponse('Missing privyId for auth', { status: 400 });
+  }
+
+  const userIdFromToken = req.headers.get('x-user-id');
+
+  if (!userIdFromToken || userIdFromToken !== privyId) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   const merchant = await Merchant.findById(merchantId);
   if (!merchant) {
-    return new NextResponse('Merchant not found', { status: 404 });
+    return new NextResponse('Merchant not found in db', { status: 404 });
   }
 
   const decryptedAccessToken = decrypt(merchant.square_access_token);
