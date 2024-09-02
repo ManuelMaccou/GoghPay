@@ -11,6 +11,8 @@ enum MilestoneType {
 export interface User {
   _id: string;
   privyId?: string;
+  squareCustomerId?: string;
+  shopifyCustomerId?: string;
   walletAddress: string;
   name?: string;
   email?: string;

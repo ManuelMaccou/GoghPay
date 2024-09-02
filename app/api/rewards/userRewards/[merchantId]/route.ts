@@ -21,8 +21,6 @@ export async function GET (request: NextRequest,
     }
 
     const userIdFromToken = request.headers.get('x-user-id');
-    console.log('userId from token:', userIdFromToken);
-    console.log('privyId:', privyId);
 
     if (!userIdFromToken || userIdFromToken !== privyId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

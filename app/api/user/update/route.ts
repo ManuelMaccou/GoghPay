@@ -20,7 +20,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ message: "No fields to update" }, { status: 400 });
     }
 
-    const allowedFields = ['coinbaseAddress', 'smartAccountAddress'];
+    const allowedFields = [
+      'coinbaseAddress',
+      'smartAccountAddress',
+      'squareCustomerId',
+      'shopifyCustomerId'
+    ];
     const fieldsToUpdate: { [key: string]: any } = {};
     Object.keys(updateFields).forEach((key) => {
       if (allowedFields.includes(key)) {

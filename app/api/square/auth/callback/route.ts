@@ -8,7 +8,6 @@ import Merchant from '@/app/models/Merchant';
 const SQUARE_CLIENT_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
 const SQUARE_APP_SECRET = process.env.SQUARE_APP_SECRET;
 const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV;
-const SQUARE_OBTAIN_TOKEN_URL = `https://connect.${SQUARE_ENV}.com/oauth2/token`;
 
 export async function GET(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
