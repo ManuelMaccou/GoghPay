@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
 
   console.log("creating new square user");
 
-  const { email, merchantId, goghUserId, privyId } = await req.json();
+  const { email, merchantId, goghUserId, privyId, note } = await req.json();
   const idempotencyKey = uuidv4();
 
   if (!merchantId) {
@@ -104,7 +104,8 @@ export async function POST(req: NextRequest) {
     const response = await client.customersApi.createCustomer({
       idempotencyKey: idempotencyKey,
       emailAddress: email,
-      referenceId: goghUserId
+      referenceId: goghUserId,
+      note,
     });
 
     if (response.result.errors) {

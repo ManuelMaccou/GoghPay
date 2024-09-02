@@ -46,6 +46,11 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
   const merchantId = params.merchantId
 
+
+  const handleLogin = () => {
+    login({ loginMethods: ['google', 'email'] });
+  };
+
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
       console.log('login successful');
@@ -71,6 +76,14 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
           console.log('New user created:', response.data);
+          if (response.status >= 200 && response.status < 300) {
+            console.log('New user created:', response.data);
+            setAppUser(response.data.user);
+          } else {
+            setErrorCheckingSquareDirectory('There was an issue logging in. Please try again.');
+            console.error('Unexpected response status:', response.status, response.statusText);
+          }
+
         } catch (error: unknown) {
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
@@ -152,6 +165,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
           merchantId: merchant?._id,
           goghUserId: currentUser?._id, // saved in Square as a referenceID
           privyId: currentUser?.privyId,
+          note: "Gogh rewards"
         }),
       });
 
@@ -475,7 +489,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   backgroundColor: secondaryColor,
                   color: primaryColor,
                 }} 
-                onClick={login}>
+                onClick={handleLogin}>
                 Contiue
               </Button>
             </Flex>
