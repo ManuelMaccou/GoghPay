@@ -89,8 +89,6 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
   });
 
   useEffect(() => {
-    console.log('app user:', appUser);
-    console.log('current user:', currentUser);
 
     if (appUser && !currentUser) {
       setCurrentUser(appUser);
@@ -158,8 +156,6 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
       if (response.ok) {
         const data = await response.json();
-
-        console.log('square data:', data)
 
         await updateGoghUserWithSquareId(data.newSquareCustomer.id)
       } else if (response.status === 503) {
