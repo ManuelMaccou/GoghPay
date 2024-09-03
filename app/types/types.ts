@@ -1,3 +1,5 @@
+import { Payment } from "square";
+
 enum DiscountType {
   Dollar = 'dollar',
   Percent = 'percent',
@@ -6,6 +8,14 @@ enum DiscountType {
 enum MilestoneType {
   DollarsSpent = 'dollars_spent',
   NumberOfVisits = 'number_of_visits',
+}
+
+export enum PaymentType {
+  Venmo = 'Venmo',
+  Zelle = 'Zelle',
+  Square = 'Square',
+  ManualEntry = 'ManualEntry',
+  Cash = 'Cash'
 }
 
 export interface User {
@@ -34,6 +44,7 @@ export interface Merchant {
   taxes: Tax[];
   shopify?: Shopify;
   square?: Square;
+  paymentMethods: PaymentMethod[];
   rewards?: Rewards;
   branding: Branding;
 }
@@ -115,11 +126,29 @@ export interface Branding {
 }
 
 export interface UserReward {
-  userId: string;
+  customerId: string;
   merchantId: string;
   totalSpent: number;
   visitsCount: number;
   lastVisit: Date;
   currentTier: string;
   nextTier: string;
+}
+
+export interface RewardsCustomer {
+  totalSpent: number,
+  visitsCount: number,
+  lastVisit: Date,
+  userInfo: {
+    _id: string,
+    name: string,
+    email: string,
+    squareCustomerId: string,
+  }
+}
+
+export interface PaymentMethod {
+  type: PaymentType;
+  logo: string;
+  qrCode?: Buffer;
 }

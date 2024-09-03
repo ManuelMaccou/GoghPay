@@ -36,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
   })
 
   return (
-    <Box width={'100%'}>
+    <Box maxWidth={'100%'}>
       <Flex direction={'row'} justify={'end'}>
         {ready && authenticated && (
           <>

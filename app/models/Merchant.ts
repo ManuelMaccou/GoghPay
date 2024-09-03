@@ -1,6 +1,27 @@
 import mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
+const paymentTypes = ['Venmo', 'Zelle', 'Square', 'ManualEntry', 'Cash'];
+
+const PaymentMethodSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: paymentTypes,
+    required: true,
+  },
+  logo: {
+    type: String,
+    required: true,
+  },
+  qrCode: {
+    type: Buffer,
+    required: function(this: any) {
+      // Required only if the payment type is Venmo or Zelle
+      return ['Venmo', 'Zelle'].includes(this.type);
+    },
+  },
+}, { timestamps: true });
+
 const SquareSchema = new mongoose.Schema({
   merchant_id: { type: String },
   location_id: { type: String },
@@ -60,6 +81,7 @@ const merchantSchema = new mongoose.Schema({
     accessToken: { type: String },
   },
   square: { type: SquareSchema },
+  paymentMethods: { type: [PaymentMethodSchema] },
   rewards: { type: RewardsSchema },
   branding: { type: BrandingSchema }
 

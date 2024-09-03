@@ -3,11 +3,14 @@
 import React, { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode.react';
-import { getAccessToken, useLogout, usePrivy } from '@privy-io/react-auth';
+import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWallets } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import { Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text } from '@radix-ui/themes';
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { Location, Merchant, SquareCatalog } from '../types/types';
+import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentMethod } from '../types/types';
+import { BalanceProvider } from '../contexts/BalanceContext';
+import { Header } from '../components/Header';
+import { useUser } from '../contexts/UserContext';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -16,10 +19,24 @@ function isError(error: any): error is Error {
 
 
 export default function Sell() {
-  const [signedUrl, setSignedUrl] = useState('');
+  const { appUser, setIsFetchingUser, setAppUser } = useUser();
   const { ready, authenticated, user, login } = usePrivy();
+
+  const [currentUser, setCurrentUser] = useState<User>();
+
+  const { wallets } = useWallets();
+  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+  const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
+  
+  const [signedUrl, setSignedUrl] = useState('');
   const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+
+  const [currentRewardsCustomers, setCurrentRewardsCustomers] = useState<RewardsCustomer[]>([]);
+  const [isFetchingCurrentRewardsCustomers, setIsFetchingCurrentRewardsCustomers] = useState<boolean>(true);
+  const [errorFetchingRewards, setErrorFetchingRewards] = useState<string | null>(null);
+
   const [ isDeterminingMerchantStatus, setIsDeterminingMerchantStatus ] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loadingCatelog, setLoadingCatalog] = useState<boolean>(false);
@@ -29,8 +46,23 @@ export default function Sell() {
   const [error, setError] = useState<string | null>(null);
   const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  
 
   const router = useRouter();
+
+  useEffect(() => {
+
+    if (appUser && !currentUser) {
+      setCurrentUser(appUser);
+    }
+  }, [appUser, currentUser]);
+
+  useEffect(() => {
+    if (appUser) {
+      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress;
+      setWalletForPurchase(walletAddress);
+    }
+  }, [appUser]);
 
   const { logout } = useLogout ({
     onSuccess: async () => {
@@ -40,6 +72,45 @@ export default function Sell() {
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
+  };
+
+  const fetchCheckedInCustomers = async () => {
+    if (!currentUser) return;
+    setIsFetchingCurrentRewardsCustomers(true)
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/rewards/userRewards/customers/?merchantId=${merchant?._id}&privyId=${currentUser.privyId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+      });
+
+      if (response.ok) {
+        const rewardsCustomers = await response.json();
+        console.log('rewards data from get:', rewardsCustomers)
+        setCurrentRewardsCustomers(rewardsCustomers);
+
+      } else if (response.status === 401) {
+        setErrorFetchingRewards('Unauthorized access. Please log in again.');
+      } else if (response.status === 404) {
+        setErrorFetchingRewards('No customers found. Please refresh the page.');
+      } else {
+        setErrorFetchingRewards('Error searching for customers. Please refresh the page.');
+      }
+
+    } catch (error: unknown) {
+      if (isError(error)) {
+        console.error('Error fetching reward customers:', error.message);
+      } else {
+        console.error('Unknown error:', error);
+      }
+      setError('Error fetching user');
+    } finally {
+      setIsFetchingCurrentRewardsCustomers(false);
+    }
   };
 
   useEffect(() => {
@@ -100,6 +171,19 @@ export default function Sell() {
   }, [user, ready, authenticated]);
 
   useEffect(() => {
+    if (ready && authenticated && currentUser && merchant) {
+      fetchCheckedInCustomers();
+    }
+  }, [authenticated, ready, currentUser, merchant]);
+
+  useEffect(() => {
+    if (merchant && merchant.paymentMethods) {
+      setPaymentMethods(merchant.paymentMethods);
+    }
+  }, [merchant]);
+
+  /*
+  useEffect(() => {
     const fetchInventory = async () => {
       if (merchant?.square?.access_token) {
         await fetchLocations(merchant._id);
@@ -112,11 +196,12 @@ export default function Sell() {
     fetchInventory();
     
   }, [locations, merchant]);
+  */
 
   const fetchSquareCatelog = async () => {
     setLoadingCatalog(true);
     
-
+    // PLACEHOLDER FOR FETCHING CATELOG
   } 
 
   const fetchLocations = async (merchantId: string) => {
@@ -180,15 +265,18 @@ export default function Sell() {
         background: 'linear-gradient(to bottom, rgba(30,87,153,1) 0%,rgba(125,185,232,1) 100%)'
       }}
     >
-      <Flex direction={'row'} width={'100%'} pl={'6'} pt={'6'}>
-        <IconButton variant='ghost' style={{color: 'white'}} onClick={() => router.push(`/account/sales`)}>
-          <ArrowLeftIcon width={'35px'} height={'35px'} />
-        </IconButton>
-      </Flex>
-      <Flex direction='column' height={'40vh'} justify='center' align='center' width='100%' gap={'4'}>
-        <Heading style={{ color: 'white' }} size={'9'}>
-          New sale
-        </Heading>
+      <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'} style={{ backgroundColor: "#1E589A" }}>
+        <Heading size={'8'} style={{color: "white"}}>New Sale</Heading>
+        <BalanceProvider walletForPurchase={walletForPurchase}>
+          <Header
+            color={"white"}
+            merchant={currentUser?.merchant}
+            embeddedWallet={embeddedWallet}
+            authenticated={authenticated}
+            walletForPurchase={walletForPurchase}
+            currentUser={currentUser}
+          />
+        </BalanceProvider>
       </Flex>
       <Flex
         flexGrow={'1'}
@@ -222,6 +310,8 @@ export default function Sell() {
                   onMessageUpdate={handleMessageUpdate}
                   userId={user.id}
                   merchantFromParent={merchant}
+                  customers={currentRewardsCustomers}
+                  paymentMethods={paymentMethods}
                 />
               )
             ) : (
