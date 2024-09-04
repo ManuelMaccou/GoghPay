@@ -10,6 +10,11 @@ enum MilestoneType {
   NumberOfVisits = 'number_of_visits',
 }
 
+enum PaymentProvider {
+  Venmo = 'Venmo',
+  Zelle = 'Zelle',
+}
+
 export enum PaymentType {
   Venmo = 'Venmo',
   Zelle = 'Zelle',
@@ -44,7 +49,7 @@ export interface Merchant {
   taxes: Tax[];
   shopify?: Shopify;
   square?: Square;
-  paymentMethods: PaymentMethod[];
+  paymentMethods: PaymentMethod;
   rewards?: Rewards;
   branding: Branding;
 }
@@ -148,7 +153,18 @@ export interface RewardsCustomer {
 }
 
 export interface PaymentMethod {
-  type: PaymentType;
-  logo: string;
-  qrCode?: Buffer;
+  types: PaymentType[];
+  venmoQrCodeImage?: string;
+  zelleQrCodeImage?: string;
+}
+
+export interface QrCodeImage {
+  paymentProvider: PaymentProvider
+  contentType: string;
+  data: Buffer
+}
+
+export interface FileData {
+  url: string;
+  contentType: string;
 }

@@ -7,7 +7,7 @@ import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWal
 import { NewSaleForm } from './components/newSaleForm';
 import { Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text } from '@radix-ui/themes';
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentMethod } from '../types/types';
+import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType } from '../types/types';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { Header } from '../components/Header';
 import { useUser } from '../contexts/UserContext';
@@ -31,7 +31,7 @@ export default function Sell() {
   const [signedUrl, setSignedUrl] = useState('');
   const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentType[]>([]);
 
   const [currentRewardsCustomers, setCurrentRewardsCustomers] = useState<RewardsCustomer[]>([]);
   const [isFetchingCurrentRewardsCustomers, setIsFetchingCurrentRewardsCustomers] = useState<boolean>(true);
@@ -177,8 +177,8 @@ export default function Sell() {
   }, [authenticated, ready, currentUser, merchant]);
 
   useEffect(() => {
-    if (merchant && merchant.paymentMethods) {
-      setPaymentMethods(merchant.paymentMethods);
+    if (merchant && merchant.paymentMethods.types.length > 0) {
+      setPaymentMethods(merchant.paymentMethods.types);
     }
   }, [merchant]);
 
@@ -284,6 +284,7 @@ export default function Sell() {
         direction={'column'}
         justify={'between'}
         align={'center'}
+        height={'100%'}
         style={{
           backgroundColor: 'white',
           borderRadius: '20px 20px 0px 0px',
