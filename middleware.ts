@@ -53,6 +53,7 @@ export const config = {
     '/api/rewards/milestone',
     '/api/rewards/userRewards/:path*',
     '/api/square/user',
+    '/api/rewards/userRewards/customers',
   ]
 };
 

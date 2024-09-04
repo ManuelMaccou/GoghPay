@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     // Check if the user reward already exists to prevent duplicates
     const existingReward = await UserReward.findOne({
-      userId: userRewardData.userId,
+      customerId: userRewardData.customerId,
       merchantId: userRewardData.merchantId,
     });
 
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const userReward = new UserReward({
-      userId: userRewardData.userId,
+      customerId: userRewardData.customerId,
       merchantId: userRewardData.merchantId,
       totalSpent: userRewardData.totalSpent,
       visitsCount: userRewardData.visitsCount,

@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
 
     const response = await client.locationsApi.listLocations();
 
-    console.log(response.result);
     return new NextResponse(JSON.stringify(response.result), { status: 200 });
   } catch (error: unknown) {
     console.error('Error fetching locations:', error);

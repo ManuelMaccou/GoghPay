@@ -319,6 +319,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
       const accessToken = await getAccessToken();
       try {
+        console.log('customerID:', currentUser._id);
         const response = await fetch(`/api/rewards/userRewards`, {
           method: 'POST',
           headers: {
@@ -327,7 +328,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
           },
           body: JSON.stringify({ 
             privyId: currentUser?.privyId,
-            userId: currentUser._id,
+            customerId: currentUser._id,
             merchantId: merchantId,
             totalSpent: 0,
             visitsCount: 1,
@@ -358,7 +359,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       const accessToken = await getAccessToken();
 
       try {
-        const response = await fetch(`/api/rewards/userRewards/${merchantId}?currentUserId=${currentUser._id}&privyId=${currentUser.privyId}`, {
+        const response = await fetch(`/api/rewards/userRewards/${merchantId}?customerId=${currentUser._id}&privyId=${currentUser.privyId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

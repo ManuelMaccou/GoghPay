@@ -1,6 +1,14 @@
 import mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
+const paymentTypes = ['Venmo', 'Zelle', 'Square', 'ManualEntry', 'Cash'];
+
+const PaymentMethodSchema = new mongoose.Schema({
+  types: [{ type: String, enum: paymentTypes, required: true }],
+  venmoQrCodeImage: { type: String },
+  zelleQrCodeImage: { type: String },
+}, { timestamps: true });
+
 const SquareSchema = new mongoose.Schema({
   merchant_id: { type: String },
   location_id: { type: String },
@@ -60,6 +68,7 @@ const merchantSchema = new mongoose.Schema({
     accessToken: { type: String },
   },
   square: { type: SquareSchema },
+  paymentMethods: { type: PaymentMethodSchema },
   rewards: { type: RewardsSchema },
   branding: { type: BrandingSchema }
 

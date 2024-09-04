@@ -23,8 +23,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
-  const { setMerchant } = useMerchant();
-  const { merchant, isFetchingMerchant } = useMerchant();
+  const { merchant, isFetchingMerchant, setMerchant } = useMerchant();
   const { appUser, setIsFetchingUser } = useUser();
 
   const [currentUser, setCurrentUser] = useState<User>();
