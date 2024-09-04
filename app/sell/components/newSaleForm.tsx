@@ -453,7 +453,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
                               display: 'block',
                               objectFit: 'contain',
                               width: '100%',
-                              height: 'auto',
+                              height: '150px',
                               justifySelf: 'center'
                             }}
                           />
