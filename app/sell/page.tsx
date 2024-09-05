@@ -241,7 +241,7 @@ export default function Sell() {
       handleSquarePosPayment(newSaleFormData);
     }
 
-  }, [selectedPaymentMethod])
+  }, [newSaleFormData, selectedPaymentMethod])
 
   useEffect(() => {
     setShowVenmoDialog(selectedPaymentMethod === 'Venmo');
@@ -413,7 +413,7 @@ export default function Sell() {
                               style={{objectFit: "contain", maxWidth: '100%'}}
                               />
                             </Avatar.Root>
-                            <Text size={'7'}>Press continue when you're confirmed Venmo transaction</Text>
+                            <Text size={'7'}>Press continue when you&apos;ve confirmed Venmo transaction</Text>
                           </Flex>
                      
                         <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
