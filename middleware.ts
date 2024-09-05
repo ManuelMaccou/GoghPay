@@ -54,6 +54,7 @@ export const config = {
     '/api/rewards/userRewards/:path*',
     '/api/square/user',
     '/api/rewards/userRewards/customers',
+    '/api/square/payment/creditCard',
   ]
 };
 

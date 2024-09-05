@@ -295,7 +295,7 @@ function IntegrationsContent() {
     if (ready && authenticated) {
       fetchUser();
     }
-  }, [ready, authenticated, user?.id]); 
+  }, [ready, authenticated, user?.id, setMerchant]); 
 
   useEffect(() => {
     if(!merchant?.paymentMethods.venmoQrCodeImage) return
@@ -341,17 +341,16 @@ function IntegrationsContent() {
                       />
                     </Avatar.Root>
 
-                    <Dialog.Root open={showLocationDialog} onOpenChange={setShowLocationDialog}>
-                      <Dialog.Trigger>
+                    <AlertDialog.Root open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+                      <AlertDialog.Trigger>
                         <Button style={{ display: 'none' }} />
-                      </Dialog.Trigger>
-
-                      <Dialog.Content maxWidth="450px">
-                        <Dialog.Title>Select a location for inventory</Dialog.Title>
+                      </AlertDialog.Trigger>
+                      <AlertDialog.Content maxWidth="450px">
+                        <AlertDialog.Title>Select a location for inventory</AlertDialog.Title>
                         <VisuallyHidden>
-                          <Dialog.Description size="2" mb="4">
+                          <AlertDialog.Description size="2" mb="4">
                             Select a location for inventory.
-                          </Dialog.Description>
+                          </AlertDialog.Description>
                         </VisuallyHidden>
                         {!isFetchingLocations ? (
                           <RadioGroup.Root value={selectedLocation?.id || ''} onValueChange={(value) => setSelectedLocation(locations.find(loc => loc.id === value) || null)} name="locations">
@@ -364,21 +363,15 @@ function IntegrationsContent() {
                         ) : (
                           <Spinner />
                         )}
-                        
                         <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
-                          <Dialog.Close>
-                            <Button variant="ghost">
-                              Skip
-                            </Button>
-                          </Dialog.Close>
-                          <Dialog.Close>
+                          <AlertDialog.Action>
                             <Button onClick={handleLocationSelect}>
                                 Continue
                             </Button>
-                          </Dialog.Close>
+                          </AlertDialog.Action>
                         </Flex>
-                      </Dialog.Content>
-                    </Dialog.Root>
+                      </AlertDialog.Content>
+                    </AlertDialog.Root>
 
                     <Flex direction={'column'} gap={'4'}>
                       {!isFetchingLocations ? (

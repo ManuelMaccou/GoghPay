@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
           'userInfo.name': 1,
           'userInfo.email': 1,
           'userInfo.squareCustomerId': 1,
+          'userInfo.privyId': 1,
         }
       },
       { $sort: { lastVisit: -1 } }, // Sort by lastVisit in descending order

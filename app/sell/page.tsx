@@ -1,22 +1,32 @@
 'use client'
 
-import React, { useState, FormEvent, useEffect } from 'react';
+import React, { useState, FormEvent, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode.react';
 import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWallets } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
-import { Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text } from '@radix-ui/themes';
-import { ArrowLeftIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import * as Avatar from '@radix-ui/react-avatar';
+import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Inset, Link, Spinner, Strong, Text, VisuallyHidden } from '@radix-ui/themes';
+import { ExclamationTriangleIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType } from '../types/types';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { Header } from '../components/Header';
+import { CreditCardCheckout } from './components/CreditCardCheckout';
 import { useUser } from '../contexts/UserContext';
+
+interface SaleFormData {
+  product: string;
+  price: string;
+  tax: number;
+  merchant: string;
+  customer: RewardsCustomer | null;
+  sellerMerchant: Merchant | null;
+  paymentMethod: PaymentType;
+}
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
-
-
 
 export default function Sell() {
   const { appUser, setIsFetchingUser, setAppUser } = useUser();
@@ -33,6 +43,8 @@ export default function Sell() {
   const [ merchantVerified, setMerchantVerified ] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentType[]>([]);
 
+  const [newSaleFormData, setNewSaleFormData] = useState<SaleFormData | null>(null);
+
   const [currentRewardsCustomers, setCurrentRewardsCustomers] = useState<RewardsCustomer[]>([]);
   const [isFetchingCurrentRewardsCustomers, setIsFetchingCurrentRewardsCustomers] = useState<boolean>(true);
   const [errorFetchingRewards, setErrorFetchingRewards] = useState<string | null>(null);
@@ -46,6 +58,8 @@ export default function Sell() {
   const [error, setError] = useState<string | null>(null);
   const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentType | null>(null);
+  const [showVenmoDialog, setShowVenmoDialog] = useState(selectedPaymentMethod === 'Venmo');
   
 
   const router = useRouter();
@@ -74,13 +88,13 @@ export default function Sell() {
     setMessage(msg);
   };
 
-  const fetchCheckedInCustomers = async () => {
+  const fetchCheckedInCustomers = useCallback(async (merchantId: string) => {
     if (!currentUser) return;
     setIsFetchingCurrentRewardsCustomers(true)
     const accessToken = await getAccessToken();
 
     try {
-      const response = await fetch(`/api/rewards/userRewards/customers/?merchantId=${merchant?._id}&privyId=${currentUser.privyId}`, {
+      const response = await fetch(`/api/rewards/userRewards/customers/?merchantId=${merchantId}&privyId=${currentUser.privyId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +125,7 @@ export default function Sell() {
     } finally {
       setIsFetchingCurrentRewardsCustomers(false);
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     if (!ready || !authenticated) {
@@ -172,15 +186,66 @@ export default function Sell() {
 
   useEffect(() => {
     if (ready && authenticated && currentUser && merchant) {
-      fetchCheckedInCustomers();
+      fetchCheckedInCustomers(merchant._id);
     }
-  }, [authenticated, ready, currentUser, merchant]);
+  }, [authenticated, ready, currentUser, merchant, fetchCheckedInCustomers]);
 
   useEffect(() => {
     if (merchant && merchant.paymentMethods.types.length > 0) {
       setPaymentMethods(merchant.paymentMethods.types);
     }
   }, [merchant]);
+
+  useEffect(() => {
+    const handleSquarePosPayment = (newSaleFormData: SaleFormData | null) => {
+      const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback`;
+      const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!
+      
+      let priceInCents: number;
+      const priceNum = parseFloat(newSaleFormData?.price || "0");
+      if (newSaleFormData?.tax) {
+        priceInCents = (priceNum + (((newSaleFormData?.tax/100) * priceNum)) *100) * 100
+      } else {
+        priceInCents = priceNum * 100
+      }
+
+      const finalPrice = priceInCents.toString();
+
+      const dataParameter = {
+        amount_money: {
+          amount: finalPrice,
+          currency_code: 'USD',
+        },
+        callback_url: callbackUrl,
+        client_id: squareClientId,
+        version: "1.3",
+        notes: 'Thank you for your purchase!',
+        customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
+        options: {
+          supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+          auto_return: true,
+        },
+      };
+  
+      const url = `square-commerce-v1://payment/create?data=${encodeURIComponent(
+        JSON.stringify(dataParameter)
+      )}`;
+  
+      console.log("url:", url);
+  
+      // Redirect to Square Point of Sale app
+      window.location.href = url;
+    };
+
+    if (selectedPaymentMethod === 'Square') {
+      handleSquarePosPayment(newSaleFormData);
+    }
+
+  }, [selectedPaymentMethod])
+
+  useEffect(() => {
+    setShowVenmoDialog(selectedPaymentMethod === 'Venmo');
+  }, [selectedPaymentMethod]);
 
   /*
   useEffect(() => {
@@ -249,10 +314,28 @@ export default function Sell() {
       </Flex>
     );
   }
+
+  const handlePaymentMethodChange = (method: PaymentType) => {
+    setSelectedPaymentMethod(method);
+  };
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
   };
+
+  const handlePaymentSuccess = (result: any) => {
+    console.log('Payment successful!', result);
+    alert('Payment processed successfully!');
+  };
+
+  const handlePaymentFailure = (error: any) => {
+    console.error('Payment failed!', error);
+    alert('Payment failed. Please try again.');
+  };
+
+  const handleSaveVenmoPayment = () => {
+    //Placeholder
+  }
 
 
   return (
@@ -267,6 +350,7 @@ export default function Sell() {
     >
       <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'} style={{ backgroundColor: "#1E589A" }}>
         <Heading size={'8'} style={{color: "white"}}>New Sale</Heading>
+        
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             color={"white"}
@@ -296,25 +380,88 @@ export default function Sell() {
             isDeterminingMerchantStatus ? (
               <Spinner />
             ) : merchantVerified ? (
-              signedUrl ? (
-                <Card variant='classic'>
-                  <Flex direction={'column'} align={'center'} gap={'6'}>
-                    <QRCode value={signedUrl} size={256} level={'M'} includeMargin={true} />
-                    <Text size={'6'} weight={'bold'} align={'center'} aria-live='polite' role='status'>
-                      {message}
-                    </Text>
-                  </Flex>
-                </Card>
-              ) : (
-                <NewSaleForm
-                  onQrCodeGenerated={handleQrCodeGenerated}
-                  onMessageUpdate={handleMessageUpdate}
-                  userId={user.id}
-                  merchantFromParent={merchant}
-                  customers={currentRewardsCustomers}
-                  paymentMethods={paymentMethods}
-                />
-              )
+              <>
+                {newSaleFormData && selectedPaymentMethod === 'ManualEntry' && (
+                  <CreditCardCheckout
+                    formData={newSaleFormData}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentFailure={handlePaymentFailure}
+                  />
+                )}
+
+                {newSaleFormData && selectedPaymentMethod === 'Venmo' && (
+                  newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage ? (
+                    <AlertDialog.Root open={showVenmoDialog} onOpenChange={setShowVenmoDialog}>
+                      <AlertDialog.Trigger>
+                        <Button style={{ display: 'none' }} />
+                      </AlertDialog.Trigger>
+                      <AlertDialog.Content maxWidth="450px">
+                        <VisuallyHidden>
+                         <AlertDialog.Title>Venmo QR code</AlertDialog.Title>
+                        </VisuallyHidden>
+                        <VisuallyHidden>
+                          <AlertDialog.Description size="2" mb="4">
+                          Venmo QR code
+                          </AlertDialog.Description>
+                        </VisuallyHidden>
+                        
+                          <Flex direction={'column'} width={'100%'} align={'center'} gap={'9'}>
+                            <Avatar.Root>
+                              <Avatar.Image 
+                              src={ newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage }
+                              alt="Venmo QR code"
+                              style={{objectFit: "contain", maxWidth: '100%'}}
+                              />
+                            </Avatar.Root>
+                            <Text size={'7'}>Press continue when you're confirmed Venmo transaction</Text>
+                          </Flex>
+                     
+                        <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                          <AlertDialog.Cancel>
+                            <Button size={'4'} variant="ghost" 
+                              onClick={() => {
+                                setSelectedPaymentMethod(null),
+                                setNewSaleFormData(null)
+                              }}>
+                              Cancel
+                            </Button>
+                          </AlertDialog.Cancel>
+                          <AlertDialog.Action>
+                            <Button size={'4'} onClick={handleSaveVenmoPayment}>
+                                Confirm
+                            </Button>
+                          </AlertDialog.Action>
+                        </Flex>
+                      </AlertDialog.Content>
+                    </AlertDialog.Root>
+                  ) : (
+                    <Callout.Root color='red' mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'6'}>
+                        Venmo has not been configured. Please add your QR code in {" "} <Link href='/account/integrations'> <Strong>settings</Strong></Link>
+                      </Callout.Text>
+                    </Callout.Root>
+                  )
+                )}
+
+                {!newSaleFormData ? (
+                  <NewSaleForm
+                    onQrCodeGenerated={handleQrCodeGenerated}
+                    onMessageUpdate={handleMessageUpdate}
+                    userId={user.id}
+                    merchantFromParent={merchant}
+                    customers={currentRewardsCustomers}
+                    paymentMethods={paymentMethods}
+                    onNewSaleFormSubmit={(formData: SaleFormData) => {
+                      setNewSaleFormData(formData);
+                      handlePaymentMethodChange(formData.paymentMethod);
+                    }}
+                  />
+                ) : null}
+                  
+              </>
             ) : (
               <Flex direction={'column'} flexGrow={'1'} px={'5'} justify={'center'} align={'center'} gap={'9'}>
                 <Callout.Root color='red' role='alert'>

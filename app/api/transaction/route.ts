@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     await transaction.save();
 
-    return NextResponse.json({ message: 'Transaction saved successfully' }, { status: 200 });
+    return NextResponse.json({transaction, message: 'Transaction saved successfully' }, { status: 200 });
   } catch (error) {
     console.error('Error saving transaction:', error);
     return NextResponse.json({ error: 'Error saving transaction' }, { status: 500 });

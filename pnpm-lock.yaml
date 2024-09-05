@@ -50,6 +50,12 @@ dependencies:
   '@radix-ui/themes':
     specifier: ^3.0.5
     version: 3.0.5(@types/react-dom@18.3.0)(@types/react@18.3.2)(react-dom@18.3.1)(react@18.3.1)
+  '@square/web-payments-sdk-types':
+    specifier: ^1.60.7
+    version: 1.60.7
+  '@square/web-sdk':
+    specifier: ^2.0.1
+    version: 2.0.1
   '@stitches/react':
     specifier: ^1.2.8
     version: 1.2.8(react@18.3.1)
@@ -3563,6 +3569,19 @@ packages:
 
   /@simplewebauthn/types@9.0.1:
     resolution: {integrity: sha512-tGSRP1QvsAvsJmnOlRQyw/mvK9gnPtjEc5fg2+m8n+QUa+D7rvrKkOYyfpy42GTs90X3RDOnqJgfHt+qO67/+w==}
+    dev: false
+
+  /@square/web-payments-sdk-types@1.60.7:
+    resolution: {integrity: sha512-jIIfu4IKfby+8vmo2StV7HmBLK6teO0RDLrcUIPdR+bpSxuiJM+OxCinuT7V7/3zITEBQIXgDMHPKEv/gy4U5w==}
+    dependencies:
+      typescript: 4.9.5
+    dev: false
+
+  /@square/web-sdk@2.0.1:
+    resolution: {integrity: sha512-m+pauPLJUHO4qzBNKlHRMe+qDAhQdbEd7g/v/SW8BWZARwJC0liHB4AnVAJuM/7JMFEPiT2ZO3SRt1VQsCeoYg==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dependencies:
+      '@square/web-payments-sdk-types': 1.60.7
     dev: false
 
   /@stablelib/aead@1.0.1:
@@ -8478,6 +8497,12 @@ packages:
     resolution: {integrity: sha512-zdu8XMNEDepKKR+XYOXAVPtWui0ly0NtohUscw+UmaHiAWT8hrV1rr//H6V+0DvJ3OQ19S979M0laLfX8rm82Q==}
     dependencies:
       is-typedarray: 1.0.0
+    dev: false
+
+  /typescript@4.9.5:
+    resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
     dev: false
 
   /typescript@5.4.5:

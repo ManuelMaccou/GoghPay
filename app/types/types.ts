@@ -15,7 +15,23 @@ enum PaymentProvider {
   Zelle = 'Zelle',
 }
 
+export enum PaymentTypes {
+  Venmo = 'Venmo',
+  Zelle = 'Zelle',
+  Square = 'Square',
+  ManualEntry = 'ManualEntry',
+  SponsoredCrypto = 'sponsored crypto',
+  crypto = 'crypto',
+  MobilePay = 'mobile pay',
+}
+
+enum TransactionStatus {
+  PENDING = 'PENDING',
+  COMPLETE = 'COMPLETE',
+}
+
 export enum PaymentType {
+  None = 'None',
   Venmo = 'Venmo',
   Zelle = 'Zelle',
   Square = 'Square',
@@ -69,10 +85,11 @@ export interface Transaction {
   buyer: User;
   productName: string;
   productPrice: number;
-  tipAmount: number;
-  salesTax: number;
-  transactionHash: string;
-  paymentType: string; // 'sponsored crypto', 'crypto', 'mobile pay'
+  tipAmount?: number;
+  salesTax?: number;
+  transactionHash?: string;
+  paymentType: PaymentTypes;
+  status?: TransactionStatus;
   createdAt: Date;
 }
 
@@ -149,6 +166,7 @@ export interface RewardsCustomer {
     name: string,
     email: string,
     squareCustomerId: string,
+    privyId: string,
   }
 }
 
