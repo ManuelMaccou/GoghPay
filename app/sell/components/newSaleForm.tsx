@@ -18,6 +18,7 @@ interface NewSaleFormProps {
   customers: RewardsCustomer[];
   paymentMethods: PaymentType[];
   onNewSaleFormSubmit: (formData: SaleFormData) => void;
+  onStartNewSale: () => void;
 }
 
 interface SaleFormData {
@@ -38,6 +39,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   customers,
   paymentMethods,
   onNewSaleFormSubmit,
+  onStartNewSale,
 }) => {
   const [formData, setFormData] = useState<SaleFormData>({
     product: "",
@@ -144,8 +146,13 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   const handleSelectPaymentMethod = (paymentMethod: PaymentType) => {
     const updatedFormData = { ...formData, paymentMethod };
     setFormData(updatedFormData);
+    console.log('form data from venmo:', updatedFormData)
     
     onNewSaleFormSubmit(updatedFormData);
+  };
+
+  const handleResetParentMessages = () => {
+    onStartNewSale();
   };
 
   const validateAndFormatPrice = (price: string): string => {
@@ -368,6 +375,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
             size={'4'}
             style={{ width: '100%', marginBottom: '20px' }}
             type='submit'
+            onClick={handleResetParentMessages}
           >
             Checkout
           </Button>

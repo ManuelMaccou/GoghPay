@@ -140,7 +140,7 @@ export const CreditCardCheckout: React.FC<CheckoutProps> = ({
         isCardInitialized.current = false;
       }
     };
-  }, [applicationId, locationId]); 
+  }, [applicationId, locationId, card]); 
 
   const handlePaymentMethodSubmission = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -172,6 +172,8 @@ export const CreditCardCheckout: React.FC<CheckoutProps> = ({
   const saveTransaction = async () => {
     const accessToken = await getAccessToken();
     try {
+      const priceNum = parseFloat(formData.price);
+      const calculatedSalesTax = parseFloat(((formData.tax/100) * priceNum).toFixed(2));
       const response = await fetch('/api/transaction', {
         method: 'POST',
         headers: {
@@ -185,7 +187,7 @@ export const CreditCardCheckout: React.FC<CheckoutProps> = ({
           buyerPrivyId: formData.customer?.userInfo.privyId,
           productName: formData.product,
           productPrice: formData.price,
-          salesTax: formData.tax,
+          salesTax: calculatedSalesTax,
           paymentType: 'ManualEntry',
           status: 'PENDING'
         }),

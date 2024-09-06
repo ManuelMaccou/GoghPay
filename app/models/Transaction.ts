@@ -7,7 +7,7 @@ const transactionStatus = ['COMPLETE', 'PENDING'];
 const transactionSchema = new Schema({
   type: { type: String },
   merchant: { type: Schema.Types.ObjectId, ref: 'Merchant' },
-  buyer: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  buyer: { type: Schema.Types.ObjectId, ref: 'User' },
   productName: { type: String, required: true },
   productPrice: { type: Number, required: true },
   tipAmount: { type: Number },

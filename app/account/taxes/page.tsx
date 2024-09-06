@@ -26,6 +26,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
   const [merchant, setMerchant] = useState<Merchant>();
   const [transactiosnwithTaxes, setTransactiosnwithTaxes] = useState<Transaction[] | null>(null);
   const [totalTaxAmount, setTotalTaxAmount] = useState<number>(0);
+  const [totalTaxAmountExcludingCash, setTotalTaxAmountExcludingCash] = useState<number>(0);
   const [taxes, setTaxes] = useState<Tax[] | null>(null);
   const [selectedTax, setSelectedTax] = useState<Tax | null>(null); 
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
@@ -177,9 +178,14 @@ export default function Taxes({ params }: { params: { userId: string } }) {
 
   const getPaymentTypeInfo = (paymentType: string) => {
     const types: { [key: string]: { label: string; color: string } } = {
-      'sponsored crypto': { label: 'Crypto', color: '#4CAF50' },
-      'crypto': { label: 'Crypto', color: '#4CAF50' },
-      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' }
+      'sponsored crypto': { label: 'Crypto', color: '#8E004B' },
+      'crypto': { label: 'Crypto', color: '#8E004B' },
+      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' },
+      'Venmo': { label: 'Venmo', color: '#0084F7' },
+      'ManualEntry': { label: 'Manual CC', color: '#ea7100' },
+      'Cash': { label: 'Cash', color: '#4CAF50' },
+      'Square': { label: 'Square', color: '#000000' },
+      'Zelle': { label: 'Zelle', color: '##6C1CD3' },
     };
     return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
   };
@@ -255,14 +261,22 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         // Filter transactions to get all the taxes
         console.log('sortedTotalTransactions', sortedTotalTransactions);
         const transactionsWithTaxes = sortedTotalTransactions
-          .filter((transaction: Transaction) => transaction.salesTax !== undefined && transaction.salesTax !== null);
+          .filter((transaction: Transaction) => transaction.salesTax !== undefined && transaction.salesTax !== null && transaction.salesTax !== 0);
 
+        const transactionsWithTaxesExcludingCash = sortedTotalTransactions
+          .filter((transaction: Transaction) => transaction.salesTax !== undefined && transaction.salesTax !== null && transaction.salesTax !== 0 && transaction.paymentType !== "Cash");
+        
         const totalTaxAmount = transactionsWithTaxes.reduce((sum: number, transaction: Transaction) => {
+          return sum + (transaction.salesTax || 0);
+        }, 0);
+
+        const totalTaxAmountExcludingCash = transactionsWithTaxesExcludingCash.reduce((sum: number, transaction: Transaction) => {
           return sum + (transaction.salesTax || 0);
         }, 0);
 
         setTransactiosnwithTaxes(transactionsWithTaxes);
         setTotalTaxAmount(totalTaxAmount);
+        setTotalTaxAmountExcludingCash(totalTaxAmountExcludingCash);
 
       } catch (err) {
         if (isError(err)) {
@@ -391,14 +405,25 @@ export default function Taxes({ params }: { params: { userId: string } }) {
                 </Table.Root>
               </Box>
             </Flex>
-            <Flex direction={'row'} justify={'between'} width={'100%'} mb={'4'}>
-              <Text weight={'bold'} size={'3'}>
-                Total sales tax collected:
-              </Text>
-              <Text>
-                ${totalTaxAmount.toFixed(2)}
-              </Text>
+            <Flex direction={'column'} width={'100%'} gap={'4'}>
+              <Flex direction={'row'} justify={'between'} width={'100%'}>
+                <Text weight={'bold'} size={'3'}>
+                  Total sales tax collected:
+                </Text>
+                <Text>
+                  ${totalTaxAmount.toFixed(2)}
+                </Text>
+              </Flex>
+              <Flex direction={'row'} justify={'between'} width={'100%'} mb={'4'}>
+                <Text weight={'bold'} size={'3'}>
+                  Total sales tax collected (excluding cash):
+                </Text>
+                <Text>
+                  ${totalTaxAmountExcludingCash.toFixed(2)}
+                </Text>
+              </Flex>
             </Flex>
+            
           </>
         ) : authenticated && !merchant ? (
           <Flex direction={"column"} flexGrow={"1"} px={"5"} justify={"center"} align={"center"} gap={"9"}>

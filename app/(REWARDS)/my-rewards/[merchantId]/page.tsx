@@ -320,7 +320,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       const accessToken = await getAccessToken();
       try {
         console.log('customerID:', currentUser._id);
-        const response = await fetch(`/api/rewards/userRewards`, {
+        const response = await fetch(`/api/rewards/userRewards/create`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -331,7 +331,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
             customerId: currentUser._id,
             merchantId: merchantId,
             totalSpent: 0,
-            visitsCount: 1,
+            purchaseCount: 0,
             lastVisit: new Date().toISOString(),
           })
         });
@@ -369,7 +369,6 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
         if (response.ok) {
           const userRewardsData = await response.json();
-          console.log('rewards datat from get:', userRewardsData)
           setCurrentUserMerchantRewards(userRewardsData);
         } else {
           if (response.status === 404) {

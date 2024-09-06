@@ -23,6 +23,7 @@ export enum PaymentTypes {
   SponsoredCrypto = 'sponsored crypto',
   crypto = 'crypto',
   MobilePay = 'mobile pay',
+  Cash = 'Cash',
 }
 
 enum TransactionStatus {
@@ -85,9 +86,9 @@ export interface Transaction {
   buyer: User;
   productName: string;
   productPrice: number;
-  tipAmount?: number;
-  salesTax?: number;
-  transactionHash?: string;
+  tipAmount: number;
+  salesTax: number;
+  transactionHash: string;
   paymentType: PaymentTypes;
   status?: TransactionStatus;
   createdAt: Date;
@@ -148,18 +149,22 @@ export interface Branding {
 }
 
 export interface UserReward {
+  _id: string;
   customerId: string;
   merchantId: string;
   totalSpent: number;
-  visitsCount: number;
+  purchaseCount: number;
   lastVisit: Date;
-  currentTier: string;
+  currentDiscount: {
+    type: DiscountType;
+    amount: number;
+  }
   nextTier: string;
 }
 
 export interface RewardsCustomer {
   totalSpent: number,
-  visitsCount: number,
+  purchaseCount: number,
   lastVisit: Date,
   userInfo: {
     _id: string,
@@ -185,4 +190,14 @@ export interface QrCodeImage {
 export interface FileData {
   url: string;
   contentType: string;
+}
+
+export interface SaleFormData {
+  product: string;
+  price: string;
+  tax: number;
+  merchant: string;
+  customer: RewardsCustomer | null;
+  sellerMerchant: Merchant | null;
+  paymentMethod: PaymentType;
 }

@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/app/utils/mongodb';
 import { UserReward } from '@/app/models/UserReward';
-import User from '@/app/models/User';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -50,9 +49,10 @@ export async function GET(request: NextRequest) {
           _id: 1,
           merchantId: 1,
           totalSpent: 1,
-          visitsCount: 1,
+          purchaseCount: 1,
           lastVisit: 1,
-          currentTier: 1,
+          'currentDiscount.type': 1,
+          'currentDiscount.amount': 1,
           nextTier: 1,
           'userInfo._id': 1, // Include specific fields from the User document
           'userInfo.name': 1,

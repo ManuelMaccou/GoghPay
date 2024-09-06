@@ -8,21 +8,13 @@ import { NewSaleForm } from './components/newSaleForm';
 import * as Avatar from '@radix-ui/react-avatar';
 import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Inset, Link, Spinner, Strong, Text, VisuallyHidden } from '@radix-ui/themes';
 import { ExclamationTriangleIcon, InfoCircledIcon } from '@radix-ui/react-icons';
-import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType } from '../types/types';
+import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType, SaleFormData } from '../types/types';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { Header } from '../components/Header';
 import { CreditCardCheckout } from './components/CreditCardCheckout';
 import { useUser } from '../contexts/UserContext';
-
-interface SaleFormData {
-  product: string;
-  price: string;
-  tax: number;
-  merchant: string;
-  customer: RewardsCustomer | null;
-  sellerMerchant: Merchant | null;
-  paymentMethod: PaymentType;
-}
+import { logAdminError } from '../utils/logAdminError';
+import { ApiError } from '../utils/ApiError';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -59,8 +51,13 @@ export default function Sell() {
   const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentType | null>(null);
-  const [showVenmoDialog, setShowVenmoDialog] = useState(selectedPaymentMethod === 'Venmo');
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
+  const [successMessage1, setSuccessMessage1] = useState<string | null>(null);
+  const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
+  
+  const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
 
   const router = useRouter();
 
@@ -243,9 +240,11 @@ export default function Sell() {
 
   }, [newSaleFormData, selectedPaymentMethod])
 
+  /*
   useEffect(() => {
     setShowVenmoDialog(selectedPaymentMethod === 'Venmo');
   }, [selectedPaymentMethod]);
+  */
 
   /*
   useEffect(() => {
@@ -317,10 +316,21 @@ export default function Sell() {
 
   const handlePaymentMethodChange = (method: PaymentType) => {
     setSelectedPaymentMethod(method);
+    if (method === 'Venmo') {
+      setShowVenmoDialog(true);
+    }
+    console.log('selected pay meth:', selectedPaymentMethod);
+    console.log('new sale form data:', newSaleFormData);
   };
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
+  };
+
+  const handleResetMessages = () => {
+    setSuccessMessage1(null);
+    setSuccessMessage2(null);
+    setErrorMessage(null);
   };
 
   const handlePaymentSuccess = (result: any) => {
@@ -333,10 +343,114 @@ export default function Sell() {
     alert('Payment failed. Please try again.');
   };
 
-  const handleSaveVenmoPayment = () => {
-    //Placeholder
-  }
 
+  const handleSaveVenmoPayment = async (newSaleFormData: SaleFormData) => {
+    const accessToken = await getAccessToken();
+
+    if (newSaleFormData.customer) {
+      try {
+        const response = await fetch(`/api/rewards/userRewards/update`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            privyId: currentUser?.privyId,
+            purchaseData: newSaleFormData,
+          }),
+        });
+
+    
+        if (!response.ok) {
+          const errorData = await response.json();
+          setNewSaleFormData(null);
+          setErrorMessage('There was an error updating the customer rewards. We have received the error and are looking into it.');
+    
+          const apiError = new ApiError(
+            `API Error: ${response.status} - ${response.statusText} - ${errorData.message || 'Unknown Error'}`,
+            response.status,
+            errorData
+          );
+      
+          await logAdminError(merchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction`, {
+            message: apiError.message,
+            status: apiError.status,
+            responseBody: apiError.responseBody,
+            stack: apiError.stack,
+          });
+      
+          console.error(apiError);
+        } else {
+          const result = await response.json();
+          setSuccessMessage1('Customer rewards have been saved.');
+          setNewSaleFormData(null);
+          console.log('Rewards updated successfully:', result);
+        }
+      } catch (error) {
+        // Catch any other errors and log them with their full details
+        await logAdminError(merchant?._id, `Attempting to update user rewards`, {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      
+        console.error(error);
+      }
+    }
+    try {
+      const priceNum = parseFloat(newSaleFormData.price);
+      const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
+      const response = await fetch(`/api/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: currentUser?.privyId,
+          buyerPrivyId: currentUser?.privyId,
+          merchantId: newSaleFormData.sellerMerchant?._id,
+          productName: newSaleFormData.product,
+          productPrice: newSaleFormData.price,
+          salesTax: calculatedSalesTax,
+          paymentType: newSaleFormData.paymentMethod,
+          status: (newSaleFormData.paymentMethod === 'Venmo' || newSaleFormData.paymentMethod === 'Zelle') ? "COMPLETE" : "PENDING",
+        }),
+      });
+  
+      if (!response.ok) {
+        setNewSaleFormData(null);
+        setErrorMessage('There was an error saving the transaction. We have received the error and are looking into it.');
+        const errorData = await response.json();
+        
+        const apiError = new ApiError(
+          `API Error: ${response.status} - ${response.statusText} - ${errorData.message || 'Unknown Error'}`,
+          response.status,
+          errorData
+        );
+    
+        await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
+          message: apiError.message,
+          status: apiError.status,
+          responseBody: apiError.responseBody,
+          stack: apiError.stack,
+        });
+    
+        console.error(error);
+      } else {
+        const result = await response.json();
+        setSuccessMessage2('Transaction saved.');
+        setNewSaleFormData(null);
+        console.log('Transaction saved successfully:', result);
+      }
+    } catch (error) {
+
+      await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+  };
 
   return (
     <Flex
@@ -413,22 +527,26 @@ export default function Sell() {
                               style={{objectFit: "contain", maxWidth: '100%'}}
                               />
                             </Avatar.Root>
-                            <Text size={'7'}>Press continue when you&apos;ve confirmed Venmo transaction</Text>
+                            <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
                           </Flex>
                      
                         <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
                           <AlertDialog.Cancel>
                             <Button size={'4'} variant="ghost" 
                               onClick={() => {
-                                setSelectedPaymentMethod(null),
-                                setNewSaleFormData(null)
+                                setSelectedPaymentMethod(null);
+                                setNewSaleFormData(null);
                               }}>
                               Cancel
                             </Button>
                           </AlertDialog.Cancel>
                           <AlertDialog.Action>
-                            <Button size={'4'} onClick={handleSaveVenmoPayment}>
-                                Confirm
+                            <Button size={'4'} 
+                              onClick={() => {
+                                handleSaveVenmoPayment(newSaleFormData);
+                                setShowVenmoDialog(false);
+                              }}>
+                              Confirm
                             </Button>
                           </AlertDialog.Action>
                         </Flex>
@@ -458,8 +576,45 @@ export default function Sell() {
                       setNewSaleFormData(formData);
                       handlePaymentMethodChange(formData.paymentMethod);
                     }}
+                    onStartNewSale={handleResetMessages}
                   />
                 ) : null}
+
+                <Flex direction={'column'} gap={'4'}>
+                  {successMessage1 && (
+                    <Callout.Root color='green' mx={'4'}>
+                    <Callout.Icon>
+                      <InfoCircledIcon />
+                    </Callout.Icon>
+                    <Callout.Text size={'6'}>
+                      {successMessage1}
+                    </Callout.Text>
+                  </Callout.Root>
+                  )}
+
+                  {successMessage2 && (
+                    <Callout.Root color='green' mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'6'}>
+                        {successMessage2}
+                      </Callout.Text>
+                    </Callout.Root>
+                  )}
+
+                  {errorMessage && (
+                    <Callout.Root color='red' mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'6'}>
+                        {errorMessage}
+                      </Callout.Text>
+                    </Callout.Root>
+                  )}
+                </Flex>
+                
                   
               </>
             ) : (

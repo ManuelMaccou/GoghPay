@@ -1,12 +1,17 @@
 import mongoose, { Schema } from 'mongoose';
 
+const discountType = ['dollar', 'percent'];
+
 const UserRewardSchema = new Schema({
   customerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   merchantId: { type: Schema.Types.ObjectId, ref: 'Merchant', required: true },
   totalSpent: { type: Number, default: 0 }, 
-  visitsCount: { type: Number, default: 0 },
+  purchaseCount: { type: Number, default: 0 },
   lastVisit: { type: Date },
-  currentTier: { type: String },
+  currentDiscount: {
+    type: { type: String, enum: discountType },
+    amount: { type: Number }
+  },
   nextTier: { type: String },
 });
 

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       customerId: userRewardData.customerId,
       merchantId: userRewardData.merchantId,
       totalSpent: userRewardData.totalSpent,
-      visitsCount: userRewardData.visitsCount,
+      purchaseCount: userRewardData.purchaseCount,
       lastVisit: userRewardData.lastVisit,
     });
 
