@@ -365,6 +365,17 @@ export default function ManualCreditCardPayment() {
           console.error('Error updating transaction details:', updateError);
         }
 
+        if (formData && formData.customer) {
+          try {
+            const updatedRewards = await updateRewards(formData);
+            if (!updatedRewards) {
+              console.error('Failed to updating rewards after transaction.');
+            }
+          } catch (updateError) {
+            console.error('Failed to updating rewards after transaction:', updateError);
+          }
+        }
+        
         return responseData;
 
       }
@@ -439,6 +450,65 @@ export default function ManualCreditCardPayment() {
       return false;
     }
   }
+
+  const updateRewards = async (formData: SaleFormData | null) => {
+    console.log('updating rewards after manual cc.')
+    const accessToken = await getAccessToken();
+    if (!formData || !formData.customer) {
+      await logAdminError('Unknown seller', 'Missing form data to update rewards after a manual credit card transaction.', { error: 'No formData provided' });
+      console.error('missing form data to update rewards')
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/rewards/userRewards/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: currentUser?.privyId,
+          purchaseData: formData,
+        }),
+      });
+
+      const responseData = await response.json();
+      const serializedError = await serializeError(responseData.error);
+
+      if (!response.ok) {
+        
+        setErrorMessage1('There was an error updating the customer rewards. We have received the error and are looking into it.');
+  
+        const apiError = new ApiError(
+          `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+          response.status,
+          responseData
+        );
+    
+        await logAdminError(formData.sellerMerchant?._id,
+          `Updating user rewards during ${formData.paymentMethod} transaction. User: ${formData.customer.userInfo._id}. Amount: ${formData.price}.`,
+          serializedError
+        );
+
+        console.error(apiError);
+        return false;
+      } else {
+        setSuccessMessage1('Customer rewards have been saved.');
+        console.log('Rewards updated successfully:', responseData);
+
+        return true;
+      }
+    } catch (error) {
+      // Catch any other errors and log them with their full details
+      await logAdminError(formData.sellerMerchant?._id, `Updating user rewards during ${formData.paymentMethod} transaction. User: ${formData.customer.userInfo._id}. Amount: ${formData.price}.`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    
+      console.error(error);
+      return false;
+    }
+  }
   
 
   if (sessionStorageError || !formData) {
@@ -499,7 +569,7 @@ export default function ManualCreditCardPayment() {
 
         {error && <p className="error">{error}</p>}
         <Flex mb={'5'} id="payment-status-container"></Flex>
-        <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading} style={{width: '100%'}}>
+        <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed} style={{width: '100%'}}>
           {isLoading ? 'Processing...' : `Charge $${formData?.price || 0}`}
         </Button>
 
