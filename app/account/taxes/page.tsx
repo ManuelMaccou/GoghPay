@@ -185,7 +185,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
       'ManualEntry': { label: 'Manual CC', color: '#ea7100' },
       'Cash': { label: 'Cash', color: '#4CAF50' },
       'Square': { label: 'Square', color: '#000000' },
-      'Zelle': { label: 'Zelle', color: '##6C1CD3' },
+      'Zelle': { label: 'Zelle', color: '#6C1CD3' },
     };
     return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
   };

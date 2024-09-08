@@ -3,12 +3,14 @@ import { createSquareClient } from '@/app/lib/square';
 import { v4 as uuidv4 } from 'uuid';
 import Merchant from '@/app/models/Merchant';
 import { decrypt } from '@/app/lib/encrypt-decrypt';
+import JSONBig from 'json-bigint';
+import { serializeError } from '@/app/utils/logAdminError';
 
 export async function POST(req: NextRequest) {
 
   console.log("Processing payment with token");
 
-  const { privyId, merchantId, locationId, sourceId, customerId, price, transactionId } = await req.json();
+  const { privyId, merchantId, locationId, sourceId, customerId, priceInCents, transactionId } = await req.json();
   const idempotencyKey = uuidv4();
 
   if (!merchantId) {
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
       sourceId: sourceId,
       idempotencyKey: idempotencyKey,
       amountMoney: {
-        amount: price,
+        amount: BigInt(Math.round(priceInCents)),
         currency: 'USD'
       },
       autocomplete: true,
@@ -49,22 +51,58 @@ export async function POST(req: NextRequest) {
       note: 'Gogh initiated credit card payment'
     });
 
+    // Check if there are errors in the response
     if (response.result.errors) {
-      console.error('Error creating credit card payment:', response.result.errors);
-      return new NextResponse(JSON.stringify({ error: response.result.errors }), { status: 500 });
+      console.error('Payment failed with errors:', response.result.errors);
+
+      // Extract and return the error details
+      const errorDetail = response.result.errors.map((error) => ({
+        code: error.code,
+        detail: error.detail,
+        category: error.category,
+      }));
+
+      return new NextResponse(
+        JSON.stringify({
+          message: 'Payment failed',
+          errors: errorDetail,
+          status: 'FAILED',
+        }),
+        { status: 400 }
+      );
     }
 
+    // Handle successful payment
     const creditCardPaymentResponse = response.result.payment;
 
-    if (creditCardPaymentResponse) {
-      
-      return new NextResponse(JSON.stringify({ creditCardPaymentResponse }), { status: 200 });
+    if (creditCardPaymentResponse?.status === 'COMPLETED') {
+      const sanitizedResponse = JSONBig.stringify(creditCardPaymentResponse);
+      return new NextResponse(sanitizedResponse, { status: 200 });
     } else {
-      return new NextResponse('Error creating credit card payment:', { status: 404 });
+      // Handle unexpected status
+      console.error('Unexpected payment status:', creditCardPaymentResponse?.status);
+      return new NextResponse(
+        JSON.stringify({
+          message: 'Payment status unexpected',
+          status: creditCardPaymentResponse?.status || 'Unknown',
+        }),
+        { status: 500 }
+      );
     }
 
-  } catch (error) {
-    console.error('Error creating credit card payment:', error);
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    // Check if the error status code is available and return appropriate status
+    if (error.statusCode && error.statusCode === 400) {
+      console.error('Client error occurred:', error);
+      return NextResponse.json(
+        { message: 'Client error occurred', details: error.body },
+        { status: 400 }
+      );
+    }
+
+    const serializedError = await serializeError(error);
+    // Log and return the error as a server error if no specific status code is found
+    console.error('Server error creating credit card payment:', error);
+    return NextResponse.json({ message: "Internal Server Error",  error: serializedError }, { status: 500 });
   }
 }

@@ -91,6 +91,7 @@ export interface Transaction {
   transactionHash: string;
   paymentType: PaymentTypes;
   status?: TransactionStatus;
+  squarePaymentId?: string;
   createdAt: Date;
 }
 

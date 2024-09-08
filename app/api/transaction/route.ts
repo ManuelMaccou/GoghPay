@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   await connectToDatabase();
 
   try {
-    const { buyerId, buyerPrivyId, merchantId, productName, productPrice, paymentType, tipAmount, salesTax, transactionHash } = await req.json();
+    const { buyerId, buyerPrivyId, merchantId, productName, productPrice, paymentType, tipAmount, salesTax, status, transactionHash } = await req.json();
     const privyId = req.headers.get('x-user-id');
 
     if (!privyId) {
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       salesTax,
       paymentType,
       transactionHash,
+      status,
     });
 
     await transaction.save();

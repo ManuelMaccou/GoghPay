@@ -146,7 +146,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   const handleSelectPaymentMethod = (paymentMethod: PaymentType) => {
     const updatedFormData = { ...formData, paymentMethod };
     setFormData(updatedFormData);
-    console.log('form data from venmo:', updatedFormData)
+    console.log('Updated form data:', updatedFormData)
     
     onNewSaleFormSubmit(updatedFormData);
   };
@@ -397,6 +397,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                   <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsPaymentsDialogOpen(false)}/>
                 </Flex>
                 <Dialog.Title mb={'5'}>Select payment method</Dialog.Title>
+                <VisuallyHidden><Dialog.Description>Select payment method</Dialog.Description></VisuallyHidden>
                 {paymentMethods.length > 0 ? (
                   <Grid
                     columns={{ initial: '2', xs: '2' }} // Responsive grid columns
@@ -408,13 +409,13 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                         key={paymentMethod}
                         variant="surface"
                         onClick={() => handleSelectPaymentMethod(paymentMethod)}
-                        style={{ cursor: 'pointer', padding: '1.5rem', alignContent: 'center', height: '150px' }}
+                        style={{ cursor: 'pointer', padding: '1.5rem', alignContent: 'center', height: '150px', position: 'relative' }}
                       >
                         <Image
                           src={paymentTypeLogos[paymentMethod]}
                           alt={paymentMethod}
-                          fill={true}
-                          objectFit='contain'
+                          fill
+                          sizes='300px'
                           style={{
                             display: 'block',
                             objectFit: 'contain',

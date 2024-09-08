@@ -14,6 +14,7 @@ const transactionSchema = new Schema({
   salesTax: { type: Number },
   paymentType: { type: String, enum: paymentTypes, required: true },
   status: { type: String, enum: transactionStatus },
+  squarePaymentId: { type: String },
   transactionHash: { type: String },
 }, { timestamps: true });
 

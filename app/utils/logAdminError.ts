@@ -1,4 +1,4 @@
-'use server'
+'use server';
 
 import AdminError from "../models/AdminError";
 
@@ -11,19 +11,18 @@ import AdminError from "../models/AdminError";
 export const logAdminError = async (
   merchantId: string | undefined,
   attemptedTask: string,
-  error: { message: string; status?: number; stack?: string; responseBody?: any }
+  error: any // Accept any type of error to ensure flexibility
 ) => {
   try {
-    const { message, stack } = error;
-    
-    console.error(`Failed during ${attemptedTask} for merchant ${merchantId}: ${message}`);
+    const errorMessage = error instanceof Error ? error.stack || error.message : String(error);
 
-    // Store the error in the database
+    console.error(`Failed during ${attemptedTask} for merchant ${merchantId}:`, errorMessage);
+
+    // Store the error in the database (async operation)
     await AdminError.create({
       merchantId,
       attemptedTask,
-      errorMessage: message,
-      errorStack: stack,
+      errorMessage: errorMessage || "Unknown error", // Ensure the message is not null
       timestamp: new Date(),
     });
   } catch (logError) {
@@ -31,3 +30,22 @@ export const logAdminError = async (
   }
 };
 
+/**
+ * Serializes an error object to ensure all details are captured.
+ * Although it does not perform async tasks, it must still be async due to Next.js server requirements.
+ */
+export const serializeError = async (error: any) => {
+  if (error instanceof Error) {
+    const { message, stack, name, ...otherProperties } = error;
+
+    return {
+      message,
+      stack,
+      name,
+      ...otherProperties // Spread remaining properties
+    };
+  }
+
+  // If it's not an instance of Error, return a string or JSON.
+  return typeof error === 'object' ? JSON.stringify(error) : String(error);
+};

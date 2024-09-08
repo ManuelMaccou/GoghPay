@@ -73,6 +73,11 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                   <VisuallyHidden>
                     <Dialog.Title>Menu</Dialog.Title>
                   </VisuallyHidden>
+                  <VisuallyHidden>
+                    <Dialog.Description>
+                      Menu
+                    </Dialog.Description>
+                  </VisuallyHidden>
                   <Flex direction={'row'} justify={'between'} flexGrow={'1'}>
                     {embeddedWallet && authenticated ? (
                       <Card variant="ghost" mb={'3'}>
@@ -90,6 +95,16 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                                 <Button variant="ghost">Show address</Button>
                               </Dialog.Trigger>
                               <Dialog.Content size={'3'} maxWidth={'300px'}>
+                                <VisuallyHidden>
+                                  <Dialog.Title>
+                                    Show address
+                                  </Dialog.Title>
+                                </VisuallyHidden>
+                                <VisuallyHidden>
+                                  <Dialog.Description>
+                                    Show address
+                                  </Dialog.Description>
+                                </VisuallyHidden>
                                 <Text as="p" trim="both" size="1">
                                   {currentUser?.smartAccountAddress}
                                 </Text>
@@ -114,6 +129,16 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                                 <Button variant="ghost">Show address</Button>
                               </Dialog.Trigger>
                               <Dialog.Content size={'3'} maxWidth={'300px'}>
+                                <VisuallyHidden>
+                                  <Dialog.Title>
+                                    Show address
+                                  </Dialog.Title>
+                                </VisuallyHidden>
+                                <VisuallyHidden>
+                                  <Dialog.Description>
+                                    Show address
+                                  </Dialog.Description>
+                                </VisuallyHidden>
                                 <Text as="p" trim="both" size="1">
                                   {walletForPurchase}
                                 </Text>

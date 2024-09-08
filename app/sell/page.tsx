@@ -11,7 +11,6 @@ import { ExclamationTriangleIcon, InfoCircledIcon } from '@radix-ui/react-icons'
 import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType, SaleFormData } from '../types/types';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { Header } from '../components/Header';
-import { CreditCardCheckout } from './components/CreditCardCheckout';
 import { useUser } from '../contexts/UserContext';
 import { logAdminError } from '../utils/logAdminError';
 import { ApiError } from '../utils/ApiError';
@@ -58,6 +57,7 @@ export default function Sell() {
   const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
   
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
+  const [showZelleDialog, setShowZelleDialog] = useState<boolean>(false);
 
   const router = useRouter();
 
@@ -200,10 +200,12 @@ export default function Sell() {
       
       let priceInCents: number;
       const priceNum = parseFloat(newSaleFormData?.price || "0");
+      
       if (newSaleFormData?.tax) {
-        priceInCents = (priceNum + (((newSaleFormData?.tax/100) * priceNum)) *100) * 100
+        const taxAmount = (newSaleFormData.tax / 100) * priceNum;
+        priceInCents = (priceNum + taxAmount) * 100;
       } else {
-        priceInCents = priceNum * 100
+        priceInCents = priceNum * 100;
       }
 
       const finalPrice = priceInCents.toString();
@@ -305,22 +307,17 @@ export default function Sell() {
     }
   };
 
-  // Spinner shown during loading state
-  if (isLoading) {
-    return (
-      <Flex height={'100vh'} direction={'column'} align={'center'} justify={'center'} flexGrow={'1'}>
-        <Spinner />
-      </Flex>
-    );
-  }
-
-  const handlePaymentMethodChange = (method: PaymentType) => {
+  const handlePaymentMethodChange = (method: PaymentType, newSaleForm: SaleFormData) => {
     setSelectedPaymentMethod(method);
+    console.log('method:', method);
     if (method === 'Venmo') {
       setShowVenmoDialog(true);
+    } else if (method === 'Zelle') {
+      setShowZelleDialog(true);
+    } else if (method === 'ManualEntry') {
+      sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
+      router.push('/checkout/manual');
     }
-    console.log('selected pay meth:', selectedPaymentMethod);
-    console.log('new sale form data:', newSaleFormData);
   };
   
   const handleQrCodeGenerated = (url: string) => {
@@ -344,7 +341,7 @@ export default function Sell() {
   };
 
 
-  const handleSaveVenmoPayment = async (newSaleFormData: SaleFormData) => {
+  const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
     const accessToken = await getAccessToken();
 
     if (newSaleFormData.customer) {
@@ -459,10 +456,10 @@ export default function Sell() {
       minHeight='100vh'
       width='100%'
       style={{
-        background: 'linear-gradient(to bottom, rgba(30,87,153,1) 0%,rgba(125,185,232,1) 100%)'
+        background: 'linear-gradient(to bottom, #1e5799 0%,#2989d8 50%,#207cca 51%,#7db9e8 100%)'
       }}
     >
-      <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'} style={{ backgroundColor: "#1E589A" }}>
+      <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
         <Heading size={'8'} style={{color: "white"}}>New Sale</Heading>
         
         <BalanceProvider walletForPurchase={walletForPurchase}>
@@ -494,15 +491,7 @@ export default function Sell() {
             isDeterminingMerchantStatus ? (
               <Spinner />
             ) : merchantVerified ? (
-              <>
-                {newSaleFormData && selectedPaymentMethod === 'ManualEntry' && (
-                  <CreditCardCheckout
-                    formData={newSaleFormData}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentFailure={handlePaymentFailure}
-                  />
-                )}
-
+              <>         
                 {newSaleFormData && selectedPaymentMethod === 'Venmo' && (
                   newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage ? (
                     <AlertDialog.Root open={showVenmoDialog} onOpenChange={setShowVenmoDialog}>
@@ -511,7 +500,7 @@ export default function Sell() {
                       </AlertDialog.Trigger>
                       <AlertDialog.Content maxWidth="450px">
                         <VisuallyHidden>
-                         <AlertDialog.Title>Venmo QR code</AlertDialog.Title>
+                          <AlertDialog.Title>Venmo QR code</AlertDialog.Title>
                         </VisuallyHidden>
                         <VisuallyHidden>
                           <AlertDialog.Description size="2" mb="4">
@@ -519,17 +508,17 @@ export default function Sell() {
                           </AlertDialog.Description>
                         </VisuallyHidden>
                         
-                          <Flex direction={'column'} width={'100%'} align={'center'} gap={'9'}>
-                            <Avatar.Root>
-                              <Avatar.Image 
-                              src={ newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage }
-                              alt="Venmo QR code"
-                              style={{objectFit: "contain", maxWidth: '100%'}}
-                              />
-                            </Avatar.Root>
-                            <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
-                          </Flex>
-                     
+                        <Flex direction={'column'} width={'100%'} align={'center'} gap={'9'}>
+                          <Avatar.Root>
+                            <Avatar.Image 
+                            src={ newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage }
+                            alt="Venmo QR code"
+                            style={{objectFit: "contain", maxWidth: '100%'}}
+                            />
+                          </Avatar.Root>
+                          <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
+                        </Flex>
+                       
                         <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
                           <AlertDialog.Cancel>
                             <Button size={'4'} variant="ghost" 
@@ -543,7 +532,7 @@ export default function Sell() {
                           <AlertDialog.Action>
                             <Button size={'4'} 
                               onClick={() => {
-                                handleSaveVenmoPayment(newSaleFormData);
+                                handleSavePaymentAndUpdateRewards(newSaleFormData);
                                 setShowVenmoDialog(false);
                               }}>
                               Confirm
@@ -552,7 +541,7 @@ export default function Sell() {
                         </Flex>
                       </AlertDialog.Content>
                     </AlertDialog.Root>
-                  ) : (
+                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage && (
                     <Callout.Root color='red' mx={'4'}>
                       <Callout.Icon>
                         <InfoCircledIcon />
@@ -564,6 +553,67 @@ export default function Sell() {
                   )
                 )}
 
+                {newSaleFormData && selectedPaymentMethod === 'Zelle' && (
+                  newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage ? (
+                    <AlertDialog.Root open={showZelleDialog} onOpenChange={setShowZelleDialog}>
+                      <AlertDialog.Trigger>
+                        <Button style={{ display: 'none' }} />
+                      </AlertDialog.Trigger>
+                      <AlertDialog.Content maxWidth="450px">
+                        <VisuallyHidden>
+                          <AlertDialog.Title>Zelle QR code</AlertDialog.Title>
+                        </VisuallyHidden>
+                        <VisuallyHidden>
+                          <AlertDialog.Description size="2" mb="4">
+                          Zelle QR code
+                          </AlertDialog.Description>
+                        </VisuallyHidden>
+                        
+                        <Flex direction={'column'} width={'100%'} align={'center'} gap={'9'}>
+                          <Avatar.Root>
+                            <Avatar.Image 
+                            src={ newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage }
+                            alt="Zelle QR code"
+                            style={{objectFit: "contain", maxWidth: '100%'}}
+                            />
+                          </Avatar.Root>
+                          <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
+                        </Flex>
+                       
+                        <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                          <AlertDialog.Cancel>
+                            <Button size={'4'} variant="ghost" 
+                              onClick={() => {
+                                setSelectedPaymentMethod(null);
+                                setNewSaleFormData(null);
+                              }}>
+                              Cancel
+                            </Button>
+                          </AlertDialog.Cancel>
+                          <AlertDialog.Action>
+                            <Button size={'4'} 
+                              onClick={() => {
+                                handleSavePaymentAndUpdateRewards(newSaleFormData);
+                                setShowZelleDialog(false);
+                              }}>
+                              Confirm
+                            </Button>
+                          </AlertDialog.Action>
+                        </Flex>
+                      </AlertDialog.Content>
+                    </AlertDialog.Root>
+                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage && (
+                    <Callout.Root color='red' mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'6'}>
+                        Zelle has not been configured. Please add your QR code in {" "} <Link href='/account/integrations'> <Strong>settings</Strong></Link>
+                      </Callout.Text>
+                    </Callout.Root>
+                  )
+                )} 
+                
                 {!newSaleFormData ? (
                   <NewSaleForm
                     onQrCodeGenerated={handleQrCodeGenerated}
@@ -574,7 +624,7 @@ export default function Sell() {
                     paymentMethods={paymentMethods}
                     onNewSaleFormSubmit={(formData: SaleFormData) => {
                       setNewSaleFormData(formData);
-                      handlePaymentMethodChange(formData.paymentMethod);
+                      handlePaymentMethodChange(formData.paymentMethod, formData);
                     }}
                     onStartNewSale={handleResetMessages}
                   />
@@ -614,31 +664,29 @@ export default function Sell() {
                     </Callout.Root>
                   )}
                 </Flex>
-                
-                  
-              </>
-            ) : (
-              <Flex direction={'column'} flexGrow={'1'} px={'5'} justify={'center'} align={'center'} gap={'9'}>
-                <Callout.Root color='red' role='alert'>
-                  <Callout.Icon>
-                    <ExclamationTriangleIcon />
-                  </Callout.Icon>
-                  <Callout.Text>
-                    <Strong>Unauthorized.</Strong> This page is for merchants only. You can{' '}
-                    <Link href='https://www.ongogh.com' target='_blank' rel='noopener noreferrer'>
-                      request access here.
-                    </Link>
-                      If you think this is a mistake, please{' '}
-                    <Link href='mailto: hello@ongogh.com' target='_blank' rel='noopener noreferrer'>
-                      contact us.
-                    </Link>
-                  </Callout.Text>
-                </Callout.Root>
-                <Button onClick={logout} style={{ width: '250px' }} size={'4'}>
-                  Log out
-                </Button>
-              </Flex>
-            )
+                </>
+              ) : (
+                <Flex direction={'column'} flexGrow={'1'} px={'5'} justify={'center'} align={'center'} gap={'9'}>
+                  <Callout.Root color='red' role='alert'>
+                    <Callout.Icon>
+                      <ExclamationTriangleIcon />
+                    </Callout.Icon>
+                    <Callout.Text>
+                      <Strong>Unauthorized.</Strong> This page is for merchants only. You can{' '}
+                      <Link href='https://www.ongogh.com' target='_blank' rel='noopener noreferrer'>
+                        request access here.
+                      </Link>
+                        If you think this is a mistake, please{' '}
+                      <Link href='mailto: hello@ongogh.com' target='_blank' rel='noopener noreferrer'>
+                        contact us.
+                      </Link>
+                    </Callout.Text>
+                  </Callout.Root>
+                  <Button onClick={logout} style={{ width: '250px' }} size={'4'}>
+                    Log out
+                  </Button>
+                </Flex>
+              )
           ) : null
         ) : (
           <Button size={'4'} style={{ width: '250px' }} onClick={login}>
