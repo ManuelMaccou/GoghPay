@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Payments } from '@square/web-sdk';
 import { Merchant, PaymentType, RewardsCustomer, SaleFormData, User } from '@/app/types/types';
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { logAdminError, serializeError } from '@/app/utils/logAdminError';
 import { ApiError } from '@/app/utils/ApiError';
-import { Button, Callout, Flex, Heading, Text } from '@radix-ui/themes';
+import { Button, Callout, Flex, Heading, Strong, Text } from '@radix-ui/themes';
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { BalanceProvider } from '@/app/contexts/BalanceContext';
 import { Header } from '@/app/components/Header';
@@ -14,6 +15,7 @@ import { useUser } from '@/app/contexts/UserContext';
 import Transaction from '@/app/models/Transaction';
 
 export default function ManualCreditCardPayment() {
+  const router = useRouter();
   const { appUser, setIsFetchingUser, setAppUser } = useUser();
   const { ready, authenticated, user, login } = usePrivy();
   const [currentUser, setCurrentUser] = useState<User>();
@@ -83,10 +85,10 @@ export default function ManualCreditCardPayment() {
   }, []);
 
   useEffect(() => {
-    if (transactionSaved && paymentProcessed) {
+    if (paymentProcessed) {
       sessionStorage.removeItem('newSaleFormData');
     }
-  }, [transactionSaved, paymentProcessed]);
+  }, [paymentProcessed]);
 
   useEffect(() => {
 
@@ -240,7 +242,6 @@ export default function ManualCreditCardPayment() {
       } else {
         transactionId = responseData.transaction._id;
         setTransactionSaved(true);
-        setSuccessMessage1('Transaction saved.');
         console.log('save cc transaction response:', responseData)
       }
     } catch (error) {
@@ -555,7 +556,6 @@ export default function ManualCreditCardPayment() {
         flexGrow={'1'}
         py={'7'}
         direction={'column'}
-        justify={'between'}
         align={'center'}
         height={'100%'}
         style={{
@@ -564,65 +564,108 @@ export default function ManualCreditCardPayment() {
           boxShadow: 'var(--shadow-6)'
         }}
       >
-      <form id="payment-form" onSubmit={handlePaymentMethodSubmission}>
-        <Flex direction={'column'} id="card-container" ref={cardContainerRef} align={'center'}></Flex>
-
-        {error && <p className="error">{error}</p>}
-        <Flex mb={'5'} id="payment-status-container"></Flex>
-        <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed} style={{width: '100%'}}>
-          {isLoading ? 'Processing...' : `Charge $${formData?.price || 0}`}
-        </Button>
-
-        <Flex direction={'column'} gap={'4'} mt={'5'}>
-          
-          {successMessage2 && (
-            <Callout.Root color='green' mx={'4'}>
-              <Callout.Icon>
-                <InfoCircledIcon />
-              </Callout.Icon>
-              <Callout.Text size={'6'}>
-                {successMessage2}
-              </Callout.Text>
-            </Callout.Root>
+        
+        <Flex direction={'column'} maxHeight={'max-content'} mb={'5'} width={'90%'}>
+          {formData && formData.customer?.userInfo.email && (
+            <Text size={'5'}>Customer: <Strong>{formData.customer?.userInfo.email}</Strong></Text>
           )}
-
-          {successMessage1 && (
-            <Callout.Root color='green' mx={'4'}>
-              <Callout.Icon>
-                <InfoCircledIcon />
-              </Callout.Icon>
-              <Callout.Text size={'6'}>
-                {successMessage1}
-              </Callout.Text>
-            </Callout.Root>
-          )}
-
-
-          {errorMessage1 && (
-            <Callout.Root color='red' mx={'4'}>
-              <Callout.Icon>
-                <InfoCircledIcon />
-              </Callout.Icon>
-              <Callout.Text size={'6'}>
-                {errorMessage1}
-              </Callout.Text>
-            </Callout.Root>
-          )}
-
-          {errorMessage2 && (
-            <Callout.Root color='red' mx={'4'}>
-              <Callout.Icon>
-                <InfoCircledIcon />
-              </Callout.Icon>
-              <Callout.Text size={'6'}>
-                {errorMessage2}
-              </Callout.Text>
-            </Callout.Root>
+          <Text size={'5'}>Product: <Strong>{formData.product}</Strong></Text>
+          <Text size={'5'}>Price: <Strong>${formData.price}</Strong></Text>
+          {formData && formData.tax && (
+            <Text size={'5'}>Sales tax: <Strong>${(formData.tax/100 * (parseFloat(formData.price) || 0)).toFixed(2)}</Strong></Text>
           )}
         </Flex>
         
-      </form>
-    </Flex>
+        <Flex direction={'column'} width={'90%'}>
+          <form id="payment-form" onSubmit={handlePaymentMethodSubmission}>
+            <style>
+              {`
+                #card-container .sq-card-wrapper {
+                  width: 100% !important;
+                  max-width: none !important;
+                }
+              `}
+            </style>
+            <Flex width={'100%'} direction={'column'} id="card-container" ref={cardContainerRef} align={'center'}></Flex>
+
+            {error && <p className="error">{error}</p>}
+            <Flex mb={'5'} id="payment-status-container"></Flex>
+            <Flex direction={'column'} gap={'8'} justify={'center'}>
+              <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed} style={{width: '100%'}}>
+              {isLoading 
+                ? 'Processing...' 
+                : `Charge $${(
+                    (parseFloat(formData?.price) || 0) + 
+                    (formData?.tax ? (formData.tax / 100) * (parseFloat(formData.price) || 0) : 0)
+                  ).toFixed(2)}`
+              }
+              </Button>
+              <Button
+                variant='ghost'
+                size={'4'}
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent any form submission or validation
+                  router.back(); // Navigate back
+                }}
+              >
+                Cancel
+              </Button>
+            </Flex>
+            
+
+
+            <Flex direction={'column'} gap={'4'} mt={'5'}>
+              
+              {successMessage2 && (
+                <Callout.Root color='green' mx={'4'}>
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text size={'6'}>
+                    {successMessage2}
+                  </Callout.Text>
+                </Callout.Root>
+              )}
+
+              {successMessage1 && (
+                <Callout.Root color='green' mx={'4'}>
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text size={'6'}>
+                    {successMessage1}
+                  </Callout.Text>
+                </Callout.Root>
+              )}
+
+
+              {errorMessage1 && (
+                <Callout.Root color='red' mx={'4'}>
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text size={'6'}>
+                    {errorMessage1}
+                  </Callout.Text>
+                </Callout.Root>
+              )}
+
+              {errorMessage2 && (
+                <Callout.Root color='red' mx={'4'}>
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text size={'6'}>
+                    {errorMessage2}
+                  </Callout.Text>
+                </Callout.Root>
+              )}
+            </Flex>
+            
+          </form>
+        </Flex>
+          
+      </Flex>
     </Flex>
   );
 };

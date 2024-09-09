@@ -2,10 +2,10 @@
 
 import { getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRouter } from 'next/navigation';
-import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Link, Spinner, Strong, Text, TextField, VisuallyHidden } from "@radix-ui/themes";
+import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Link, SegmentedControl, Spinner, Strong, Text, TextField, VisuallyHidden } from "@radix-ui/themes";
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { User, RewardsTier } from "@/app/types/types";
+import { User, RewardsTier, Rewards } from "@/app/types/types";
 import { useEffect, useState } from "react";
 import { useMerchant } from "@/app/contexts/MerchantContext";
 import { useUser } from "@/app/contexts/UserContext";
@@ -197,7 +197,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
         const updatedMerchant = data.merchant; 
         setMerchant(updatedMerchant);
         setAddNewMilestone(false);
-        setFormData({ name: '', milestone: '', discount: '' });
+        setFormData({ name: '', milestone: '', discount: ''});
   
       } else {
         setErrorMessage(data.message || 'There was an error updating the rewards. Please refresh and try again.');
@@ -236,7 +236,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     setFormData({ 
       name: tier.name, 
       milestone: String(tier.milestone), 
-      discount: String(tier.discount) 
+      discount: String(tier.discount), 
     });
     setAddNewMilestone(true);
   };
@@ -253,12 +253,20 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   };
 
   return (
-    <Flex direction={'column'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'}>
-      {isFetchingMerchant && <Spinner />}
-
-      {ready && (
+    <Flex 
+      direction='column'
+      position='relative'
+      minHeight='100vh'
+      width='100%'
+      style={{
+        background: 'linear-gradient(to bottom, #ff962d 0%,#ff7b0d 12%)'
+      }}
+    >
+      <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
+        <Heading size={'8'} style={{color: "white"}}>Rewards</Heading>
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
+            color={"white"}
             merchant={currentUser?.merchant}
             embeddedWallet={embeddedWallet}
             authenticated={authenticated}
@@ -266,76 +274,79 @@ export default function ManageRewards({ params }: { params: { merchantId: string
             currentUser={currentUser}
           />
         </BalanceProvider>
-      )}
-      {ready && authenticated ? (
-        currentUser && !isFetchingMerchant && merchant ? (
-          <>
-            {currentRewardsTiers.length === 0 && !addNewMilestone && !isLoading ? (
-                <Flex direction={'column'} align={'center'} justify={'center'} gap={'5'} height={'100%'}>
-                  <Heading>Gogh Rewards</Heading>
+      </Flex>
+      <Flex
+        flexGrow={'1'}
+        p={'7'}
+        direction={'column'}
+        gap={'5'}
+        align={'center'}
+        height={'100%'}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '20px 20px 0px 0px',
+          boxShadow: 'var(--shadow-6)'
+        }}
+      >
+        {ready && authenticated ? (
+          currentUser && !isFetchingMerchant && merchant ? (
+            !addNewMilestone ? (
+
+              currentRewardsTiers.length === 0 && !isLoading ? (
+                <>
                   <Text size={'5'} align={'center'}>
                     Incentivize your customers to spend more and visit often with automated rewards. 
                     You&apos;ll configure your reward milestones once and discounts will be automatically applied 
-                    at checkout for in-person and online sales.
+                    at checkout for in-person sales. Rewards for online sales coming soon.
                   </Text>
                   <Button style={{width: '250px'}} onClick={() => setAddNewMilestone(true)}>
                     Get Started
                   </Button>
-                </Flex>
-            ) : currentRewardsTiers.length > 0 && !addNewMilestone && (
-              <>
-                <Heading>Manage Rewards</Heading>
-                <Text>When a customer reaches a milestone, they will be rewarded with a discount on future purchases.</Text>
+                </>
+              ) : currentRewardsTiers.length > 0 && !isLoading ? (
+                <>
+                  <Heading>Manage Rewards</Heading>
+                  <Text>When a customer reaches a milestone, they will be rewarded with a discount on future purchases.</Text>
 
-                <Flex direction={'column'} maxHeight={'55vh'} overflow={'scroll'} gap={'3'}>
-                  {currentRewardsTiers
-                  .sort((a, b) => a.milestone - b.milestone) // Sort by milestone in ascending order
-                  .map((tier) => (
-                    <Card key={tier._id} variant="surface" style={{ flexShrink: 0 }}>
-                      <Flex direction={'row'} gap={'3'} width={'100%'} justify={'between'} height={'80px'}>
-                        <Flex direction={'column'} gap={'3'} flexGrow={'1'}>
-                          <Text as="div" size="2" weight="bold">
-                            {tier.name}
-                          </Text>
-                          <Text as="div" color="gray" size="2">
-                            Amount to spend: ${tier.milestone}
-                          </Text>
-
-                          <Flex direction={'row'} width={'100%'} justify={'between'} flexGrow={'1'}>
-                          <Text as="div" color="gray" size="2">
-                            Discount: {tier.discount}%
-                          </Text>
-
-
-                          
+                  <Flex direction={'column'} width={'100%'} maxHeight={'55vh'} overflow={'scroll'} gap={'3'}>
+                    {currentRewardsTiers
+                    .sort((a, b) => a.milestone - b.milestone) // Sort by milestone in ascending order
+                    .map((tier) => (
+                      <Card key={tier._id} variant="surface" style={{ flexShrink: 0 }}>
+                        <Flex direction={'row'} gap={'3'} width={'100%'} justify={'between'} height={'80px'}>
+                          <Flex direction={'column'} gap={'3'} flexGrow={'1'}>
+                            <Text as="div" size="2" weight="bold">
+                              {tier.name}
+                            </Text>
+                            <Text as="div" color="gray" size="2">
+                              Amount to spend: ${tier.milestone}
+                            </Text>
+                            <Flex direction={'row'} width={'100%'} justify={'between'} flexGrow={'1'}>
+                              <Text as="div" color="gray" size="2">
+                                Discount: {tier.discount}%
+                              </Text>
+                            </Flex>
                           </Flex>
-
+                          <Flex direction={'column'} justify={'between'} flexShrink={'1'}>
+                            <IconButton variant="ghost" size={'3'} onClick={() => handleModify(tier)}>
+                              <Pencil2Icon width={'22'} height={'22'} />
+                            </IconButton>
+                          </Flex>
                         </Flex>
-                        <Flex direction={'column'} justify={'between'} flexShrink={'1'}>
-
-
-                         
-                          <IconButton variant="ghost" size={'3'} onClick={() => handleModify(tier)}>
-                            <Pencil2Icon width={'22'} height={'22'} />
-                          </IconButton>
-                        </Flex>
-                      </Flex>
-                    </Card>
-                  ))}
-                </Flex>
-
-                <Button variant="ghost" 
-                  onClick={() => {
-                    setAddNewMilestone(true);
-                    setRewardsUpdateOperation('add');
-                  }}>
-                  + add milestone
-                </Button>
-              </>
-            )}
-
-            {addNewMilestone && (
-              <Flex direction={'column'} align={'center'} justify={'between'} minWidth={'70%'} height={'100%'}>
+                      </Card>
+                    ))}
+                  </Flex>
+                  <Button variant="ghost" 
+                    onClick={() => {
+                      setAddNewMilestone(true);
+                      setRewardsUpdateOperation('add');
+                    }}>
+                    + add milestone
+                  </Button>
+                </>
+              ) : null
+            ) : (
+              <Flex direction={'column'} align={'center'} justify={'between'} width={'100%'} height={'100%'}>
                 <form onSubmit={handleSubmit} className={styles.formGroup}>
                   <Flex direction={'column'} justify={'center'}>
                     <label htmlFor="name" className={styles.formLabel}>
@@ -346,7 +357,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       mb={'5'}
                       mt={'1'}
                       type="text"
-                      size={'2'}
+                      size={'3'}
                       name="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -359,7 +370,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       mb={'5'}
                       mt={'1'}
                       type="number"
-                      size={'2'}
+                      size={'3'}
                       name="milestone"
                       value={formData.milestone}
                       onChange={(e) => setFormData({ ...formData, milestone: e.target.value })}
@@ -377,7 +388,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       mb={'5'}
                       mt={'1'}
                       type="number"
-                      size={'2'}
+                      size={'3'}
                       name="discount"
                       value={formData.discount}
                       onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
@@ -395,48 +406,47 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                         <RocketIcon />
                       </Callout.Icon>
                         {!formData.discount && !formData.milestone && (
-                          <Callout.Text align={'left'}>The customer must spend...</Callout.Text>
+                          <Callout.Text size={'3'} align={'left'}>The customer must spend...</Callout.Text>
                         )}
-
+      
                         {!formData.discount && formData.milestone && (
-                          <Callout.Text>
+                          <Callout.Text size={'3'}>
                             The customer must spend ${formData.milestone} to receive
                             a discount of...
                           </Callout.Text>
                         )}
-
+      
                         {formData.discount && !formData.milestone && (
-                          <Callout.Text>
+                          <Callout.Text size={'3'}>
                             The customer must spend... to receive
                             a discount of {formData.discount}% on all future purchases 
                           </Callout.Text>
                         )}
-
+      
                         {formData.discount && formData.milestone && (
-                          <Callout.Text>
+                          <Callout.Text size={'3'}>
                             The customer must spend ${formData.milestone} to receive
                             a discount of {formData.discount}% on all future purchases
                           </Callout.Text>
                         )}
                     </Callout.Root>
                     <Flex direction={'column'} mt={'5'} justify={'center'}>
-                    {errorMessage && <Text align={'center'} color="red">{errorMessage}</Text>}
+                      {errorMessage && <Text align={'center'} color="red">{errorMessage}</Text>}
                     </Flex>
-                   
+                  
                     <Flex direction={'row'} justify={'between'} align={'center'} mt={'6'} mb={'7'}>
-                     
-                      <Button variant="ghost" style={{width: '50%'}}
+                      <Button variant="ghost" size={'4'} style={{width: '150px'}}
                         onClick={() => {
                           setAddNewMilestone(false); 
                           setErrorMessage("")
                         }}>
                         Cancel
                       </Button>
-                      <Button my={'4'} type="submit" loading={isLoading} style={{width: '50%'}}>
+                      <Button my={'4'} size={'4'} type="submit" loading={isLoading} style={{width: '150px'}}>
                         Submit
                       </Button>
                     </Flex>
-
+      
                     {rewardsUpdateOperation === 'modify' && (
                       <AlertDialog.Root>
                         <AlertDialog.Trigger>
@@ -449,7 +459,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                           <AlertDialog.Description size="2">
                             Delete rewards milestone?
                           </AlertDialog.Description>
-
+      
                           <Flex gap="3" mt="4" justify='between'>
                             <AlertDialog.Cancel>
                               <Button variant="soft" color="gray">
@@ -465,41 +475,43 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                         </AlertDialog.Content>
                       </AlertDialog.Root>
                     )}
-                
                   </Flex>
                 </form>
               </Flex>
-            )}
+            )
+          ) : currentUser && !isFetchingMerchant && !merchant ? (
+          <>
+            <Callout.Root color='red' role='alert'>
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text>
+                <Strong>Unauthorized.</Strong> This page is for merchants only. You can{' '}
+                <Link href='https://www.ongogh.com' target='_blank' rel='noopener noreferrer'>
+                  request access here.
+                </Link>
+                  If you think this is a mistake, please{' '}
+                <Link href='mailto: hello@ongogh.com' target='_blank' rel='noopener noreferrer'>
+                  contact us.
+                </Link>
+              </Callout.Text>
+            </Callout.Root>
+            <Button variant="ghost" style={{ width: '250px' }} size={'4'}  onClick={() => router.push("/")}>
+              Return home
+            </Button>
           </>
-        ) : (
-          currentUser && !isFetchingMerchant && !merchant && (
-            <>
-              <Callout.Root color='red' role='alert'>
-                <Callout.Icon>
-                  <ExclamationTriangleIcon />
-                </Callout.Icon>
-                <Callout.Text>
-                  <Strong>Unauthorized.</Strong> This page is for merchants only. You can{' '}
-                  <Link href='https://www.ongogh.com' target='_blank' rel='noopener noreferrer'>
-                    request access here.
-                  </Link>
-                    If you think this is a mistake, please{' '}
-                  <Link href='mailto: hello@ongogh.com' target='_blank' rel='noopener noreferrer'>
-                    contact us.
-                  </Link>
-                </Callout.Text>
-              </Callout.Root>
-              <Button variant="ghost" style={{ width: '250px' }} size={'4'}  onClick={() => router.push("/")}>
-                Return home
-              </Button>
-            </>
-          )
-        )
+        ) : null
+
+        
+    
       ) : ready && !authenticated && (
         <Button variant="ghost" style={{ width: '250px' }} size={'4'}  onClick={() => router.push("/")}>
           Please log in to view this page
         </Button>
       )}
+
+      
+      </Flex>
     </Flex>
   )
 }

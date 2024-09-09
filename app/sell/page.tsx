@@ -35,6 +35,7 @@ export default function Sell() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentType[]>([]);
 
   const [newSaleFormData, setNewSaleFormData] = useState<SaleFormData | null>(null);
+  const [showNewSaleForm, setShowNewSaleForm] = useState<boolean>(true);
 
   const [currentRewardsCustomers, setCurrentRewardsCustomers] = useState<RewardsCustomer[]>([]);
   const [isFetchingCurrentRewardsCustomers, setIsFetchingCurrentRewardsCustomers] = useState<boolean>(true);
@@ -58,6 +59,7 @@ export default function Sell() {
   
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
   const [showZelleDialog, setShowZelleDialog] = useState<boolean>(false);
+  const [showCashDialog, setShowCashDialog] = useState<boolean>(false);
 
   const router = useRouter();
 
@@ -312,13 +314,43 @@ export default function Sell() {
     console.log('method:', method);
     if (method === 'Venmo') {
       setShowVenmoDialog(true);
+      sessionStorage.removeItem('newSaleFormData');
+
     } else if (method === 'Zelle') {
       setShowZelleDialog(true);
+      sessionStorage.removeItem('newSaleFormData');
+
+    } else if (method === 'Cash') {
+      setShowCashDialog(true);
+      sessionStorage.removeItem('newSaleFormData');
+
     } else if (method === 'ManualEntry') {
       sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
       router.push('/checkout/manual');
     }
   };
+
+  useEffect(() => {
+    const storedData = sessionStorage.getItem('newSaleFormData');
+    
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setNewSaleFormData(parsedData);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Clear sessionStorage on page refresh
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem('newSaleFormData');
+    };
+  
+    window.addEventListener('beforeunload', handleBeforeUnload);
+  
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
@@ -343,6 +375,7 @@ export default function Sell() {
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
     const accessToken = await getAccessToken();
+    console.log('status before transaction:', newSaleFormData.paymentMethod)
 
     if (newSaleFormData.customer) {
       try {
@@ -362,6 +395,7 @@ export default function Sell() {
         if (!response.ok) {
           const errorData = await response.json();
           setNewSaleFormData(null);
+          setShowNewSaleForm(true);
           setErrorMessage('There was an error updating the customer rewards. We have received the error and are looking into it.');
     
           const apiError = new ApiError(
@@ -382,6 +416,7 @@ export default function Sell() {
           const result = await response.json();
           setSuccessMessage1('Customer rewards have been saved.');
           setNewSaleFormData(null);
+          setShowNewSaleForm(true);
           console.log('Rewards updated successfully:', result);
         }
       } catch (error) {
@@ -405,18 +440,20 @@ export default function Sell() {
         },
         body: JSON.stringify({
           privyId: currentUser?.privyId,
-          buyerPrivyId: currentUser?.privyId,
+          buyerPrivyId: currentUser?.privyId, // Needs to be the current user for auth purposes. Special case since the merchant is triggering the purchase for the buyer
+          buyerId: newSaleFormData.customer?.userInfo._id,
           merchantId: newSaleFormData.sellerMerchant?._id,
           productName: newSaleFormData.product,
           productPrice: newSaleFormData.price,
           salesTax: calculatedSalesTax,
           paymentType: newSaleFormData.paymentMethod,
-          status: (newSaleFormData.paymentMethod === 'Venmo' || newSaleFormData.paymentMethod === 'Zelle') ? "COMPLETE" : "PENDING",
+          status: (newSaleFormData.paymentMethod === 'Venmo' || newSaleFormData.paymentMethod === 'Zelle' || newSaleFormData.paymentMethod === 'Cash') ? "COMPLETE" : "PENDING",
         }),
       });
   
       if (!response.ok) {
         setNewSaleFormData(null);
+        setShowNewSaleForm(true);
         setErrorMessage('There was an error saving the transaction. We have received the error and are looking into it.');
         const errorData = await response.json();
         
@@ -438,6 +475,8 @@ export default function Sell() {
         const result = await response.json();
         setSuccessMessage2('Transaction saved.');
         setNewSaleFormData(null);
+        setShowNewSaleForm(true);
+        sessionStorage.removeItem('newSaleFormData');
         console.log('Transaction saved successfully:', result);
       }
     } catch (error) {
@@ -524,7 +563,7 @@ export default function Sell() {
                             <Button size={'4'} variant="ghost" 
                               onClick={() => {
                                 setSelectedPaymentMethod(null);
-                                setNewSaleFormData(null);
+                                setShowNewSaleForm(true);
                               }}>
                               Cancel
                             </Button>
@@ -585,7 +624,7 @@ export default function Sell() {
                             <Button size={'4'} variant="ghost" 
                               onClick={() => {
                                 setSelectedPaymentMethod(null);
-                                setNewSaleFormData(null);
+                                setShowNewSaleForm(true);
                               }}>
                               Cancel
                             </Button>
@@ -613,8 +652,58 @@ export default function Sell() {
                     </Callout.Root>
                   )
                 )} 
+
+                {newSaleFormData && selectedPaymentMethod === 'Cash' && (
+                  <AlertDialog.Root open={showCashDialog} onOpenChange={setShowCashDialog}>
+                    <AlertDialog.Trigger>
+                      <Button style={{ display: 'none' }} />
+                    </AlertDialog.Trigger>
+                    <AlertDialog.Content maxWidth="450px">
+                      <VisuallyHidden>
+                        <AlertDialog.Title>Cash payment</AlertDialog.Title>
+                      </VisuallyHidden>
+                      <VisuallyHidden>
+                        <AlertDialog.Description size="2" mb="4">
+                          Cash payment
+                        </AlertDialog.Description>
+                      </VisuallyHidden>
+                      
+                      <Flex direction={'column'} width={'100%'} align={'center'} justify={'center'} gap={'9'}>
+                        <Avatar.Root>
+                          <Avatar.Image 
+                            src={ '/paymentMethodLogos/cash.png' }
+                            alt="Cash payment logo"
+                            style={{objectFit: "contain", maxWidth: '50%'}}
+                          />
+                        </Avatar.Root>
+                        <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
+                      </Flex>
+                      
+                      <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                        <AlertDialog.Cancel>
+                          <Button size={'4'} variant="ghost" 
+                            onClick={() => {
+                              setSelectedPaymentMethod(null);
+                              setShowNewSaleForm(true);
+                            }}>
+                            Cancel
+                          </Button>
+                        </AlertDialog.Cancel>
+                        <AlertDialog.Action>
+                          <Button size={'4'} 
+                            onClick={() => {
+                              handleSavePaymentAndUpdateRewards(newSaleFormData);
+                              setShowZelleDialog(false);
+                            }}>
+                            Confirm
+                          </Button>
+                        </AlertDialog.Action>
+                      </Flex>
+                    </AlertDialog.Content>
+                  </AlertDialog.Root>
+                )} 
                 
-                {!newSaleFormData ? (
+                {showNewSaleForm ? (
                   <NewSaleForm
                     onQrCodeGenerated={handleQrCodeGenerated}
                     onMessageUpdate={handleMessageUpdate}
@@ -623,10 +712,12 @@ export default function Sell() {
                     customers={currentRewardsCustomers}
                     paymentMethods={paymentMethods}
                     onNewSaleFormSubmit={(formData: SaleFormData) => {
+                      setShowNewSaleForm(false);
                       setNewSaleFormData(formData);
                       handlePaymentMethodChange(formData.paymentMethod, formData);
                     }}
                     onStartNewSale={handleResetMessages}
+                    formData={newSaleFormData}
                   />
                 ) : null}
 

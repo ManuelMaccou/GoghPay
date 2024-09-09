@@ -17,6 +17,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized user' }, { status: 403 });
     }
 
+    console.log('status in transaction:', status);
+
 
     const transaction = new Transaction({
       merchant: merchantId,

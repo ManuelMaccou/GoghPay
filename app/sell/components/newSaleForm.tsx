@@ -19,6 +19,7 @@ interface NewSaleFormProps {
   paymentMethods: PaymentType[];
   onNewSaleFormSubmit: (formData: SaleFormData) => void;
   onStartNewSale: () => void;
+  formData: SaleFormData | null;
 }
 
 interface SaleFormData {
@@ -40,15 +41,16 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   paymentMethods,
   onNewSaleFormSubmit,
   onStartNewSale,
+  formData,
 }) => {
-  const [formData, setFormData] = useState<SaleFormData>({
-    product: "",
-    price: "",
-    tax: 0,
-    merchant: "",
-    customer: null,
-    sellerMerchant: merchantFromParent,
-    paymentMethod: PaymentType.None
+  const [localFormData, setlocalFormData] = useState<SaleFormData>({
+    product: formData?.product || "",
+    price: formData?.price || "",
+    tax: formData?.tax || 0,
+    merchant: formData?.merchant || "",
+    customer: formData?.customer || null,
+    sellerMerchant: formData?.sellerMerchant || merchantFromParent,
+    paymentMethod: formData?.paymentMethod || PaymentType.None,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -118,15 +120,15 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     if (name === 'price') {
       // Remove any non-numeric characters except dot
       const cleanedValue = value.replace(/[^0-9.]/g, '');
-      setFormData(prevState => ({ ...prevState, [name]: cleanedValue }));
+      setlocalFormData(prevState => ({ ...prevState, [name]: cleanedValue }));
     } else {
-      setFormData(prevState => ({ ...prevState, [name]: value }));
+      setlocalFormData(prevState => ({ ...prevState, [name]: value }));
     }
   };
 
   const handleFocus = () => {
     if (priceInputRef.current) {
-      const length = formData.price.length;
+      const length = localFormData.price.length;
       priceInputRef.current.setSelectionRange(0, length);
     }
   };
@@ -134,18 +136,30 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   const handleSelectChange = (value: string) => {
     const selectedMerchant = merchantsList.find(merchant => merchant._id === value) || null;
     setSellerMerchant(selectedMerchant);
-    setFormData(prevState => ({ ...prevState, merchant: value, sellerMerchant: selectedMerchant  }));
+    setlocalFormData(prevState => ({ ...prevState, merchant: value, sellerMerchant: selectedMerchant  }));
   };
 
   const handleSelectCustomer = (customer: RewardsCustomer) => {
-    setFormData(prevState => ({ ...prevState, customer }));
+    setlocalFormData(prevState => ({ ...prevState, customer }));
     setCurrentCustomer(customer);
     setIsCustomerDialogOpen(false);
   };
 
+  useEffect(() => {
+    const storedData = sessionStorage.getItem('newSaleFormData');
+    
+    if (storedData) {
+      const parsedData: SaleFormData = JSON.parse(storedData);
+      setCurrentCustomer(parsedData.customer);
+    } else if (formData && formData.customer) {
+      setCurrentCustomer(formData.customer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSelectPaymentMethod = (paymentMethod: PaymentType) => {
-    const updatedFormData = { ...formData, paymentMethod };
-    setFormData(updatedFormData);
+    const updatedFormData = { ...localFormData, paymentMethod };
+    setlocalFormData(updatedFormData);
     console.log('Updated form data:', updatedFormData)
     
     onNewSaleFormSubmit(updatedFormData);
@@ -172,14 +186,14 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     setErrorMessage("")
 
     // Validate and format the price
-    const formattedPrice = validateAndFormatPrice(formData.price);
+    const formattedPrice = validateAndFormatPrice(localFormData.price);
     if (!formattedPrice) {
       setIsLoading(false);
       setErrorMessage("Invalid price format. Please enter a valid number with up to two decimals.");
       return;
     }
 
-    if (!formData.product) {
+    if (!localFormData.product) {
       setIsLoading(false);
       setErrorMessage("Product name is required.");
       return;
@@ -192,7 +206,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     }
 
     const taxRate = isTaxChecked && defaultTax ? defaultTax.rate : 0;
-    setFormData(prevState => ({ ...prevState, tax: taxRate, sellerMerchant }));
+    setlocalFormData(prevState => ({ ...prevState, tax: taxRate, sellerMerchant }));
 
     // All validations passed; open the payments dialog
     setIsPaymentsDialogOpen(true);
@@ -201,9 +215,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
 
   /*
   const generateQrCodeFunction = async () => {
-    if (!formData || !sellerMerchant) return;
+    if (!localFormData || !sellerMerchant) return;
     try {
-      const result = await generateQrCode({ message: "" }, userId, sellerMerchant, formData);
+      const result = await generateQrCode({ message: "" }, userId, sellerMerchant, localFormData);
       if (result.signedURL) {
         onQrCodeGenerated(result.signedURL);
       }
@@ -288,8 +302,10 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                 )}
                 {customers.length > 0 ? (
                   customers.map((customer: RewardsCustomer) => (
+                    
                     <Card
                       key={customer.userInfo._id}
+                      mb={'5'}
                       variant="surface"
                       onClick={() => handleSelectCustomer(customer)}
                       style={{ cursor: 'pointer', padding: '1.5rem' }}
@@ -319,7 +335,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
               type="text"
               size={'3'}
               name="product"
-              value={formData.product}
+              value={localFormData.product}
               onChange={handleChange}
               required
             />
@@ -331,7 +347,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
               type="text"
               size={'3'}
               name="price"
-              value={formData.price}
+              value={localFormData.price}
               onChange={handleChange}
               onFocus={handleFocus}
               required

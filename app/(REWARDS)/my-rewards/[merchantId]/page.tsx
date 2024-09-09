@@ -501,8 +501,14 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
           
         ) : ( !isFetchingMerchant && !isFetchingCurrentUserRewards ) ? (
           <>
-            <Flex direction={'column'} gap={'5'} height={'100vh'}>
-              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'} style={{ backgroundColor: primaryColor }}>
+            <Flex 
+              direction='column'
+              position='relative'
+              minHeight='100vh'
+              width='100%'
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
                 <Avatar.Root>
                   <Avatar.Image 
                   className="MerchantLogo"
@@ -522,8 +528,19 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   />
                 </BalanceProvider>
               </Flex>
-
-              <Flex direction={'column'} justify={'between'} align={'center'} height={'100%'} gap={'4'} px={'6'} mb={'9'}>
+              <Flex
+                flexGrow={'1'}
+                p={'7'}
+                direction={'column'}
+                gap={'5'}
+                align={'center'}
+                height={'100%'}
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '20px 20px 0px 0px',
+                  boxShadow: 'var(--shadow-6)'
+                }}
+              >
                 <Flex direction={'column'} align={'center'} gap={'4'} width={'100%'}>
                   {usersCurrentRewardsTier ? (
                     <Heading>{usersCurrentRewardsTier.name}</Heading>
@@ -541,7 +558,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   .map((tier) => (
                     <Card key={tier._id}
                     ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
-                    variant='classic'
+                    
                       style={{
                         flexShrink: 0,
                         width: tier._id === usersCurrentRewardsTier?._id ? '85%' : '70%',
