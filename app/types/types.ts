@@ -15,7 +15,24 @@ enum PaymentProvider {
   Zelle = 'Zelle',
 }
 
+export enum PaymentTypes {
+  Venmo = 'Venmo',
+  Zelle = 'Zelle',
+  Square = 'Square',
+  ManualEntry = 'ManualEntry',
+  SponsoredCrypto = 'sponsored crypto',
+  crypto = 'crypto',
+  MobilePay = 'mobile pay',
+  Cash = 'Cash',
+}
+
+enum TransactionStatus {
+  PENDING = 'PENDING',
+  COMPLETE = 'COMPLETE',
+}
+
 export enum PaymentType {
+  None = 'None',
   Venmo = 'Venmo',
   Zelle = 'Zelle',
   Square = 'Square',
@@ -72,7 +89,9 @@ export interface Transaction {
   tipAmount: number;
   salesTax: number;
   transactionHash: string;
-  paymentType: string; // 'sponsored crypto', 'crypto', 'mobile pay'
+  paymentType: PaymentTypes;
+  status?: TransactionStatus;
+  squarePaymentId?: string;
   createdAt: Date;
 }
 
@@ -131,24 +150,29 @@ export interface Branding {
 }
 
 export interface UserReward {
+  _id: string;
   customerId: string;
   merchantId: string;
   totalSpent: number;
-  visitsCount: number;
+  purchaseCount: number;
   lastVisit: Date;
-  currentTier: string;
+  currentDiscount: {
+    type: DiscountType;
+    amount: number;
+  }
   nextTier: string;
 }
 
 export interface RewardsCustomer {
   totalSpent: number,
-  visitsCount: number,
+  purchaseCount: number,
   lastVisit: Date,
   userInfo: {
     _id: string,
     name: string,
     email: string,
     squareCustomerId: string,
+    privyId: string,
   }
 }
 
@@ -167,4 +191,14 @@ export interface QrCodeImage {
 export interface FileData {
   url: string;
   contentType: string;
+}
+
+export interface SaleFormData {
+  product: string;
+  price: string;
+  tax: number;
+  merchant: string;
+  customer: RewardsCustomer | null;
+  sellerMerchant: Merchant | null;
+  paymentMethod: PaymentType;
 }

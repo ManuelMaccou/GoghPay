@@ -4,10 +4,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { generateQrCode } from "./generateQrCodeUrl";
 import Spinner from '../../components/Spinner';
 import { usePrivy } from '@privy-io/react-auth';
-import { Box, Button, Card, Checkbox, Container, Dialog, Flex, Grid, IconButton, Inset, Link, Section, Select, Text, TextField } from '@radix-ui/themes';
+import { Box, Button, Card, Checkbox, Container, Dialog, Flex, Grid, IconButton, Inset, Link, Section, Select, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
 import styles from '../styles.module.css'
 import { Merchant, Tax, RewardsCustomer, PaymentMethod, PaymentType } from '@/app/types/types';
 import { Cross1Icon, Cross2Icon, PersonIcon } from '@radix-ui/react-icons';
+import Image from 'next/image';
 
 interface NewSaleFormProps {
   onQrCodeGenerated: (signedUrl: string) => void;
@@ -16,26 +17,42 @@ interface NewSaleFormProps {
   merchantFromParent: Merchant;
   customers: RewardsCustomer[];
   paymentMethods: PaymentType[];
+  onNewSaleFormSubmit: (formData: SaleFormData) => void;
+  onStartNewSale: () => void;
+  formData: SaleFormData | null;
 }
 
-interface FormData {
+interface SaleFormData {
   product: string;
   price: string;
   tax: number;
   merchant: string;
   customer: RewardsCustomer | null;
   sellerMerchant: Merchant | null;
+  paymentMethod: PaymentType;
 }
 
-export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, merchantFromParent, customers, paymentMethods }: NewSaleFormProps) {
-  const [formData, setFormData] = useState<FormData>({
-    product: "",
-    price: "",
-    tax: 0,
-    merchant: "",
-    customer: null,
-    sellerMerchant: merchantFromParent,
+export const NewSaleForm: React.FC<NewSaleFormProps> = ({
+  onQrCodeGenerated,
+  onMessageUpdate,
+  userId,
+  merchantFromParent,
+  customers,
+  paymentMethods,
+  onNewSaleFormSubmit,
+  onStartNewSale,
+  formData,
+}) => {
+  const [localFormData, setlocalFormData] = useState<SaleFormData>({
+    product: formData?.product || "",
+    price: formData?.price || "",
+    tax: formData?.tax || 0,
+    merchant: formData?.merchant || "",
+    customer: formData?.customer || null,
+    sellerMerchant: formData?.sellerMerchant || merchantFromParent,
+    paymentMethod: formData?.paymentMethod || PaymentType.None,
   });
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<String>("");
   const priceInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +65,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
   const [isPaymentsDialogOpen, setIsPaymentsDialogOpen] = useState(false);
 
   const paymentTypeLogos: Record<PaymentType, string> = {
+    [PaymentType.None]: '/paymentMethodLogos/venmo.png',
     [PaymentType.Venmo]: '/paymentMethodLogos/venmo.png',
     [PaymentType.Zelle]: '/paymentMethodLogos/zelle.png',
     [PaymentType.Square]: '/paymentMethodLogos/square.png',
@@ -102,15 +120,15 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
     if (name === 'price') {
       // Remove any non-numeric characters except dot
       const cleanedValue = value.replace(/[^0-9.]/g, '');
-      setFormData(prevState => ({ ...prevState, [name]: cleanedValue }));
+      setlocalFormData(prevState => ({ ...prevState, [name]: cleanedValue }));
     } else {
-      setFormData(prevState => ({ ...prevState, [name]: value }));
+      setlocalFormData(prevState => ({ ...prevState, [name]: value }));
     }
   };
 
   const handleFocus = () => {
     if (priceInputRef.current) {
-      const length = formData.price.length;
+      const length = localFormData.price.length;
       priceInputRef.current.setSelectionRange(0, length);
     }
   };
@@ -118,83 +136,38 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
   const handleSelectChange = (value: string) => {
     const selectedMerchant = merchantsList.find(merchant => merchant._id === value) || null;
     setSellerMerchant(selectedMerchant);
-    setFormData(prevState => ({ ...prevState, merchant: value, sellerMerchant: selectedMerchant  }));
+    setlocalFormData(prevState => ({ ...prevState, merchant: value, sellerMerchant: selectedMerchant  }));
   };
 
-  const handleCustomerCardClick = (customer: RewardsCustomer) => {
-    setFormData(prevState => ({ ...prevState, customer }));
+  const handleSelectCustomer = (customer: RewardsCustomer) => {
+    setlocalFormData(prevState => ({ ...prevState, customer }));
     setCurrentCustomer(customer);
     setIsCustomerDialogOpen(false);
   };
 
-  const handlePaymentCardClick = async (paymentMethod: PaymentType) => {
-    try {
-      switch (paymentMethod) {
-        case PaymentType.Venmo:
-          handleVenmoPayment();
-          break;
-        case PaymentType.Zelle:
-          handleZellePayment();
-          break;
-        case PaymentType.Cash:
-          await handleCashPayment(formData);
-          break;
-        case PaymentType.ManualEntry:
-          await initiateCreditCardPayment(formData);
-          break;
-        case PaymentType.Square:
-          await handleSquarePayment(formData);
-          break;
-        default:
-          console.warn('Unknown payment method:', paymentMethod);
-          break;
-      }
-    } catch (error) {
-      console.error('Error processing payment:', error);
-    } finally {
-      setIsPaymentsDialogOpen(false);
+  useEffect(() => {
+    const storedData = sessionStorage.getItem('newSaleFormData');
+    
+    if (storedData) {
+      const parsedData: SaleFormData = JSON.parse(storedData);
+      setCurrentCustomer(parsedData.customer);
+    } else if (formData && formData.customer) {
+      setCurrentCustomer(formData.customer)
     }
-  };
-  
-  // for Zelle and Venmo
-  const handleVenmoPayment = () => {
-    const venmoQrCode = sellerMerchant?.paymentMethods.venmoQrCodeImage;
-    if (venmoQrCode) {
-      displayQRCode(venmoQrCode);
-    } else {
-      console.error('No Venmo QR code available.');
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleZellePayment = () => {
-    const zelleQrCode = sellerMerchant?.paymentMethods.zelleQrCodeImage;
-    if (zelleQrCode) {
-      displayQRCode(zelleQrCode);
-    } else {
-      console.error('No Zelle QR code available.');
-    }
-  };
-  
-  const handleCashPayment = async (formData: FormData) => {
-    console.log('Handling cash payment with form data:', formData);
+  const handleSelectPaymentMethod = (paymentMethod: PaymentType) => {
+    const updatedFormData = { ...localFormData, paymentMethod };
+    setlocalFormData(updatedFormData);
+    console.log('Updated form data:', updatedFormData)
+    
+    onNewSaleFormSubmit(updatedFormData);
   };
 
-  const initiateCreditCardPayment = async (formData: FormData) => {
-    console.log('Processing credit card payment with form data:', formData);
+  const handleResetParentMessages = () => {
+    onStartNewSale();
   };
-
-  const handleSquarePayment = async (formData: FormData) => {
-    console.log('Handling Square payment with form data:', formData);
-  };
-
-  const displayQRCode = (qrCodeUrl: string) => {
-    window.open(qrCodeUrl, '_blank');
-  };
-
-
-
-
-
 
   const validateAndFormatPrice = (price: string): string => {
     const cleanedPrice = price.replace(/\$/, '');
@@ -213,14 +186,14 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
     setErrorMessage("")
 
     // Validate and format the price
-    const formattedPrice = validateAndFormatPrice(formData.price);
+    const formattedPrice = validateAndFormatPrice(localFormData.price);
     if (!formattedPrice) {
       setIsLoading(false);
       setErrorMessage("Invalid price format. Please enter a valid number with up to two decimals.");
       return;
     }
 
-    if (!formData.product) {
+    if (!localFormData.product) {
       setIsLoading(false);
       setErrorMessage("Product name is required.");
       return;
@@ -233,7 +206,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
     }
 
     const taxRate = isTaxChecked && defaultTax ? defaultTax.rate : 0;
-    setFormData(prevState => ({ ...prevState, tax: taxRate, sellerMerchant }));
+    setlocalFormData(prevState => ({ ...prevState, tax: taxRate, sellerMerchant }));
 
     // All validations passed; open the payments dialog
     setIsPaymentsDialogOpen(true);
@@ -242,9 +215,9 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
 
   /*
   const generateQrCodeFunction = async () => {
-    if (!formData || !sellerMerchant) return;
+    if (!localFormData || !sellerMerchant) return;
     try {
-      const result = await generateQrCode({ message: "" }, userId, sellerMerchant, formData);
+      const result = await generateQrCode({ message: "" }, userId, sellerMerchant, localFormData);
       if (result.signedURL) {
         onQrCodeGenerated(result.signedURL);
       }
@@ -308,6 +281,11 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
                   <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsCustomerDialogOpen(false)}/>
                 </Flex>
                 <Dialog.Title mb={'5'}>Recently checked in</Dialog.Title>
+                <VisuallyHidden>
+                  <Dialog.Description>
+                    Recently checked in custoemrs
+                  </Dialog.Description>
+                </VisuallyHidden>
                 {currentCustomer && (
                   <Flex direction={'column'} align={'center'}>
                     <Button size={'4'} variant='ghost' color='red' mb={'7'} 
@@ -324,10 +302,12 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
                 )}
                 {customers.length > 0 ? (
                   customers.map((customer: RewardsCustomer) => (
+                    
                     <Card
                       key={customer.userInfo._id}
+                      mb={'5'}
                       variant="surface"
-                      onClick={() => handleCustomerCardClick(customer)}
+                      onClick={() => handleSelectCustomer(customer)}
                       style={{ cursor: 'pointer', padding: '1.5rem' }}
                     >
                       {customer.userInfo.name && (
@@ -355,7 +335,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
               type="text"
               size={'3'}
               name="product"
-              value={formData.product}
+              value={localFormData.product}
               onChange={handleChange}
               required
             />
@@ -367,7 +347,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
               type="text"
               size={'3'}
               name="price"
-              value={formData.price}
+              value={localFormData.price}
               onChange={handleChange}
               onFocus={handleFocus}
               required
@@ -411,6 +391,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
             size={'4'}
             style={{ width: '100%', marginBottom: '20px' }}
             type='submit'
+            onClick={handleResetParentMessages}
           >
             Checkout
           </Button>
@@ -432,6 +413,7 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
                   <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsPaymentsDialogOpen(false)}/>
                 </Flex>
                 <Dialog.Title mb={'5'}>Select payment method</Dialog.Title>
+                <VisuallyHidden><Dialog.Description>Select payment method</Dialog.Description></VisuallyHidden>
                 {paymentMethods.length > 0 ? (
                   <Grid
                     columns={{ initial: '2', xs: '2' }} // Responsive grid columns
@@ -442,22 +424,21 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
                       <Card
                         key={paymentMethod}
                         variant="surface"
-                        onClick={() => handlePaymentCardClick(paymentMethod)}
-                        style={{ cursor: 'pointer', padding: '1.5rem', alignContent: 'center' }}
+                        onClick={() => handleSelectPaymentMethod(paymentMethod)}
+                        style={{ cursor: 'pointer', padding: '1.5rem', alignContent: 'center', height: '150px', position: 'relative' }}
                       >
-                        <Inset clip="border-box">
-                          <img
-                            src={paymentTypeLogos[paymentMethod]}
-                            alt={paymentMethod}
-                            style={{
-                              display: 'block',
-                              objectFit: 'contain',
-                              width: '100%',
-                              height: '150px',
-                              justifySelf: 'center'
-                            }}
-                          />
-                        </Inset>
+                        <Image
+                          src={paymentTypeLogos[paymentMethod]}
+                          alt={paymentMethod}
+                          fill
+                          sizes='300px'
+                          style={{
+                            display: 'block',
+                            objectFit: 'contain',
+                            padding: '20px',
+                            justifySelf: 'center'
+                          }}
+                        />
                       </Card>
                     ))}
                   </Grid>
@@ -477,4 +458,4 @@ export function NewSaleForm({ onQrCodeGenerated, onMessageUpdate, userId, mercha
       </form>
     </Flex>
   );
-}
+};

@@ -98,9 +98,14 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   const getPaymentTypeInfo = (paymentType: string) => {
     const types: { [key: string]: { label: string; color: string } } = {
-      'sponsored crypto': { label: 'Crypto', color: '#4CAF50' },
-      'crypto': { label: 'Crypto', color: '#4CAF50' },
-      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' }
+      'sponsored crypto': { label: 'Crypto', color: '#8E004B' },
+      'crypto': { label: 'Crypto', color: '#8E004B' },
+      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' },
+      'Venmo': { label: 'Venmo', color: '#0084F7' },
+      'ManualEntry': { label: 'Manual CC', color: '#ea7100' },
+      'Cash': { label: 'Cash', color: '#4CAF50' },
+      'Square': { label: 'Square', color: '#000000' },
+      'Zelle': { label: 'Zelle', color: '#6C1CD3' },
     };
     return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
   };

@@ -6,19 +6,19 @@ export async function POST(req: NextRequest) {
   await connectToDatabase();
 
   try {
-    const { buyerId, buyerPrivyId, merchantId, productName, productPrice, paymentType, tipAmount, salesTax, transactionHash } = await req.json();
+    const { buyerId, buyerPrivyId, merchantId, productName, productPrice, paymentType, tipAmount, salesTax, status, transactionHash } = await req.json();
     const privyId = req.headers.get('x-user-id');
 
-    /*
     if (!privyId) {
-      return NextResponse.json({ error: 'User ID not provided during auth middleware' }, { status: 401 });
+      return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
     }
 
-     // Check if the provided buyerId matches the privyId from the headers
-     if (buyerPrivyId !== privyId) {
+    if (buyerPrivyId !== privyId) {
       return NextResponse.json({ error: 'Unauthorized user' }, { status: 403 });
     }
-    */
+
+    console.log('status in transaction:', status);
+
 
     const transaction = new Transaction({
       merchant: merchantId,
@@ -29,11 +29,12 @@ export async function POST(req: NextRequest) {
       salesTax,
       paymentType,
       transactionHash,
+      status,
     });
 
     await transaction.save();
 
-    return NextResponse.json({ message: 'Transaction saved successfully' }, { status: 200 });
+    return NextResponse.json({transaction, message: 'Transaction saved successfully' }, { status: 200 });
   } catch (error) {
     console.error('Error saving transaction:', error);
     return NextResponse.json({ error: 'Error saving transaction' }, { status: 500 });

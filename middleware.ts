@@ -49,11 +49,15 @@ export const config = {
     '/api/merchant/verifyMerchantStatus/:path*',
     '/api/user/update',
     '/api/transfer',
+    '/api/transaction',
+    '/api/transaction/update',
     '/api/merchant/update',
     '/api/rewards/milestone',
     '/api/rewards/userRewards/:path*',
     '/api/square/user',
     '/api/rewards/userRewards/customers',
+    '/api/rewards/userRewards/update',
+    '/api/square/payment/creditCard',
   ]
 };
 

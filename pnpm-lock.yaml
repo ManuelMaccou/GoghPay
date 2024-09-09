@@ -50,6 +50,12 @@ dependencies:
   '@radix-ui/themes':
     specifier: ^3.0.5
     version: 3.0.5(@types/react-dom@18.3.0)(@types/react@18.3.2)(react-dom@18.3.1)(react@18.3.1)
+  '@square/web-payments-sdk-types':
+    specifier: ^1.60.7
+    version: 1.60.7
+  '@square/web-sdk':
+    specifier: ^2.0.1
+    version: 2.0.1
   '@stitches/react':
     specifier: ^1.2.8
     version: 1.2.8(react@18.3.1)
@@ -59,6 +65,9 @@ dependencies:
   '@stripe/stripe-js':
     specifier: ^4.3.0
     version: 4.3.0
+  '@types/json-bigint':
+    specifier: ^1.0.4
+    version: 1.0.4
   '@types/node-fetch':
     specifier: ^2.6.11
     version: 2.6.11
@@ -89,6 +98,9 @@ dependencies:
   js-cookie:
     specifier: ^3.0.5
     version: 3.0.5
+  json-bigint:
+    specifier: ^1.0.0
+    version: 1.0.0
   jsonwebtoken:
     specifier: ^9.0.2
     version: 9.0.2
@@ -3565,6 +3577,19 @@ packages:
     resolution: {integrity: sha512-tGSRP1QvsAvsJmnOlRQyw/mvK9gnPtjEc5fg2+m8n+QUa+D7rvrKkOYyfpy42GTs90X3RDOnqJgfHt+qO67/+w==}
     dev: false
 
+  /@square/web-payments-sdk-types@1.60.7:
+    resolution: {integrity: sha512-jIIfu4IKfby+8vmo2StV7HmBLK6teO0RDLrcUIPdR+bpSxuiJM+OxCinuT7V7/3zITEBQIXgDMHPKEv/gy4U5w==}
+    dependencies:
+      typescript: 4.9.5
+    dev: false
+
+  /@square/web-sdk@2.0.1:
+    resolution: {integrity: sha512-m+pauPLJUHO4qzBNKlHRMe+qDAhQdbEd7g/v/SW8BWZARwJC0liHB4AnVAJuM/7JMFEPiT2ZO3SRt1VQsCeoYg==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dependencies:
+      '@square/web-payments-sdk-types': 1.60.7
+    dev: false
+
   /@stablelib/aead@1.0.1:
     resolution: {integrity: sha512-q39ik6sxGHewqtO0nP4BuSe3db5G1fEJE8ukvngS2gLkBXyy6E7pLubhbYgnkDFv6V8cWaxcE4Xn0t6LWcJkyg==}
     dev: false
@@ -3781,6 +3806,10 @@ packages:
   /@types/js-cookie@3.0.6:
     resolution: {integrity: sha512-wkw9yd1kEXOPnvEeEV1Go1MmxtBJL0RR79aOTAApecWFVu7w0NNXNqhcWgvw2YgZDYadliXkl14pa3WXw5jlCQ==}
     dev: true
+
+  /@types/json-bigint@1.0.4:
+    resolution: {integrity: sha512-ydHooXLbOmxBbubnA7Eh+RpBzuaIiQjh8WGJYQB50JFGFrdxW7JzVlyEV7fAXw0T2sqJ1ysTneJbiyNLqZRAag==}
+    dev: false
 
   /@types/json5@0.0.29:
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
@@ -6609,6 +6638,12 @@ packages:
     hasBin: true
     dev: false
 
+  /json-bigint@1.0.0:
+    resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
+    dependencies:
+      bignumber.js: 9.1.2
+    dev: false
+
   /json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
     dev: true
@@ -8478,6 +8513,12 @@ packages:
     resolution: {integrity: sha512-zdu8XMNEDepKKR+XYOXAVPtWui0ly0NtohUscw+UmaHiAWT8hrV1rr//H6V+0DvJ3OQ19S979M0laLfX8rm82Q==}
     dependencies:
       is-typedarray: 1.0.0
+    dev: false
+
+  /typescript@4.9.5:
+    resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
     dev: false
 
   /typescript@5.4.5:
