@@ -15,6 +15,7 @@ const transactionSchema = new Schema({
   discount: {
     type: { type: String },
     amount: { type: Number },
+    welcome: { type: Number },
   },
   payment: {
     paymentType: { type: String, enum: paymentTypes, required: true },

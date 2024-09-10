@@ -91,6 +91,7 @@ export interface Transaction {
   discount: {
     type: string;
     amount: number;
+    welcome: number;
   };
   payment: {
     paymentType: PaymentTypes;

@@ -54,6 +54,7 @@ export default function Sell() {
 
   const [rewardsDiscount, setRewardsDiscount] = useState<number | 0>(0);
   const [welcomeDiscount, setWelcomeDiscount] = useState<number | 0>(0);
+  const [finalPriceCalculated, setFinalPriceCalculated] = useState<boolean>(false);
   const [finalPrice, setFinalPrice] = useState<string | null>(null);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -340,57 +341,54 @@ export default function Sell() {
   useEffect(() => {
     setRewardsDiscount(0);
     setWelcomeDiscount(0);
+    setFinalPriceCalculated(false)
     setFinalPrice(null);
 
-    let priceNum = 0;
-    if (newSaleFormData && newSaleFormData.price) {
-      priceNum = !isNaN(parseFloat(newSaleFormData.price)) ? parseFloat(newSaleFormData.price) : 0;
-    }
-    
+    if (!newSaleFormData) return;
+    if (!newSaleFormData.price) return;
+
+    const priceNum = parseFloat(newSaleFormData.price)
+
     let rewardsDiscountAmount = 0;
     let welcomeDiscountAmount = 0;
     let priceAfterDiscount = priceNum;
     let finalPriceCalculation = priceNum;
 
-    if (newSaleFormData && newSaleFormData.customer) {
-      if (newSaleFormData.customer?.currentDiscount.amount) {
-        if (newSaleFormData.customer.currentDiscount.type === 'percent') {
-          rewardsDiscountAmount = priceNum * (newSaleFormData.customer.currentDiscount.amount / 100);
-        } else if (newSaleFormData.customer.currentDiscount.type === 'dollar') {
-          rewardsDiscountAmount = newSaleFormData.customer.currentDiscount.amount;
-        }
+
+    if (newSaleFormData.sellerMerchant?.rewards?.welcome_reward && newSaleFormData.customer?.purchaseCount === 1) {
+      welcomeDiscountAmount = newSaleFormData.sellerMerchant?.rewards?.welcome_reward
+    }
+
+    if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.amount) {
+      rewardsDiscountAmount = newSaleFormData.customer.currentDiscount.amount
+    }
+
+    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
+
+    if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'percent') {
+      if (totalDiscountAmount > 100) {
+        priceAfterDiscount = 0
+      } else {
+        priceAfterDiscount = priceNum - ((totalDiscountAmount/100) * priceNum)
       }
 
-      if (newSaleFormData.sellerMerchant?.rewards?.welcome_reward && newSaleFormData.customer?.purchaseCount === 1) {
-        welcomeDiscountAmount = newSaleFormData.sellerMerchant?.rewards?.welcome_reward
-      }
-
-      if (newSaleFormData.customer?.currentDiscount.type === 'percent') {
-        if ((rewardsDiscountAmount + welcomeDiscountAmount) > 100) {
-          priceAfterDiscount = 0
-        } else {
-          priceAfterDiscount = priceNum - (((rewardsDiscountAmount + welcomeDiscountAmount)/100) * priceNum)
-        }
-      } else if (newSaleFormData.customer?.currentDiscount.type === 'dollar') {
-        priceAfterDiscount = priceNum - (rewardsDiscountAmount + welcomeDiscountAmount)
-        if (priceAfterDiscount < 0) {
-          priceAfterDiscount = 0
-        }
+    } else if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'dollar') {
+      priceAfterDiscount = priceNum - totalDiscountAmount
+      if (priceAfterDiscount < 0) {
+        priceAfterDiscount = 0
       }
     }
     
-    if (newSaleFormData && newSaleFormData.tax && newSaleFormData.tax > 0) {
-      finalPriceCalculation = ((newSaleFormData.tax/100) * priceAfterDiscount) + priceAfterDiscount
+    if (newSaleFormData.tax > 0) {
+      finalPriceCalculation = priceAfterDiscount + ((newSaleFormData.tax / 100) * priceAfterDiscount);
     } else {
       finalPriceCalculation = priceAfterDiscount
     }
 
     setRewardsDiscount(rewardsDiscountAmount);
     setWelcomeDiscount(welcomeDiscountAmount);
+    setFinalPriceCalculated(true);
     setFinalPrice(finalPriceCalculation.toFixed(2));
-
-    console.log('rewards discount:', rewardsDiscountAmount);
-    console.log('welcome discount:', welcomeDiscountAmount);
 
   }, [newSaleFormData])
 
@@ -511,8 +509,9 @@ export default function Sell() {
           merchantId: newSaleFormData.sellerMerchant?._id,
           productName: newSaleFormData.product,
           productPrice: newSaleFormData.price,
-          discountAmount: newSaleFormData.customer?.currentDiscount.amount,
           discountType: newSaleFormData.customer?.currentDiscount.type,
+          discountAmount: newSaleFormData.customer?.currentDiscount.amount,
+          welcomeDiscount: welcomeDiscount,
           salesTax: calculatedSalesTax,
           paymentType: newSaleFormData.paymentMethod,
           status: (newSaleFormData.paymentMethod === 'Venmo' || newSaleFormData.paymentMethod === 'Zelle' || newSaleFormData.paymentMethod === 'Cash') ? "COMPLETE" : "PENDING",
@@ -617,41 +616,44 @@ export default function Sell() {
                         
                         <Flex direction={'column'} width={'100%'} justify={'center'} align={'center'} gap={'6'}>
                           
-                          <Flex direction={'column'} justify={'center'}>
-                            <Text size={'9'} align={'center'}>${finalPrice}</Text>
-                            <Flex direction={'row'} width={'300px'} justify={'between'}>
-                              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
-                              <Text size={'5'} mt={'5'} align={'left'}><Strong>{parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
-                            </Flex>
-                            {newSaleFormData && newSaleFormData.customer && rewardsDiscount > 0 && (
+                          {newSaleFormData && finalPriceCalculated && (
+                            <Flex direction={'column'} justify={'center'}>
+                              <Text size={'9'} align={'center'}>${finalPrice}</Text>
                               <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Rewards discount:</Text>
-                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{rewardsDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${rewardsDiscount}</Strong></Text>
-                                )}
+                                <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                                <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                               </Flex>
-                            )}
+                              {rewardsDiscount > 0 && (
+                                <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                  <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                                  {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                    <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                                  ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                    <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                                  )}
+                                </Flex>
+                              )}
 
-                            {newSaleFormData && newSaleFormData.customer && welcomeDiscount > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Welcome discount:</Text>
-                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
-                                )}
-                              </Flex>
-                            )}
-                        
-                            {newSaleFormData.tax && newSaleFormData.tax > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Sales tax:</Text>
-                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
-                              </Flex>
-                            )}
-                          </Flex>
+                              {welcomeDiscount > 0 && (
+                                <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                  <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                                  {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                    <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                                  ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                    <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                  )}
+                                </Flex>
+                              )}
+                          
+                              {newSaleFormData.tax > 0 && (
+                                <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                  <Text size={'5'} align={'left'}>Sales tax:</Text>
+                                  <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
+                                </Flex>
+                              )}
+                            </Flex>
+                          )}
+
                           <Avatar.Root>
                             <Avatar.Image 
                               src={ newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage }
@@ -713,42 +715,44 @@ export default function Sell() {
                         </VisuallyHidden>
                         
                         <Flex direction={'column'} width={'100%'} align={'center'} gap={'6'}>
-                          
-                        <Flex direction={'column'} justify={'center'}>
+
+                          {newSaleFormData && finalPriceCalculated && (
+                            <Flex direction={'column'} justify={'center'}>
                             <Text size={'9'} align={'center'}>${finalPrice}</Text>
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
-                              <Text size={'5'} mt={'5'} align={'left'}><Strong>{parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                              <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                             </Flex>
-                            {newSaleFormData && newSaleFormData.customer && rewardsDiscount > 0 && (
+                            {rewardsDiscount > 0 && (
                               <Flex direction={'row'} width={'300px'} justify={'between'}>
                                 <Text size={'5'} align={'left'}>Rewards discount:</Text>
-                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{rewardsDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${rewardsDiscount}</Strong></Text>
+                                {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                  <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                                ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                  <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
                                 )}
                               </Flex>
                             )}
 
-                            {newSaleFormData && newSaleFormData.customer && welcomeDiscount > 0 && (
+                            {welcomeDiscount > 0 && (
                               <Flex direction={'row'} width={'300px'} justify={'between'}>
                                 <Text size={'5'} align={'left'}>Welcome discount:</Text>
-                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
+                                {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
                                   <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
+                                ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
                                   <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
                                 )}
                               </Flex>
                             )}
                         
-                            {newSaleFormData.tax && newSaleFormData.tax > 0 && (
+                            {newSaleFormData.tax > 0 && (
                               <Flex direction={'row'} width={'300px'} justify={'between'}>
                                 <Text size={'5'} align={'left'}>Sales tax:</Text>
                                 <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
                               </Flex>
                             )}
-                          </Flex>
+                            </Flex>
+                          )}
                          
                           <Avatar.Root>
                             <Avatar.Image 
@@ -810,42 +814,43 @@ export default function Sell() {
                       </VisuallyHidden>
                       
                       <Flex direction={'column'} width={'100%'} align={'center'} justify={'center'} gap={'9'}>
-                        
-                        <Flex direction={'column'} justify={'center'}>
-                          <Text size={'9'} align={'center'}>${finalPrice}</Text>
-                            <Flex direction={'row'} width={'300px'} justify={'between'}>
-                              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
-                              <Text size={'5'} mt={'5'} align={'left'}><Strong>{parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
-                            </Flex>
-                            {newSaleFormData && newSaleFormData.customer && rewardsDiscount > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Rewards discount:</Text>
-                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{rewardsDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${rewardsDiscount}</Strong></Text>
-                                )}
-                              </Flex>
-                            )}
-
-                            {newSaleFormData && newSaleFormData.customer && welcomeDiscount > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Welcome discount:</Text>
-                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
-                                )}
-                              </Flex>
-                            )}
-                        
-                            {newSaleFormData.tax && newSaleFormData.tax > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Sales tax:</Text>
-                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
-                              </Flex>
-                            )}
+                        {newSaleFormData && finalPriceCalculated && (
+                          <Flex direction={'column'} justify={'center'}>
+                        <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                          <Flex direction={'row'} width={'300px'} justify={'between'}>
+                            <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                            <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                           </Flex>
+                          {rewardsDiscount > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                              {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                              ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                              )}
+                            </Flex>
+                          )}
+
+                          {welcomeDiscount > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                              {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                              ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                              )}
+                            </Flex>
+                          )}
+                      
+                          {newSaleFormData.tax > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Sales tax:</Text>
+                              <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
+                            </Flex>
+                          )}
+                          </Flex>
+                        )}
                         <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
                       </Flex>
                       

@@ -25,6 +25,10 @@ export default function ManualCreditCardPayment() {
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<SaleFormData | null>(null);
+
+  const [rewardsDiscount, setRewardsDiscount] = useState<number | 0>(0);
+  const [welcomeDiscount, setWelcomeDiscount] = useState<number | 0>(0);
+  const [finalPriceCalculated, setFinalPriceCalculated] = useState<boolean>(false);
   const [finalPrice, setFinalPrice] = useState<string | null>(null);
   
   const [card, setCard] = useState<any>(null);
@@ -159,29 +163,64 @@ export default function ManualCreditCardPayment() {
   }, [applicationId, locationId, card]);
 
   useEffect(() => {
-    let priceNum = 0;
-    if (formData && formData.price) {
-      priceNum = !isNaN(parseFloat(formData.price)) ? parseFloat(formData.price) : 0;
+    setRewardsDiscount(0);
+    setWelcomeDiscount(0);
+    setFinalPriceCalculated(false)
+    setFinalPrice(null);
+
+    if (!formData) return;
+    if (!formData.price) return;
+
+    const priceNum = parseFloat(formData.price)
+
+    let rewardsDiscountAmount = 0;
+    let welcomeDiscountAmount = 0;
+    let priceAfterDiscount = priceNum;
+    let finalPriceCalculation = priceNum;
+
+
+    if (formData.sellerMerchant?.rewards?.welcome_reward && formData.customer?.purchaseCount === 1) {
+      welcomeDiscountAmount = formData.sellerMerchant?.rewards?.welcome_reward
     }
-    
-    let priceConsideringdiscount = priceNum;
-    if (formData) {
-      if (formData.customer?.currentDiscount.amount) {
-        if (formData.customer.currentDiscount.type === 'percent') {
-          priceConsideringdiscount = (priceNum - (priceNum * (formData.customer.currentDiscount.amount / 100)));
-        } else if (formData.customer.currentDiscount.type === 'dollar') {
-          priceConsideringdiscount = (priceNum - formData.customer.currentDiscount.amount);
-        }
+
+    if (formData. customer && formData.customer.currentDiscount.amount) {
+      rewardsDiscountAmount = formData.customer.currentDiscount.amount
+    }
+
+    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
+
+    if (formData.customer && formData.customer.currentDiscount.type === 'percent') {
+      if (totalDiscountAmount > 100) {
+        priceAfterDiscount = 0
+      } else {
+        priceAfterDiscount = priceNum - ((totalDiscountAmount/100) * priceNum)
+      }
+
+    } else if (formData.customer && formData.customer.currentDiscount.type === 'dollar') {
+      priceAfterDiscount = priceNum - totalDiscountAmount
+      if (priceAfterDiscount < 0) {
+        priceAfterDiscount = 0
       }
     }
-      
-
-    let finalPrice: string = priceConsideringdiscount.toFixed(2)
-    if (formData && formData.tax) {
-      finalPrice = (((formData.tax/100) * parseFloat(finalPrice)) + parseFloat(finalPrice)).toFixed(2)
+    
+    if (formData.tax > 0) {
+      finalPriceCalculation = priceAfterDiscount + ((formData.tax / 100) * priceAfterDiscount);
+    } else {
+      finalPriceCalculation = priceAfterDiscount
     }
 
-    setFinalPrice(finalPrice);
+    setRewardsDiscount(rewardsDiscountAmount);
+    setWelcomeDiscount(welcomeDiscountAmount);
+    setFinalPriceCalculated(true);
+    setFinalPrice(finalPriceCalculation.toFixed(2));
+
+    console.log('priceNum:', priceNum)
+    console.log('tax:', formData?.tax)
+    console.log('rewards discount:', rewardsDiscount)
+    console.log('welcome discount:', welcomeDiscount)
+    console.log('price after discount:', priceAfterDiscount)
+    console.log('final price:', finalPrice)
+
   }, [formData])
 
   const handlePaymentMethodSubmission = async (event: React.FormEvent) => {
@@ -243,8 +282,9 @@ export default function ManualCreditCardPayment() {
           buyerPrivyId: formData?.sellerMerchant?.privyId,
           productName: formData?.product,
           productPrice: formData?.price,
-          discountAmount: formData?.customer?.currentDiscount.amount,
           discountType: formData?.customer?.currentDiscount.type,
+          discountAmount: formData?.customer?.currentDiscount.amount,
+          welcomeDiscount: welcomeDiscount,
           salesTax: calculatedSalesTax,
           paymentType: 'ManualEntry',
           status: 'PENDING'
@@ -501,6 +541,7 @@ export default function ManualCreditCardPayment() {
         body: JSON.stringify({
           privyId: currentUser?.privyId,
           purchaseData: formData,
+          finalPrice,
         }),
       });
 
@@ -599,36 +640,44 @@ export default function ManualCreditCardPayment() {
           boxShadow: 'var(--shadow-6)'
         }}
       >
-        
-        <Flex direction={'column'} maxHeight={'max-content'} mb={'5'} width={'90%'}>
-          {formData && formData.customer?.userInfo.email && (
-            <Text mb={'5'} size={'5'}><Strong>{formData.customer?.userInfo.email}</Strong></Text>
-          )}
-          <Flex direction={'row'} width={'200px'} justify={'between'}>
-            <Text size={'5'}>Price:</Text>
-            <Text size={'5'}><Strong>${formData.price}</Strong></Text>
-          </Flex>
-          {formData && formData.customer?.currentDiscount.type && (
-            formData.customer.currentDiscount.type === 'percent' ? (
-              <Flex direction={'row'} width={'200px'} justify={'between'}>
-                <Text size={'5'} align={'left'}>Discount:</Text>
-                <Text size={'5'} align={'left'}><Strong>{formData.customer?.currentDiscount.amount}%</Strong></Text>
+        {formData && finalPriceCalculated && (
+          <Flex direction={'column'} justify={'center'} mb={'5'}>
+            <Text size={'9'} align={'center'}>${finalPrice}</Text>
+            <Flex direction={'row'} width={'300px'} justify={'between'}>
+              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+              <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(formData.price).toFixed(2)}</Strong></Text>
+            </Flex>
+            {rewardsDiscount > 0 && (
+              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                {formData.customer?.currentDiscount.type === 'percent' ? (
+                  <Text size={'5'} align={'left'}><Strong>{formData.customer.currentDiscount.amount}%</Strong></Text>
+                ) : formData.customer?.currentDiscount.type === 'dollar' && (
+                  <Text size={'5'} align={'left'}><Strong>${formData.customer.currentDiscount.amount}</Strong></Text>
+                )}
               </Flex>
-            ) :
-          formData.customer.currentDiscount.type === 'cash' ? (
-            <Flex direction={'row'} width={'200px'} justify={'between'}>
-              <Text size={'5'} align={'left'}>Discount:</Text>
-              <Text size={'5'} align={'left'}><Strong>${formData.customer?.currentDiscount.amount}</Strong></Text>
-            </Flex>
-            ) : null
-          )}
-           {formData && formData.tax && (
-            <Flex direction={'row'} width={'200px'} justify={'between'}>
-              <Text size={'5'}>Sales tax:</Text>
-              <Text size={'5'}><Strong>{formData.tax}%</Strong></Text>
-            </Flex>
-          )}
-        </Flex>
+            )}
+
+            {welcomeDiscount > 0 && (
+              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                {formData.customer?.currentDiscount.type === 'percent' ? (
+                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                ) : formData.customer?.currentDiscount.type === 'dollar' && (
+                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                )}
+              </Flex>
+            )}
+        
+            {formData.tax > 0 && (
+              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                <Text size={'5'} align={'left'}>Sales tax:</Text>
+                <Text size={'5'} align={'left'}><Strong>{formData.tax}%</Strong></Text>
+              </Flex>
+            )}
+          </Flex>
+        )}
+          
         
         <Flex direction={'column'} width={'90%'}>
           <form id="payment-form" onSubmit={handlePaymentMethodSubmission}>
