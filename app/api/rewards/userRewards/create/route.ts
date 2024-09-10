@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
       totalSpent: userRewardData.totalSpent,
       purchaseCount: userRewardData.purchaseCount,
       lastVisit: userRewardData.lastVisit,
+      currentDiscount: {
+        type: userRewardData.currentDiscountType
+      }
     });
 
     await userReward.save();

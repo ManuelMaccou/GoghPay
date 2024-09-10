@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
     const updatedTransaction = await Transaction.findOneAndUpdate(
       { _id: transactionId },
       { $set: {
-        squarePaymentId,
-        status,
+        'payment.squarePaymentId': squarePaymentId,
+        'payment.status': status,
       } },
       { new: true }
     );

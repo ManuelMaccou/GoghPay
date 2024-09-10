@@ -49,6 +49,7 @@ const RewardsSchema = new mongoose.Schema({
     default: 'dollars_spent',
     required: true,
   },
+  welcome_reward: { type: Number }, // Has to fit the discount_type
   tiers: { type: [RewardsTierSchema]},
 }, { timestamps: true });
 

@@ -12,6 +12,7 @@ const UserRewardSchema = new Schema({
     type: { type: String, enum: discountType },
     amount: { type: Number }
   },
+  welcomeDiscount: { type: Number, default: 0 }, 
   nextTier: { type: String },
 });
 
