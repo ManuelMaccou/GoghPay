@@ -35,6 +35,10 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   const [rewardsUpdateOperation, setRewardsUpdateOperation] = useState<'add' | 'modify' | 'delete'>('add');
   const [rewardsTierIdToUpdate, setRewardsTierIdToUpdate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [submittingWelcomeReward, setSubmittingWelcomeReward] = useState<boolean>(false);
+  const [welcomeRewardAmount, setWelcomeRewardAmount] = useState<number | string>('');
+  const [welcomeRewardMessage, setWelcomeRewardMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
@@ -251,6 +255,46 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     console.log('tierId for delete:', tierId);
     updateMerchant('delete', 0, 0, undefined, tierId);
   };
+  const handleWelcomeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWelcomeRewardAmount(e.target.value);
+  };
+
+  const handleSetWelcomeReward = async () => {
+    if (!merchant) return;
+    setSubmittingWelcomeReward(true)
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/merchant/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          rewards: {
+            welcome_reward: Number(welcomeRewardAmount),
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMerchant(data.merchant);
+      } else {
+        console.error('Failed to set welcome reward:', response.status, data.message);
+        setWelcomeRewardMessage(`Failed to set welcome reward. ${data.message}`);
+      }
+
+    } catch (error) {
+      console.error('Error setting default tax:', error);
+      setWelcomeRewardMessage('Failed to set welcome reward. Please try again.');
+    } finally {
+      setSubmittingWelcomeReward(false)
+    }
+  };
 
   return (
     <Flex 
@@ -263,7 +307,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
       }}
     >
       <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
-        <Heading size={'8'} style={{color: "white"}}>Rewards</Heading>
+        <Heading size={'8'} style={{color: "white"}}>Manage rewards</Heading>
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
             color={"white"}
@@ -305,9 +349,50 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                 </>
               ) : currentRewardsTiers.length > 0 && !isLoading ? (
                 <>
-                  <Heading>Manage Rewards</Heading>
-                  <Text>When a customer reaches a milestone, they will be rewarded with a discount on future purchases.</Text>
-
+                  <Flex direction={'column'} width={'100%'} gap={'4'}>
+                    <Heading>Welcome reward</Heading>
+                    <Text>Offer a small discount for their next purchase when they join your rewards program.</Text>
+                    <Flex direction={'row'} gap={'4'}>
+                      <TextField.Root
+                        size={'3'}
+                        placeholder={merchant.rewards?.welcome_reward ? merchant.rewards?.welcome_reward.toString() : 'Enter amount'}
+                        style={{width: '200px'}}
+                        type="number"
+                        value={welcomeRewardAmount}
+                        onChange={handleWelcomeInputChange}
+                        required
+                      >
+                        <TextField.Slot side="right">
+                          <Text>% off</Text>
+                        </TextField.Slot>
+                      </TextField.Root>
+                      <Button 
+                        variant="surface"
+                        size={'3'}
+                        loading={submittingWelcomeReward}
+                        onClick={handleSetWelcomeReward}
+                      >
+                        Submit
+                      </Button>
+                    </Flex>
+                    {merchant.rewards?.welcome_reward && (
+                      <Callout.Root color="orange" style={{width: 'max-content', padding: '10px'}}>
+                        <Callout.Text size={'3'}>
+                          Welcome reward set at {merchant.rewards.welcome_reward}%
+                        </Callout.Text>
+                      </Callout.Root>
+                    )}
+                    {welcomeRewardMessage && (
+                      <Flex direction={'column'}>
+                        <Text>{welcomeRewardMessage}</Text>
+                      </Flex>
+                    )}
+                    
+                  </Flex>
+                  <Flex direction={'column'} width={'100%'} gap={'4'}>
+                    <Heading align={'left'}>Milestones</Heading>
+                    <Text>When a customer reaches a milestone, they will be rewarded with a discount on future purchases.</Text>
+                  </Flex>
                   <Flex direction={'column'} width={'100%'} maxHeight={'55vh'} overflow={'scroll'} gap={'3'}>
                     {currentRewardsTiers
                     .sort((a, b) => a.milestone - b.milestone) // Sort by milestone in ascending order

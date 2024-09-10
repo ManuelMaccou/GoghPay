@@ -8,14 +8,22 @@ const transactionSchema = new Schema({
   type: { type: String },
   merchant: { type: Schema.Types.ObjectId, ref: 'Merchant' },
   buyer: { type: Schema.Types.ObjectId, ref: 'User' },
-  productName: { type: String, required: true },
-  productPrice: { type: Number, required: true },
-  tipAmount: { type: Number },
-  salesTax: { type: Number },
-  paymentType: { type: String, enum: paymentTypes, required: true },
-  status: { type: String, enum: transactionStatus },
-  squarePaymentId: { type: String },
-  transactionHash: { type: String },
+  product: {
+    name: { type: String },
+    price: { type: Number },
+  },
+  discount: {
+    type: { type: String },
+    amount: { type: Number },
+  },
+  payment: {
+    paymentType: { type: String, enum: paymentTypes, required: true },
+    tipAmount: { type: Number },
+    salesTax: { type: Number },
+    transactionHash: { type: String },
+    status: { type: String, enum: transactionStatus },
+    squarePaymentId: { type: String },
+  }
 }, { timestamps: true });
 
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);

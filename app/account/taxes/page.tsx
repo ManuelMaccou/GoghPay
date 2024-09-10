@@ -261,17 +261,17 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         // Filter transactions to get all the taxes
         console.log('sortedTotalTransactions', sortedTotalTransactions);
         const transactionsWithTaxes = sortedTotalTransactions
-          .filter((transaction: Transaction) => transaction.salesTax !== undefined && transaction.salesTax !== null && transaction.salesTax !== 0);
+          .filter((transaction: Transaction) => transaction.payment.salesTax !== undefined && transaction.payment.salesTax !== null && transaction.payment.salesTax !== 0);
 
         const transactionsWithTaxesExcludingCash = sortedTotalTransactions
-          .filter((transaction: Transaction) => transaction.salesTax !== undefined && transaction.salesTax !== null && transaction.salesTax !== 0 && transaction.paymentType !== "Cash");
+          .filter((transaction: Transaction) => transaction.payment.salesTax !== undefined && transaction.payment.salesTax !== null && transaction.payment.salesTax !== 0 && transaction.payment.paymentType !== "Cash");
         
         const totalTaxAmount = transactionsWithTaxes.reduce((sum: number, transaction: Transaction) => {
-          return sum + (transaction.salesTax || 0);
+          return sum + (transaction.payment.salesTax || 0);
         }, 0);
 
         const totalTaxAmountExcludingCash = transactionsWithTaxesExcludingCash.reduce((sum: number, transaction: Transaction) => {
-          return sum + (transaction.salesTax || 0);
+          return sum + (transaction.payment.salesTax || 0);
         }, 0);
 
         setTransactiosnwithTaxes(transactionsWithTaxes);
@@ -381,13 +381,13 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         
                   <Table.Body>
                     {transactiosnwithTaxes?.map((transaction) => {
-                      const { label, color } = getPaymentTypeInfo(transaction.paymentType);
+                      const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
                       return (
                         <Table.Row key={transaction._id}>
-                          <Table.RowHeaderCell>${transaction.salesTax.toFixed(2)}</Table.RowHeaderCell>
+                          <Table.RowHeaderCell>${transaction.payment.salesTax.toFixed(2)}</Table.RowHeaderCell>
                           <Table.Cell>
                             <Text wrap={'nowrap'}>
-                              {transaction.productName}
+                              {transaction.product.name}
                             </Text>
                           </Table.Cell>
                           <Table.Cell>

@@ -314,7 +314,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
   useEffect(() => {
     const createNewRewards = async () => {
-      if (!currentUser) return;
+      if (!currentUser || !merchant) return;
       console.log('no existing rewards. Creating new one')
 
       const accessToken = await getAccessToken();
@@ -330,6 +330,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
             privyId: currentUser?.privyId,
             customerId: currentUser._id,
             merchantId: merchantId,
+            currentDiscountType: merchant.rewards?.discount_type,
+            welcomeDiscount: merchant.rewards?.welcome_reward ? merchant.rewards.welcome_reward : null,
             totalSpent: 0,
             purchaseCount: 0,
             lastVisit: new Date().toISOString(),
@@ -393,7 +395,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
     if (ready && authenticated && currentUser) {
       fetchCurrentUserMerchantRewards();
     }
-  }, [authenticated, ready, currentUser, merchantId]);
+  }, [authenticated, ready, currentUser, merchantId, merchant]);
 
   useEffect (() => {
     const checkMilestone = () => {

@@ -7,7 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { Box, Button, Card, Checkbox, Container, Dialog, Flex, Grid, IconButton, Inset, Link, Section, Select, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
 import styles from '../styles.module.css'
 import { Merchant, Tax, RewardsCustomer, PaymentMethod, PaymentType } from '@/app/types/types';
-import { Cross1Icon, Cross2Icon, PersonIcon } from '@radix-ui/react-icons';
+import { Cross1Icon, Cross2Icon, PersonIcon, UpdateIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 
 interface NewSaleFormProps {
@@ -19,6 +19,7 @@ interface NewSaleFormProps {
   paymentMethods: PaymentType[];
   onNewSaleFormSubmit: (formData: SaleFormData) => void;
   onStartNewSale: () => void;
+  onCustomerRefresh: (merchantId: string) => void;
   formData: SaleFormData | null;
 }
 
@@ -41,6 +42,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   paymentMethods,
   onNewSaleFormSubmit,
   onStartNewSale,
+  onCustomerRefresh,
   formData,
 }) => {
   const [localFormData, setlocalFormData] = useState<SaleFormData>({
@@ -139,7 +141,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     setlocalFormData(prevState => ({ ...prevState, merchant: value, sellerMerchant: selectedMerchant  }));
   };
 
-  const handleSelectCustomer = (customer: RewardsCustomer) => {
+  const handleSelectCustomer = (customer: RewardsCustomer | null) => {
     setlocalFormData(prevState => ({ ...prevState, customer }));
     setCurrentCustomer(customer);
     setIsCustomerDialogOpen(false);
@@ -167,6 +169,12 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
 
   const handleResetParentMessages = () => {
     onStartNewSale();
+  };
+
+  const handleCustomerRefresh = () => {
+    if (merchantFromParent && merchantFromParent._id) {
+      onCustomerRefresh(merchantFromParent._id);
+    }
   };
 
   const validateAndFormatPrice = (price: string): string => {
@@ -277,10 +285,18 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                   overflowY: 'auto',
                 }}
               >
-                <Flex direction={'column'} align={'end'} mb={'5'}>
+                <Flex direction={'column'} align={'end'} mb={'7'}>
                   <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsCustomerDialogOpen(false)}/>
                 </Flex>
-                <Dialog.Title mb={'5'}>Recently checked in</Dialog.Title>
+                  <VisuallyHidden>
+                    <Dialog.Title>Recently checked in</Dialog.Title>
+                  </VisuallyHidden>
+                  <Flex direction={'row'} justify={'between'} align={'center'} width={'85%'} mb={'7'}>
+                  <Text size={'5'} weight={'bold'}>Recently checked in</Text>
+                    <IconButton variant='ghost' onClick={handleCustomerRefresh}>
+                      <UpdateIcon height={'30'} width={'30'} />
+                    </IconButton>
+                </Flex>
                 <VisuallyHidden>
                   <Dialog.Description>
                     Recently checked in custoemrs
@@ -290,7 +306,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                   <Flex direction={'column'} align={'center'}>
                     <Button size={'4'} variant='ghost' color='red' mb={'7'} 
                       onClick={() => {
-                        setCurrentCustomer(null);
+                        handleSelectCustomer(null);
                         setIsCustomerDialogOpen(false)
                       }}>
                         <Text size={'6'}>

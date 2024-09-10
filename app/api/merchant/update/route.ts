@@ -6,6 +6,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const { privyId, rewards, operation, tierId, ...updateFields } = await req.json();
     const userIdFromToken = req.headers.get('x-user-id');
+    console.log('update fields:', updateFields)
 
     if (!privyId) {
       return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
@@ -16,7 +17,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Validate that there are fields to update or rewards operation
-    if (Object.keys(updateFields).length === 0 && !operation) {
+    if (Object.keys(updateFields).length === 0 && !operation && !rewards?.welcome_reward) {
       return NextResponse.json({ message: "No fields to update or invalid operation" }, { status: 400 });
     }
 
@@ -30,6 +31,7 @@ export async function PATCH(req: NextRequest) {
       'square.merchant_id',
       'square.token_expires_at',
       'rewards.discount_type',
+      'rewards.welcome_reward',
       'rewards.milestone_type',
       'rewards.tiers.name',
       'rewards.tiers.discount',
@@ -54,6 +56,11 @@ export async function PATCH(req: NextRequest) {
     await connectToDatabase();
 
     const updateOptions: any = { new: true };  // Returns the updated document
+
+    // Handle the 'welcome_reward' separately
+    if (rewards?.welcome_reward) {
+      fieldsToUpdate['rewards.welcome_reward'] = rewards.welcome_reward;
+    }
 
     if (operation) {
       if (operation === 'add' && rewards?.tiers) {

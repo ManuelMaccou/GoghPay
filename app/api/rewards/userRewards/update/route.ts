@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
   try {
     const userIdFromToken = req.headers.get('x-user-id');
     const body = await req.json();
-    console.log('body:', body);
     const privyId: string = body.privyId;
+    const finalPrice: string = body.finalPrice;
     const purchaseData: SaleFormData = body.purchaseData;
 
     if (!purchaseData) {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing user reward object" }, { status: 400 });
     }
 
-    const newPurchaseAmount = parseFloat(purchaseData.price || "0");
+    const newPurchaseAmount = parseFloat(finalPrice || "0");
     if (isNaN(newPurchaseAmount)) {
       console.error("Invalid purchase amount.");
       return NextResponse.json({ message: "Invalid purchase amount" }, { status: 400 });
@@ -73,8 +73,11 @@ export async function POST(req: NextRequest) {
       purchaseCount: purchaseCount
     };
 
+    let discountUpgradeMessage = null;
+
     if (highestTier && highestTier.discount > (userRewardObject.currentDiscount?.amount || 0)) {
       fieldsToUpdate['currentDiscount.amount'] = highestTier.discount;
+      discountUpgradeMessage = `Nice! Your customer has been upgraded to the next rewards tier.`;
     }
 
     const updatedUserReward = await UserReward.findOneAndUpdate(
@@ -87,7 +90,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Existing rewards account not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'User rewards updated successfully', updatedReward: updatedUserReward }, { status: 200 });
+    return NextResponse.json({
+      message: 'User rewards updated successfully',
+      updatedReward: updatedUserReward,
+      discountUpgradeMessage: discountUpgradeMessage
+    }, { status: 200 });
   } catch (error) {
     console.error('Error updating rewards:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

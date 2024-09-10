@@ -8,7 +8,7 @@ import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from
 import { logAdminError, serializeError } from '@/app/utils/logAdminError';
 import { ApiError } from '@/app/utils/ApiError';
 import { Button, Callout, Flex, Heading, Strong, Text } from '@radix-ui/themes';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { InfoCircledIcon, RocketIcon } from '@radix-ui/react-icons';
 import { BalanceProvider } from '@/app/contexts/BalanceContext';
 import { Header } from '@/app/components/Header';
 import { useUser } from '@/app/contexts/UserContext';
@@ -25,6 +25,7 @@ export default function ManualCreditCardPayment() {
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<SaleFormData | null>(null);
+  const [finalPrice, setFinalPrice] = useState<string | null>(null);
   
   const [card, setCard] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +38,7 @@ export default function ManualCreditCardPayment() {
 
   const [successMessage1, setSuccessMessage1] = useState<string | null>(null);
   const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
+  const [discountUpgradeMessage, setDiscountUpgradeMessage] = useState<string | null>(null);
 
   const [errorMessage1, setErrorMessage1] = useState<string | null>(null);
   const [errorMessage2, setErrorMessage2] = useState<string | null>(null);
@@ -156,12 +158,39 @@ export default function ManualCreditCardPayment() {
     };
   }, [applicationId, locationId, card]);
 
+  useEffect(() => {
+    let priceNum = 0;
+    if (formData && formData.price) {
+      priceNum = !isNaN(parseFloat(formData.price)) ? parseFloat(formData.price) : 0;
+    }
+    
+    let priceConsideringdiscount = priceNum;
+    if (formData) {
+      if (formData.customer?.currentDiscount.amount) {
+        if (formData.customer.currentDiscount.type === 'percent') {
+          priceConsideringdiscount = (priceNum - (priceNum * (formData.customer.currentDiscount.amount / 100)));
+        } else if (formData.customer.currentDiscount.type === 'dollar') {
+          priceConsideringdiscount = (priceNum - formData.customer.currentDiscount.amount);
+        }
+      }
+    }
+      
+
+    let finalPrice: string = priceConsideringdiscount.toFixed(2)
+    if (formData && formData.tax) {
+      finalPrice = (((formData.tax/100) * parseFloat(finalPrice)) + parseFloat(finalPrice)).toFixed(2)
+    }
+
+    setFinalPrice(finalPrice);
+  }, [formData])
+
   const handlePaymentMethodSubmission = async (event: React.FormEvent) => {
     setError(null);
     setErrorMessage1(null);
     setErrorMessage2(null);
     setSuccessMessage1(null);
     setSuccessMessage2(null);
+    setDiscountUpgradeMessage(null);
 
     event.preventDefault();
     if (!formData || !card) {
@@ -214,6 +243,8 @@ export default function ManualCreditCardPayment() {
           buyerPrivyId: formData?.sellerMerchant?.privyId,
           productName: formData?.product,
           productPrice: formData?.price,
+          discountAmount: formData?.customer?.currentDiscount.amount,
+          discountType: formData?.customer?.currentDiscount.type,
           salesTax: calculatedSalesTax,
           paymentType: 'ManualEntry',
           status: 'PENDING'
@@ -497,6 +528,10 @@ export default function ManualCreditCardPayment() {
         setSuccessMessage1('Customer rewards have been saved.');
         console.log('Rewards updated successfully:', responseData);
 
+        if (responseData.discountUpgradeMessage) {
+          setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
+        }
+
         return true;
       }
     } catch (error) {
@@ -567,12 +602,31 @@ export default function ManualCreditCardPayment() {
         
         <Flex direction={'column'} maxHeight={'max-content'} mb={'5'} width={'90%'}>
           {formData && formData.customer?.userInfo.email && (
-            <Text size={'5'}>Customer: <Strong>{formData.customer?.userInfo.email}</Strong></Text>
+            <Text mb={'5'} size={'5'}><Strong>{formData.customer?.userInfo.email}</Strong></Text>
           )}
-          <Text size={'5'}>Product: <Strong>{formData.product}</Strong></Text>
-          <Text size={'5'}>Price: <Strong>${formData.price}</Strong></Text>
-          {formData && formData.tax && (
-            <Text size={'5'}>Sales tax: <Strong>${(formData.tax/100 * (parseFloat(formData.price) || 0)).toFixed(2)}</Strong></Text>
+          <Flex direction={'row'} width={'200px'} justify={'between'}>
+            <Text size={'5'}>Price:</Text>
+            <Text size={'5'}><Strong>${formData.price}</Strong></Text>
+          </Flex>
+          {formData && formData.customer?.currentDiscount.type && (
+            formData.customer.currentDiscount.type === 'percent' ? (
+              <Flex direction={'row'} width={'200px'} justify={'between'}>
+                <Text size={'5'} align={'left'}>Discount:</Text>
+                <Text size={'5'} align={'left'}><Strong>{formData.customer?.currentDiscount.amount}%</Strong></Text>
+              </Flex>
+            ) :
+          formData.customer.currentDiscount.type === 'cash' ? (
+            <Flex direction={'row'} width={'200px'} justify={'between'}>
+              <Text size={'5'} align={'left'}>Discount:</Text>
+              <Text size={'5'} align={'left'}><Strong>${formData.customer?.currentDiscount.amount}</Strong></Text>
+            </Flex>
+            ) : null
+          )}
+           {formData && formData.tax && (
+            <Flex direction={'row'} width={'200px'} justify={'between'}>
+              <Text size={'5'}>Sales tax:</Text>
+              <Text size={'5'}><Strong>{formData.tax}%</Strong></Text>
+            </Flex>
           )}
         </Flex>
         
@@ -594,30 +648,51 @@ export default function ManualCreditCardPayment() {
               <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed} style={{width: '100%'}}>
               {isLoading 
                 ? 'Processing...' 
-                : `Charge $${(
-                    (parseFloat(formData?.price) || 0) + 
-                    (formData?.tax ? (formData.tax / 100) * (parseFloat(formData.price) || 0) : 0)
-                  ).toFixed(2)}`
+                : `Charge $${finalPrice}`
               }
               </Button>
-              <Button
-                variant='ghost'
+              {!paymentProcessed ? (
+                <Button
+                  variant='ghost'
+                  size={'4'}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    router.back(); 
+                  }}
+                >
+                  Cancel
+                </Button>
+              ) : (
+                <Button
                 size={'4'}
                 onClick={(e) => {
-                  e.preventDefault(); // Prevent any form submission or validation
-                  router.back(); // Navigate back
+                  e.preventDefault();
+                  router.back();
                 }}
               >
-                Cancel
+                Finish
               </Button>
+              )}
+              
             </Flex>
             
 
 
             <Flex direction={'column'} gap={'4'} mt={'5'}>
+
+              {discountUpgradeMessage && (
+                <Callout.Root color='green' mx={'4'}>
+                  <Callout.Icon>
+                    <RocketIcon height={'25'} width={'25'} />
+                  </Callout.Icon>
+                  <Callout.Text size={'6'}>
+                    {discountUpgradeMessage}
+                  </Callout.Text>
+                </Callout.Root>
+              )}
               
               {successMessage2 && (
-                <Callout.Root color='green' mx={'4'}>
+                <Callout.Root mx={'4'}>
                   <Callout.Icon>
                     <InfoCircledIcon />
                   </Callout.Icon>
@@ -628,7 +703,7 @@ export default function ManualCreditCardPayment() {
               )}
 
               {successMessage1 && (
-                <Callout.Root color='green' mx={'4'}>
+                <Callout.Root mx={'4'}>
                   <Callout.Icon>
                     <InfoCircledIcon />
                   </Callout.Icon>
@@ -655,7 +730,7 @@ export default function ManualCreditCardPayment() {
                   <Callout.Icon>
                     <InfoCircledIcon />
                   </Callout.Icon>
-                  <Callout.Text size={'6'}>
+                  <Callout.Text size={'6'} wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
                     {errorMessage2}
                   </Callout.Text>
                 </Callout.Root>

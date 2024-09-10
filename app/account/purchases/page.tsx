@@ -258,13 +258,13 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
                         <Table.Body>
                           {totalTransactions?.map((transaction) => {
-                            const { label, color } = getPaymentTypeInfo(transaction.paymentType);
+                            const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
                             return (
                               <Table.Row key={transaction._id}>
-                                <Table.RowHeaderCell>${((transaction.productPrice)+(transaction.tipAmount || 0)+(transaction.salesTax)).toFixed(2)}</Table.RowHeaderCell>
+                                <Table.RowHeaderCell>${((transaction.product.price)+(transaction.payment.tipAmount || 0)+(transaction.payment.salesTax)).toFixed(2)}</Table.RowHeaderCell>
                                 <Table.Cell>
                                   <Text wrap={'nowrap'}>
-                                    {transaction.merchant.name}: {transaction.productName}
+                                    {transaction.merchant.name}: {transaction.product.name}
                                   </Text>
                                 </Table.Cell>
                                 <Table.Cell>

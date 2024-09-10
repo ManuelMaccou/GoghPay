@@ -276,7 +276,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
         });
   
         // Calculate total sale for all transactions
-        const total = sortedTotalTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.productPrice + (transaction.tipAmount || 0), 0);
+        const total = sortedTotalTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.product.price + (transaction.payment.tipAmount || 0), 0);
         setTotalSale(total);
         setTotalTransactions(sortedTotalTransactions);
 
@@ -293,7 +293,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   
         // Calculate total sale for today's transactions
-        const todayTotal = sortedTodaysTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.productPrice + (transaction.tipAmount || 0), 0);
+        const todayTotal = sortedTodaysTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.product.price + (transaction.payment.tipAmount || 0), 0);
         setTodaysTotalSale(todayTotal);
         setTodaysTransactions(sortedTodaysTransactions);
       } catch (err) {
@@ -381,10 +381,10 @@ export default function Sales({ params }: { params: { userId: string } }) {
       
                 <Table.Body>
                   {totalTransactions?.map((transaction) => {
-                    const { label, color } = getPaymentTypeInfo(transaction.paymentType);
+                    const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
                     return (
                       <Table.Row key={transaction._id}>
-                        <Table.RowHeaderCell>${((transaction.productPrice) + (transaction.tipAmount || 0)).toFixed(2)}</Table.RowHeaderCell>
+                        <Table.RowHeaderCell>${((transaction.product.price) + (transaction.payment.tipAmount || 0)).toFixed(2)}</Table.RowHeaderCell>
                       {/* <Table.Cell>
                         <Text wrap={'nowrap'}>
                           {transaction.tipAmount ? `$${transaction.tipAmount.toFixed(2)}` : '-'}
@@ -392,7 +392,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
                         </Table.Cell> */}
                         <Table.Cell>
                           <Text wrap={'nowrap'}>
-                            {transaction.productName}
+                            {transaction.product.name}
                           </Text>
                         </Table.Cell>
                         <Table.Cell>

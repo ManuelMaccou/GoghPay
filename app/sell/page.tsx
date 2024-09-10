@@ -6,8 +6,8 @@ import QRCode from 'qrcode.react';
 import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWallets } from '@privy-io/react-auth';
 import { NewSaleForm } from './components/newSaleForm';
 import * as Avatar from '@radix-ui/react-avatar';
-import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Inset, Link, Spinner, Strong, Text, VisuallyHidden } from '@radix-ui/themes';
-import { ExclamationTriangleIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { AlertDialog, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Text, VisuallyHidden } from '@radix-ui/themes';
+import { ExclamationTriangleIcon, InfoCircledIcon, RocketIcon } from '@radix-ui/react-icons';
 import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType, SaleFormData } from '../types/types';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { Header } from '../components/Header';
@@ -52,10 +52,15 @@ export default function Sell() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentType | null>(null);
 
+  const [rewardsDiscount, setRewardsDiscount] = useState<number | 0>(0);
+  const [welcomeDiscount, setWelcomeDiscount] = useState<number | 0>(0);
+  const [finalPrice, setFinalPrice] = useState<string | null>(null);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const [successMessage1, setSuccessMessage1] = useState<string | null>(null);
   const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
+  const [discountUpgradeMessage, setDiscountUpgradeMessage] = useState<string | null>(null);
   
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
   const [showZelleDialog, setShowZelleDialog] = useState<boolean>(false);
@@ -94,6 +99,7 @@ export default function Sell() {
 
     try {
       const response = await fetch(`/api/rewards/userRewards/customers/?merchantId=${merchantId}&privyId=${currentUser.privyId}`, {
+        next: {revalidate: 1},
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -150,6 +156,8 @@ export default function Sell() {
           },
         });
 
+        const data = await response.json()
+
         if (response.status === 404) {
           setMerchantVerified(false);
           setIsLoading(false);
@@ -159,12 +167,10 @@ export default function Sell() {
         if (!response.ok) {
           throw new Error(`Unexpected status: ${response.status}`);
         } else {
-          const data = await response.json();
           setMerchant(data);
           setMerchantVerified(true);
         }
 
-        const data: Merchant = await response.json();
         setMerchant(data);
         setMerchantVerified(true);
 
@@ -196,25 +202,17 @@ export default function Sell() {
   }, [merchant]);
 
   useEffect(() => {
+    if (!finalPrice) return
     const handleSquarePosPayment = (newSaleFormData: SaleFormData | null) => {
       const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback`;
       const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!
       
-      let priceInCents: number;
-      const priceNum = parseFloat(newSaleFormData?.price || "0");
+      const priceNumForPOS = parseFloat(finalPrice) * 100; // finalPrice in cents
       
-      if (newSaleFormData?.tax) {
-        const taxAmount = (newSaleFormData.tax / 100) * priceNum;
-        priceInCents = (priceNum + taxAmount) * 100;
-      } else {
-        priceInCents = priceNum * 100;
-      }
-
-      const finalPrice = priceInCents.toString();
 
       const dataParameter = {
         amount_money: {
-          amount: finalPrice,
+          amount: priceNumForPOS,
           currency_code: 'USD',
         },
         callback_url: callbackUrl,
@@ -242,7 +240,7 @@ export default function Sell() {
       handleSquarePosPayment(newSaleFormData);
     }
 
-  }, [newSaleFormData, selectedPaymentMethod])
+  }, [newSaleFormData, selectedPaymentMethod, finalPrice])
 
   /*
   useEffect(() => {
@@ -340,6 +338,63 @@ export default function Sell() {
   }, []);
 
   useEffect(() => {
+    setRewardsDiscount(0);
+    setWelcomeDiscount(0);
+    setFinalPrice(null);
+
+    let priceNum = 0;
+    if (newSaleFormData && newSaleFormData.price) {
+      priceNum = !isNaN(parseFloat(newSaleFormData.price)) ? parseFloat(newSaleFormData.price) : 0;
+    }
+    
+    let rewardsDiscountAmount = 0;
+    let welcomeDiscountAmount = 0;
+    let priceAfterDiscount = priceNum;
+    let finalPriceCalculation = priceNum;
+
+    if (newSaleFormData && newSaleFormData.customer) {
+      if (newSaleFormData.customer?.currentDiscount.amount) {
+        if (newSaleFormData.customer.currentDiscount.type === 'percent') {
+          rewardsDiscountAmount = priceNum * (newSaleFormData.customer.currentDiscount.amount / 100);
+        } else if (newSaleFormData.customer.currentDiscount.type === 'dollar') {
+          rewardsDiscountAmount = newSaleFormData.customer.currentDiscount.amount;
+        }
+      }
+
+      if (newSaleFormData.sellerMerchant?.rewards?.welcome_reward && newSaleFormData.customer?.purchaseCount === 1) {
+        welcomeDiscountAmount = newSaleFormData.sellerMerchant?.rewards?.welcome_reward
+      }
+
+      if (newSaleFormData.customer?.currentDiscount.type === 'percent') {
+        if ((rewardsDiscountAmount + welcomeDiscountAmount) > 100) {
+          priceAfterDiscount = 0
+        } else {
+          priceAfterDiscount = priceNum - (((rewardsDiscountAmount + welcomeDiscountAmount)/100) * priceNum)
+        }
+      } else if (newSaleFormData.customer?.currentDiscount.type === 'dollar') {
+        priceAfterDiscount = priceNum - (rewardsDiscountAmount + welcomeDiscountAmount)
+        if (priceAfterDiscount < 0) {
+          priceAfterDiscount = 0
+        }
+      }
+    }
+    
+    if (newSaleFormData && newSaleFormData.tax && newSaleFormData.tax > 0) {
+      finalPriceCalculation = ((newSaleFormData.tax/100) * priceAfterDiscount) + priceAfterDiscount
+    } else {
+      finalPriceCalculation = priceAfterDiscount
+    }
+
+    setRewardsDiscount(rewardsDiscountAmount);
+    setWelcomeDiscount(welcomeDiscountAmount);
+    setFinalPrice(finalPriceCalculation.toFixed(2));
+
+    console.log('rewards discount:', rewardsDiscountAmount);
+    console.log('welcome discount:', welcomeDiscountAmount);
+
+  }, [newSaleFormData])
+
+  useEffect(() => {
     // Clear sessionStorage on page refresh
     const handleBeforeUnload = () => {
       sessionStorage.removeItem('newSaleFormData');
@@ -376,6 +431,10 @@ export default function Sell() {
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
     const accessToken = await getAccessToken();
     console.log('status before transaction:', newSaleFormData.paymentMethod)
+    console.log('newsaleformdata:', newSaleFormData);
+
+    const priceNum = parseFloat(newSaleFormData.price);
+    const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
 
     if (newSaleFormData.customer) {
       try {
@@ -388,20 +447,21 @@ export default function Sell() {
           body: JSON.stringify({
             privyId: currentUser?.privyId,
             purchaseData: newSaleFormData,
+            finalPrice,
           }),
         });
 
-    
+        const responseData = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json();
           setNewSaleFormData(null);
           setShowNewSaleForm(true);
           setErrorMessage('There was an error updating the customer rewards. We have received the error and are looking into it.');
     
           const apiError = new ApiError(
-            `API Error: ${response.status} - ${response.statusText} - ${errorData.message || 'Unknown Error'}`,
+            `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
             response.status,
-            errorData
+            responseData
           );
       
           await logAdminError(merchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction`, {
@@ -413,11 +473,18 @@ export default function Sell() {
       
           console.error(apiError);
         } else {
-          const result = await response.json();
+          if (merchant) {
+            fetchCheckedInCustomers(merchant._id)
+          }
           setSuccessMessage1('Customer rewards have been saved.');
           setNewSaleFormData(null);
           setShowNewSaleForm(true);
-          console.log('Rewards updated successfully:', result);
+
+          if (responseData.discountUpgradeMessage) {
+            setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
+          }
+
+          console.log('Rewards updated successfully:', responseData);
         }
       } catch (error) {
         // Catch any other errors and log them with their full details
@@ -430,8 +497,7 @@ export default function Sell() {
       }
     }
     try {
-      const priceNum = parseFloat(newSaleFormData.price);
-      const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
+      
       const response = await fetch(`/api/transaction`, {
         method: 'POST',
         headers: {
@@ -445,22 +511,25 @@ export default function Sell() {
           merchantId: newSaleFormData.sellerMerchant?._id,
           productName: newSaleFormData.product,
           productPrice: newSaleFormData.price,
+          discountAmount: newSaleFormData.customer?.currentDiscount.amount,
+          discountType: newSaleFormData.customer?.currentDiscount.type,
           salesTax: calculatedSalesTax,
           paymentType: newSaleFormData.paymentMethod,
           status: (newSaleFormData.paymentMethod === 'Venmo' || newSaleFormData.paymentMethod === 'Zelle' || newSaleFormData.paymentMethod === 'Cash') ? "COMPLETE" : "PENDING",
         }),
       });
+
+      const data = await response.json();
   
       if (!response.ok) {
         setNewSaleFormData(null);
         setShowNewSaleForm(true);
         setErrorMessage('There was an error saving the transaction. We have received the error and are looking into it.');
-        const errorData = await response.json();
         
         const apiError = new ApiError(
-          `API Error: ${response.status} - ${response.statusText} - ${errorData.message || 'Unknown Error'}`,
+          `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
           response.status,
-          errorData
+          data
         );
     
         await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
@@ -472,12 +541,11 @@ export default function Sell() {
     
         console.error(error);
       } else {
-        const result = await response.json();
         setSuccessMessage2('Transaction saved.');
         setNewSaleFormData(null);
         setShowNewSaleForm(true);
         sessionStorage.removeItem('newSaleFormData');
-        console.log('Transaction saved successfully:', result);
+        console.log('Transaction saved successfully:', data);
       }
     } catch (error) {
 
@@ -547,11 +615,47 @@ export default function Sell() {
                           </AlertDialog.Description>
                         </VisuallyHidden>
                         
-                        <Flex direction={'column'} width={'100%'} align={'center'} gap={'9'}>
+                        <Flex direction={'column'} width={'100%'} justify={'center'} align={'center'} gap={'6'}>
+                          
+                          <Flex direction={'column'} justify={'center'}>
+                            <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                              <Text size={'5'} mt={'5'} align={'left'}><Strong>{parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                            </Flex>
+                            {newSaleFormData && newSaleFormData.customer && rewardsDiscount > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
+                                  <Text size={'5'} align={'left'}><Strong>{rewardsDiscount}%</Strong></Text>
+                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
+                                  <Text size={'5'} align={'left'}><Strong>${rewardsDiscount}</Strong></Text>
+                                )}
+                              </Flex>
+                            )}
+
+                            {newSaleFormData && newSaleFormData.customer && welcomeDiscount > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
+                                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
+                                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                )}
+                              </Flex>
+                            )}
+                        
+                            {newSaleFormData.tax && newSaleFormData.tax > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Sales tax:</Text>
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
+                              </Flex>
+                            )}
+                          </Flex>
                           <Avatar.Root>
                             <Avatar.Image 
-                            src={ newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage }
-                            alt="Venmo QR code"
+                              src={ newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage }
+                              alt="Venmo QR code"
                             style={{objectFit: "contain", maxWidth: '100%'}}
                             />
                           </Avatar.Root>
@@ -608,7 +712,44 @@ export default function Sell() {
                           </AlertDialog.Description>
                         </VisuallyHidden>
                         
-                        <Flex direction={'column'} width={'100%'} align={'center'} gap={'9'}>
+                        <Flex direction={'column'} width={'100%'} align={'center'} gap={'6'}>
+                          
+                        <Flex direction={'column'} justify={'center'}>
+                            <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                              <Text size={'5'} mt={'5'} align={'left'}><Strong>{parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                            </Flex>
+                            {newSaleFormData && newSaleFormData.customer && rewardsDiscount > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
+                                  <Text size={'5'} align={'left'}><Strong>{rewardsDiscount}%</Strong></Text>
+                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
+                                  <Text size={'5'} align={'left'}><Strong>${rewardsDiscount}</Strong></Text>
+                                )}
+                              </Flex>
+                            )}
+
+                            {newSaleFormData && newSaleFormData.customer && welcomeDiscount > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
+                                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
+                                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                )}
+                              </Flex>
+                            )}
+                        
+                            {newSaleFormData.tax && newSaleFormData.tax > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Sales tax:</Text>
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
+                              </Flex>
+                            )}
+                          </Flex>
+                         
                           <Avatar.Root>
                             <Avatar.Image 
                             src={ newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage }
@@ -669,13 +810,42 @@ export default function Sell() {
                       </VisuallyHidden>
                       
                       <Flex direction={'column'} width={'100%'} align={'center'} justify={'center'} gap={'9'}>
-                        <Avatar.Root>
-                          <Avatar.Image 
-                            src={ '/paymentMethodLogos/cash.png' }
-                            alt="Cash payment logo"
-                            style={{objectFit: "contain", maxWidth: '50%'}}
-                          />
-                        </Avatar.Root>
+                        
+                        <Flex direction={'column'} justify={'center'}>
+                          <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                              <Text size={'5'} mt={'5'} align={'left'}><Strong>{parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                            </Flex>
+                            {newSaleFormData && newSaleFormData.customer && rewardsDiscount > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
+                                  <Text size={'5'} align={'left'}><Strong>{rewardsDiscount}%</Strong></Text>
+                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
+                                  <Text size={'5'} align={'left'}><Strong>${rewardsDiscount}</Strong></Text>
+                                )}
+                              </Flex>
+                            )}
+
+                            {newSaleFormData && newSaleFormData.customer && welcomeDiscount > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                                {newSaleFormData.customer.currentDiscount.type === 'percent' ? (
+                                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                                ) : newSaleFormData.customer.currentDiscount.type === 'dollar' && (
+                                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                )}
+                              </Flex>
+                            )}
+                        
+                            {newSaleFormData.tax && newSaleFormData.tax > 0 && (
+                              <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                <Text size={'5'} align={'left'}>Sales tax:</Text>
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
+                              </Flex>
+                            )}
+                          </Flex>
                         <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
                       </Flex>
                       
@@ -717,13 +887,26 @@ export default function Sell() {
                       handlePaymentMethodChange(formData.paymentMethod, formData);
                     }}
                     onStartNewSale={handleResetMessages}
+                    onCustomerRefresh={fetchCheckedInCustomers}
                     formData={newSaleFormData}
                   />
                 ) : null}
 
                 <Flex direction={'column'} gap={'4'}>
-                  {successMessage1 && (
+
+                  {discountUpgradeMessage && (
                     <Callout.Root color='green' mx={'4'}>
+                      <Callout.Icon>
+                        <RocketIcon height={'25'} width={'25'} />
+                      </Callout.Icon>
+                      <Callout.Text size={'6'}>
+                        {discountUpgradeMessage}
+                      </Callout.Text>
+                    </Callout.Root>
+                  )}
+              
+                  {successMessage1 && (
+                    <Callout.Root mx={'4'}>
                     <Callout.Icon>
                       <InfoCircledIcon />
                     </Callout.Icon>
@@ -734,7 +917,7 @@ export default function Sell() {
                   )}
 
                   {successMessage2 && (
-                    <Callout.Root color='green' mx={'4'}>
+                    <Callout.Root mx={'4'}>
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>

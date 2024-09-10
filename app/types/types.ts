@@ -84,14 +84,22 @@ export interface Transaction {
   _id: string;
   merchant: Merchant;
   buyer: User;
-  productName: string;
-  productPrice: number;
-  tipAmount: number;
-  salesTax: number;
-  transactionHash: string;
-  paymentType: PaymentTypes;
-  status?: TransactionStatus;
-  squarePaymentId?: string;
+  product: {
+    name: string;
+    price: number;
+  };
+  discount: {
+    type: string;
+    amount: number;
+  };
+  payment: {
+    paymentType: PaymentTypes;
+    tipAmount: number;
+    salesTax: number;
+    transactionHash: string;
+    status?: TransactionStatus;
+    squarePaymentId?: string;
+  };
   createdAt: Date;
 }
 
@@ -140,6 +148,7 @@ export interface RewardsTier {
 export interface Rewards {
   discount_type: DiscountType;  // Using enum
   milestone_type: MilestoneType;  // Using enum
+  welcome_reward: number; // Has to fit the discount_type
   tiers: RewardsTier[];  // Array of RewardsTier objects
 }
 
@@ -160,6 +169,7 @@ export interface UserReward {
     type: DiscountType;
     amount: number;
   }
+  welcomeDiscount: number;
   nextTier: string;
 }
 
@@ -167,6 +177,10 @@ export interface RewardsCustomer {
   totalSpent: number,
   purchaseCount: number,
   lastVisit: Date,
+  currentDiscount: {
+    type: string,
+    amount: number,
+  }
   userInfo: {
     _id: string,
     name: string,
