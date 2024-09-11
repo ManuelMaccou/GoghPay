@@ -1,13 +1,13 @@
 "use client"
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ConnectedWallet, useLogout, usePrivy } from "@privy-io/react-auth";
 import { useBalance } from '../contexts/BalanceContext';
-import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link } from '@radix-ui/themes';
+import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link, SegmentedControl } from '@radix-ui/themes';
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 import { User } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRightFromBracket, faEnvelope, faGear, faFile, faMoneyBillTransfer, faPlus, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRightFromBracket, faEnvelope, faGear, faFile, faMoneyBillTransfer, faPlus, faSackDollar, faPiggyBank, faGlobe, faSliders } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'next/navigation';
 import styles from './styles.module.css'
 
@@ -29,11 +29,21 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
   const { balance, isBalanceLoading } = useBalance();
   const router = useRouter();
 
+  const [menuState, setMenuState] = useState<'purchases' | 'rewards'>('purchases');
+
   const { logout } = useLogout ({
     onSuccess: async () => {
       router.push('/');
     }
   })
+
+  const handleSetMenuState = (value: 'purchases' | 'rewards') => {
+    setMenuState(value);
+  };
+
+  useEffect(() => {
+    console.log(menuState);
+  }, [menuState]);
 
   return (
     <Box maxWidth={'100%'}>
@@ -162,22 +172,61 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                 
                 {ready && authenticated && (
                   <Flex direction={'column'} my={'9'}>
-                    {currentUser?.merchant ? (
-                      <>
-                        <Flex direction={'column'} align={'start'}>
-                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <FontAwesomeIcon style={{padding: '20px'}} icon={faPlus} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/sell`)}>New Sale</Button>
+                    <Flex direction={'column'} mb={'5'}>
+                      <SegmentedControl.Root 
+                        defaultValue={menuState}
+                        radius="full"
+                        onValueChange={handleSetMenuState}
+                      >
+                        <SegmentedControl.Item value="purchases">Purchases</SegmentedControl.Item>
+                        <SegmentedControl.Item value="rewards">Rewards</SegmentedControl.Item>
+                      </SegmentedControl.Root>
+                    </Flex>
+                    
+
+
+                    {menuState === 'purchases' ? (
+                      currentUser?.merchant ? (
+                        <>
+                          <Flex direction={'column'} align={'start'}>
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <FontAwesomeIcon style={{padding: '20px'}} icon={faPlus} />
+                              <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/sell`)}>New Sale</Button>
+                            </Flex>
+                            <Separator size={'4'} />
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <FontAwesomeIcon style={{padding: '20px'}} icon={faSackDollar} />
+                              <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/sales`)}>Sales</Button>
+                            </Flex>
+                            <Separator size={'4'} />
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <FontAwesomeIcon style={{padding: '20px'}} icon={faFile} />
+                              <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/taxes`)}>Taxes</Button>
+                            </Flex>
+                            <Separator size={'4'} />
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
+                              <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
+                            </Flex>
+                            <Separator size={'4'} />
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <FontAwesomeIcon style={{padding: '20px'}} icon={faGear} />
+                              <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/integrations`)}>Integrations</Button>
+                            </Flex>
+                            <Separator size={'4'} />
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <a href="mailto:support@ongogh.com" style={{ width: '100%', display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+                                <FontAwesomeIcon style={{ padding: '20px' }} icon={faEnvelope} />
+                                <Button variant='ghost' size={'4'} style={{ color: 'black', width: '100%', justifyContent: 'start' }}>Contact us</Button>
+                              </a>
+                            </Flex>
                           </Flex>
-                          <Separator size={'4'} />
+                        </>
+                      ) : (
+                        <>
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <FontAwesomeIcon style={{padding: '20px'}} icon={faSackDollar} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/sales`)}>Sales</Button>
-                          </Flex>
-                          <Separator size={'4'} />
-                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <FontAwesomeIcon style={{padding: '20px'}} icon={faFile} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/taxes`)}>Taxes</Button>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
@@ -186,38 +235,53 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <FontAwesomeIcon style={{padding: '20px'}} icon={faGear} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/integrations`)}>Integrations</Button>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faEnvelope} />
+                            <Link style={{color: 'black'}}  href='mailto:support@ongogh.com' target='_blank' rel='noopener noreferrer'>
+                              Contact us
+                            </Link>
+                          </Flex>
+                        </>
+                      )
+                      
+                    ) : menuState === 'rewards' && (
+                      currentUser?.merchant ? (
+                        <>
+                          <Flex direction={'column'} align={'start'}>
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <FontAwesomeIcon style={{padding: '20px'}} icon={faSliders} />
+                              <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/rewards/manage`)}>Manage rewards</Button>
+                            </Flex>
+                            <Separator size={'4'} />
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <FontAwesomeIcon style={{padding: '20px'}} icon={faGear} />
+                              <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/integrations`)}>Integrations</Button>
+                            </Flex>
+                            <Separator size={'4'} />
+                            <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                              <a href="mailto:support@ongogh.com" style={{ width: '100%', display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+                                <FontAwesomeIcon style={{ padding: '20px' }} icon={faEnvelope} />
+                                <Button variant='ghost' size={'4'} style={{ color: 'black', width: '100%', justifyContent: 'start' }}>Contact us</Button>
+                              </a>
+                            </Flex>
+                          </Flex>
+                        </>
+                      ) : (
+                        <>
+                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faPiggyBank} />
+                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/myRewards`)}>My rewards</Button>
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <a href="mailto:support@ongogh.com" style={{ width: '100%', display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
-                              <FontAwesomeIcon style={{ padding: '20px' }} icon={faEnvelope} />
-                              <Button variant='ghost' size={'4'} style={{ color: 'black', width: '100%', justifyContent: 'start' }}>Contact us</Button>
-                            </a>
+                            <FontAwesomeIcon style={{padding: '20px'}} icon={faEnvelope} />
+                            <Link style={{color: 'black'}}  href='mailto:support@ongogh.com' target='_blank' rel='noopener noreferrer'>
+                              Contact us
+                            </Link>
                           </Flex>
-                        </Flex>
-                      </>
-                    ) : (
-                      <>
-                        <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                          <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
-                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
-                        </Flex>
-                        <Separator size={'4'} />
-                        <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                          <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                          <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
-                        </Flex>
-                        <Separator size={'4'} />
-                        <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                          <FontAwesomeIcon style={{padding: '20px'}} icon={faEnvelope} />
-                          <Link style={{color: 'black'}}  href='mailto:support@ongogh.com' target='_blank' rel='noopener noreferrer'>
-                            Contact us
-                          </Link>
-                        </Flex>
-                      </>
+                        </>
+                      )
                     )}
+                      
                   </Flex>
                   )}
                   <Flex direction={'column'} justify={'between'} align={'center'}>

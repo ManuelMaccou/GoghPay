@@ -221,105 +221,128 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   return (
     <>
-      <Flex direction={'column'} pt={'9'} pb={'4'} px={'4'} gap={'5'}>
-        {ready && authenticated && currentUser &&(
-          <BalanceProvider walletForPurchase={walletForPurchase}>
-          <Header
-            merchant={currentUser?.merchant}
-            embeddedWallet={embeddedWallet}
-            authenticated={authenticated}
-            walletForPurchase={walletForPurchase}
-            currentUser={currentUser}
-          />
-        </BalanceProvider>
-        )}
-      
+    <Flex
+        direction='column'
+        position='relative'
+        minHeight='100vh'
+        width='100%'
+        style={{
+          background: 'linear-gradient(to bottom, #1e5799 0%,#2989d8 50%,#207cca 51%,#7db9e8 100%)'
+        }}
+      >
+         <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
+          <Heading size={'8'} style={{color: "white"}}>Purchases</Heading>
         
-        <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Purchases</Text>
-        {ready ? (
-            authenticated ? (
-              isFetchingTransactions ? (
-                <>
-                  <Text>Fetching purchases</Text>
-                  <Spinner />
-                </>
-                ) : !noPurchases ? (
-                  <Flex direction={'column'} gap={'4'} justify={'start'} width={'100%'}>
-                    <Box overflow={'scroll'}>
-                      <Table.Root>
-                        <Table.Header>
-                          <Table.Row>
-                            <Table.ColumnHeaderCell>Amount</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
-                          </Table.Row>
-                        </Table.Header>
+          <BalanceProvider walletForPurchase={walletForPurchase}>
+            <Header
+              color={"white"}
+              merchant={currentUser?.merchant}
+              embeddedWallet={embeddedWallet}
+              authenticated={authenticated}
+              walletForPurchase={walletForPurchase}
+              currentUser={currentUser}
+            />
+          </BalanceProvider>
+        </Flex>
+        <Flex
+          flexGrow={'1'}
+          py={'7'}
+          px={'4'}
+          gap={'4'}
+          direction={'column'}
+          align={'center'}
+          height={'100%'}
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '20px 20px 0px 0px',
+            boxShadow: 'var(--shadow-6)'
+          }}
+        > 
+          {ready ? (
+              authenticated ? (
+                isFetchingTransactions ? (
+                  <>
+                    <Text>Fetching purchases</Text>
+                    <Spinner />
+                  </>
+                  ) : !noPurchases ? (
+                    <Flex direction={'column'} gap={'4'} justify={'start'} width={'100%'}>
+                      <Box overflow={'scroll'}>
+                        <Table.Root>
+                          <Table.Header>
+                            <Table.Row>
+                              <Table.ColumnHeaderCell>Amount</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
+                            </Table.Row>
+                          </Table.Header>
 
-                        <Table.Body>
-                          {totalTransactions?.map((transaction) => {
-                            const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
-                            return (
-                              <Table.Row key={transaction._id}>
-                                <Table.RowHeaderCell>${((transaction.product.price)+(transaction.payment.tipAmount || 0)+(transaction.payment.salesTax)).toFixed(2)}</Table.RowHeaderCell>
-                                <Table.Cell>
-                                  <Text wrap={'nowrap'}>
-                                    {transaction.merchant.name}: {transaction.product.name}
-                                  </Text>
-                                </Table.Cell>
-                                <Table.Cell>
-                                  <Badge radius="large" style={{ backgroundColor: color, color: 'white', padding: '3px 7px 3px 7px'}}>{label}</Badge>
-                                </Table.Cell>
-                                <Table.Cell>
-                                  <Text wrap={'nowrap'}>
-                                    {format(new Date(transaction.createdAt), 'MMM dd, yyyy')}
-                                  </Text>
-                                </Table.Cell>
-                              </Table.Row>
-                            );
-                          })}
-                        </Table.Body>
-                      </Table.Root>
-                    </Box>
-                  </Flex>
-                ) : (
-              <>
-                <Heading size={'5'}>No purchases yet</Heading>
-                <Callout.Root color="yellow">
-                  <Callout.Icon>
-                    <BellIcon />
-                  </Callout.Icon>
-                  <Callout.Text>
-                      You haven&apos;t made any purchases yet. If you think this is a mistake,{" "}
-                      <Link 
-                        href='mailto:payments@ongogh.com?subject=Purchases%20inquiry&body=Hello%2C%0A%0AI%20don%27t%20see%20expected%20purchases%20listed%20in%20my%20account.%20Here%20are%20my%20details%3A%0A%0AEmail%20address%3A%20%5B%20ENTER%20EMAIL%20%5D%0A%0APurchase%20method%3A%20%5B%20ENTER%20%22CREDIT%20CARD%22%2C%20%22APPLE%20PAY%22%2C%20%22GOOGLE%20PAY%22%2C%20%22CRYPTO%22%20%5D%20%0A%0ACrypto%20wallet%20address%3A%20%5B%20ENTER%20WALLET%20ADDRESS%20IF%20APPLICABLE%20%5D%0A%0A%5B%20ENTER%20ANY%20OTHER%20DETAILS%20%5D' 
-                        target='_blank' 
-                        rel='noopener noreferrer'
-                      >
-                        please contact us.
-                      </Link>
-                    </Callout.Text>
-                </Callout.Root>
-              </>
+                          <Table.Body>
+                            {totalTransactions?.map((transaction) => {
+                              const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
+                              return (
+                                <Table.Row key={transaction._id}>
+                                  <Table.RowHeaderCell>${((transaction.product.price)+(transaction.payment.tipAmount || 0)+(transaction.payment.salesTax)).toFixed(2)}</Table.RowHeaderCell>
+                                  <Table.Cell>
+                                    <Text wrap={'nowrap'}>
+                                      {transaction.merchant.name}: {transaction.product.name}
+                                    </Text>
+                                  </Table.Cell>
+                                  <Table.Cell>
+                                    <Badge radius="large" style={{ backgroundColor: color, color: 'white', padding: '3px 7px 3px 7px'}}>{label}</Badge>
+                                  </Table.Cell>
+                                  <Table.Cell>
+                                    <Text wrap={'nowrap'}>
+                                      {format(new Date(transaction.createdAt), 'MMM dd, yyyy')}
+                                    </Text>
+                                  </Table.Cell>
+                                </Table.Row>
+                              );
+                            })}
+                          </Table.Body>
+                        </Table.Root>
+                      </Box>
+                    </Flex>
+                  ) : (
+                <>
+                  <Heading size={'5'}>No purchases yet</Heading>
+                  <Callout.Root color="yellow">
+                    <Callout.Icon>
+                      <BellIcon />
+                    </Callout.Icon>
+                    <Callout.Text>
+                        You haven&apos;t made any purchases yet. If you think this is a mistake,{" "}
+                        <Link 
+                          href='mailto:payments@ongogh.com?subject=Purchases%20inquiry&body=Hello%2C%0A%0AI%20don%27t%20see%20expected%20purchases%20listed%20in%20my%20account.%20Here%20are%20my%20details%3A%0A%0AEmail%20address%3A%20%5B%20ENTER%20EMAIL%20%5D%0A%0APurchase%20method%3A%20%5B%20ENTER%20%22CREDIT%20CARD%22%2C%20%22APPLE%20PAY%22%2C%20%22GOOGLE%20PAY%22%2C%20%22CRYPTO%22%20%5D%20%0A%0ACrypto%20wallet%20address%3A%20%5B%20ENTER%20WALLET%20ADDRESS%20IF%20APPLICABLE%20%5D%0A%0A%5B%20ENTER%20ANY%20OTHER%20DETAILS%20%5D' 
+                          target='_blank' 
+                          rel='noopener noreferrer'
+                        >
+                          please contact us.
+                        </Link>
+                      </Callout.Text>
+                  </Callout.Root>
+                </>
+              )
+            ) : (
+              <Flex direction={'column'} height={'80vh'} align={'center'} justify={'center'} gap={'5'}>
+                <Text align={'center'}>
+                  Please log in to view this page
+                </Text>
+                <Button size={'4'}
+                style={{
+                  width: '250px',
+                  backgroundColor: '#0051FD'
+                }}
+                onClick={login}>
+                Log in
+              </Button>
+              </Flex>
             )
           ) : (
-            <Flex direction={'column'} height={'80vh'} align={'center'} justify={'center'} gap={'5'}>
-              <Text align={'center'}>
-                Please log in to view this page
-              </Text>
-              <Button size={'4'}
-              style={{
-                width: '250px',
-                backgroundColor: '#0051FD'
-              }}
-              onClick={login}>
-              Log in
-            </Button>
-            </Flex>
-          )
-        ) : (
-          <Spinner />
-        )}
+            <Spinner />
+          )}
+        </Flex>
       </Flex>
     </>
   );
