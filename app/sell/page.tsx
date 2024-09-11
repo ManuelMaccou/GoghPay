@@ -14,6 +14,7 @@ import { Header } from '../components/Header';
 import { useUser } from '../contexts/UserContext';
 import { logAdminError } from '../utils/logAdminError';
 import { ApiError } from '../utils/ApiError';
+import { useDeviceType } from '../contexts/DeviceType';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -22,6 +23,7 @@ function isError(error: any): error is Error {
 export default function Sell() {
   const { appUser, setIsFetchingUser, setAppUser } = useUser();
   const { ready, authenticated, user, login } = usePrivy();
+  const deviceType = useDeviceType();
 
   const [currentUser, setCurrentUser] = useState<User>();
 
@@ -203,45 +205,64 @@ export default function Sell() {
   }, [merchant]);
 
   useEffect(() => {
-    if (!finalPrice) return
+    if (!finalPrice || !finalPriceCalculated) return;
+  
     const handleSquarePosPayment = (newSaleFormData: SaleFormData | null) => {
       const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback`;
-      const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!
-      
-      const priceNumForPOS = parseFloat(finalPrice) * 100; // finalPrice in cents
-      
-
-      const dataParameter = {
-        amount_money: {
-          amount: priceNumForPOS,
-          currency_code: 'USD',
-        },
-        callback_url: callbackUrl,
-        client_id: squareClientId,
-        version: "1.3",
-        notes: 'Thank you for your purchase!',
-        customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
-        options: {
-          supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
-          auto_return: true,
-        },
-      };
+      const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
+      const priceInCents = Math.round(parseFloat(finalPrice) * 100);
   
-      const url = `square-commerce-v1://payment/create?data=${encodeURIComponent(
-        JSON.stringify(dataParameter)
-      )}`;
+      if (deviceType === 'iPhone') {
+        const dataParameter = {
+          amount_money: {
+            amount: priceInCents,
+            currency_code: 'USD',
+          },
+          callback_url: callbackUrl,
+          client_id: squareClientId,
+          version: "1.3",
+          notes: 'Thank you for your purchase!',
+          customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
+          options: {
+            supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+            auto_return: true,
+          },
+        };
   
-      console.log("url:", url);
+        const url = `square-commerce-v1://payment/create?data=${encodeURIComponent(
+          JSON.stringify(dataParameter)
+        )}`;
   
-      // Redirect to Square Point of Sale app
-      window.location.href = url;
+        window.location.href = url;
+  
+      } else if (deviceType === 'Android') {
+        const sdkVersion = "v2.0";
+        const currencyCode = "USD";
+        const tenderTypes = [
+          "com.squareup.pos.TENDER_CARD",
+        ].join(",");
+  
+        const posUrl =
+          "intent:#Intent;" +
+          "action=com.squareup.pos.action.CHARGE;" +
+          "package=com.squareup;" +
+          `S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};` +
+          `S.com.squareup.pos.CLIENT_ID=${squareClientId};` +
+          `S.com.squareup.pos.API_VERSION=${sdkVersion};` +
+          `i.com.squareup.pos.TOTAL_AMOUNT=${priceInCents};` + 
+          `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
+          `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
+          "end";
+  
+        window.open(posUrl);
+      }
     };
-
+  
     if (selectedPaymentMethod === 'Square') {
       handleSquarePosPayment(newSaleFormData);
     }
-
-  }, [newSaleFormData, selectedPaymentMethod, finalPrice])
+    
+  }, [newSaleFormData, selectedPaymentMethod, finalPrice, finalPriceCalculated, deviceType]);
 
   /*
   useEffect(() => {
