@@ -471,6 +471,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
     }
   }, [usersCurrentRewardsTier, merchant?.rewards?.tiers]);
 
+  const sortedMilestoneTiers = merchant?.rewards?.tiers ? [...merchant.rewards.tiers].sort((a, b) => b.milestone - a.milestone) : [];
+
   return (
     <>
       {ready ? (
@@ -479,11 +481,11 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
             <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{backgroundColor: primaryColor }}>
               <Avatar.Root>
                 <Avatar.Image 
-                className="MerchantLogo"
-                src={merchant?.branding.logo }
-                alt="Merchant Logo"
-                style={{objectFit: "contain", maxWidth: '200px'}}
-                />
+                  className="MerchantLogo"
+                  src={merchant?.branding.logo }
+                  alt="Merchant Logo"
+                  style={{objectFit: "contain", maxWidth: '200px'}}
+                  />
               </Avatar.Root>
 
               <Button style={{
@@ -500,7 +502,6 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
               <Spinner />
             </Flex>
           )
-          
         ) : ( !isFetchingMerchant && !isFetchingCurrentUserRewards ) ? (
           <>
             <Flex 
@@ -549,22 +550,35 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   ) : (
                     <Heading size={'8'}>Welcome</Heading>
                   )}
-                  <Flex direction={'row'} width={'100%'} justify={'between'} align={'center'}>
-                    <Text wrap={'wrap'} size={'5'} weight={'bold'} style={{maxWidth: '200px'}}>Remaining until next upgrade:</Text>
+
+                  {usersCurrentRewardsTier && usersCurrentRewardsTier._id !== sortedMilestoneTiers[0]?._id ? (
+                    <Flex direction={'row'} width={'100%'} justify={'between'} align={'center'}>
+                    <Text wrap={'wrap'} size={'5'} weight={'bold'} style={{ maxWidth: '200px' }}>
+                      Remaining until next upgrade:
+                    </Text>
                     <Text size={'8'}>${amountToNextRewardsTier}</Text>
                   </Flex>
-                 </Flex> 
-                <Flex direction={'column'} align={'end'} width={'100vw'} maxHeight={'50vh'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
-                  {merchant?.rewards?.tiers
-                  .sort((a, b) => b.milestone - a.milestone)
-                  .map((tier) => (
-                    <Card key={tier._id}
-                    ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
                     
+                  ) : (
+                    <Flex direction={'column'} width={'100vw'} align={'center'} justify={'center'}>
+                      <Callout.Root color="green" style={{ width: '100vw', padding: '7px', display: 'flex', justifyContent: 'center' }}>
+                        <Callout.Text size={'4'} weight={'bold'} align={'center'}>
+                          You&apos;re earning the max discount!
+                        </Callout.Text>
+                      </Callout.Root>
+                    </Flex>
+                    
+                  )}
+                </Flex>
+
+                <Flex direction={'column'} align={'end'} width={'100vw'} maxHeight={'50vh'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
+                  {sortedMilestoneTiers.map((tier) => (
+                    <Card key={tier._id}
+                      ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
                       style={{
                         flexShrink: 0,
                         width: tier._id === usersCurrentRewardsTier?._id ? '85%' : '70%',
-                        backgroundColor: tier._id === usersCurrentRewardsTier?._id ? primaryColor : 'transparent'
+                        backgroundColor: tier._id === usersCurrentRewardsTier?._id ? "blue" : 'transparent'
                       }}
                     >
                       <Flex direction={'row'} gap={'3'} width={'100%'} justify={'between'} align={'center'} height={'80px'} pr={'4'}>
@@ -580,26 +594,26 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                 </Flex>
                 <Flex>
                   {!errorCheckingSquareDirectory ? (
-                   isCheckingSquareDirectory === false ? (
-                    usersCurrentRewardsTier ? (
-                      <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
-                    ) : (
-                      <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
+                    isCheckingSquareDirectory === false ? (
+                      usersCurrentRewardsTier ? (
+                        <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
+                      ) : (
+                        <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
+                      )
+                    ) :  (
+                      <Text align={'center'} weight={'bold'} size={'7'}>Checking in...</Text>
                     )
-                  ) :  (
-                    <Text align={'center'} weight={'bold'} size={'7'}>Checking in...</Text>
-                  )
-                ) : (
-                  <Callout.Root color='red'>
-                    <Callout.Icon>
-                      <InfoCircledIcon />
-                    </Callout.Icon>
-                    <Callout.Text>
-                      {errorCheckingSquareDirectory}
-                    </Callout.Text>
-                  </Callout.Root>
-                )}
-                  
+                  ) : (
+                    <Callout.Root color='red'>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text>
+                        {errorCheckingSquareDirectory}
+                      </Callout.Text>
+                    </Callout.Root>
+                  )}
+                      
                   
                 </Flex>
               </Flex>

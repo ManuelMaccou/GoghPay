@@ -811,10 +811,21 @@ function TransferContent() {
 
 
   return (
-    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
-      {ready && authenticated && currentUser && (
+    <Flex
+      direction='column'
+      position='relative'
+      minHeight='100vh'
+      width='100%'
+      style={{
+        background: 'linear-gradient(to bottom, #6d0019 0%,#9e000a 24%'
+      }}
+    >
+      <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
+        <Heading size={'8'} style={{color: "white"}}>Transfer</Heading>
+      
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
+            color={"white"}
             merchant={currentUser?.merchant}
             embeddedWallet={embeddedWallet}
             authenticated={authenticated}
@@ -822,9 +833,21 @@ function TransferContent() {
             currentUser={currentUser}
           />
         </BalanceProvider>
-      )}
-      <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Transfer funds</Text>
-      <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'start'} gap={'4'}>
+      </Flex>
+      <Flex
+        flexGrow={'1'}
+        py={'7'}
+        px={'4'}
+        gap={'4'}
+        direction={'column'}
+        align={'center'}
+        height={'100%'}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '20px 20px 0px 0px',
+          boxShadow: 'var(--shadow-6)'
+        }}
+      > 
         {ready && (
           authenticated ? (
             <>
@@ -1075,7 +1098,11 @@ function TransferContent() {
                       <Text color="red" mt={'-3'}>Enter a valid address</Text>
                     )}
                     {merchantAddress && merchantAddressUpdated && isValidMerchantAddress && (
-                      <Text mt={'-3'}>Your USDC address</Text>
+                      <Callout.Root color="green" style={{width: 'max-content', padding: '7px'}}>
+                      <Callout.Text size={'3'}>
+                        Your USDC address is ready.
+                      </Callout.Text>
+                    </Callout.Root>
                     )}
                     <Flex direction={'row'} gap={'2'} align={'center'} justify={'center'} mt={'-2'} mb={'3'}>
                       <ExclamationTriangleIcon />
