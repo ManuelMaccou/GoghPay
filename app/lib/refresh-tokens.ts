@@ -10,7 +10,7 @@ const SQUARE_OBTAIN_TOKEN_URL = `https://connect.${process.env.NEXT_PUBLIC_SQUAR
 const SQUARE_CLIENT_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
 const SQUARE_APP_SECRET = process.env.SQUARE_APP_SECRET;
 
-const DAYS_TO_REFRESH = [42, 14, 7]; // Days before expiration to attempt token refresh
+const DAYS_TO_REFRESH = [22, 14, 7]; // Days before expiration to attempt token refresh
 
 export const checkAndRefreshToken = async (merchantId: string): Promise<boolean> => {
   try {

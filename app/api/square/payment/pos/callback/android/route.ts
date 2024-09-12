@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse the incoming request body (assuming JSON body)
+    // Parse the incoming request body
     const body = await req.json();
 
     if (!body || typeof body !== 'object') {
@@ -35,8 +35,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Return the response
-    return NextResponse.json({ result: resultString }, { status: 200 });
+    // Redirect to a success page and pass the result in query parameters
+    const params = new URLSearchParams({ result: resultString });
+    return NextResponse.redirect(`/payment-result?${params.toString()}`, 302);
 
   } catch (error) {
     console.error('Error processing Square POS callback:', error);

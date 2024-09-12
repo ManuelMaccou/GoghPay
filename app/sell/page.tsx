@@ -64,10 +64,12 @@ export default function Sell() {
   const [successMessage1, setSuccessMessage1] = useState<string | null>(null);
   const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
   const [discountUpgradeMessage, setDiscountUpgradeMessage] = useState<string | null>(null);
+  const [squarePosError, setSquarePosError] = useState<string | null>(null);
   
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
   const [showZelleDialog, setShowZelleDialog] = useState<boolean>(false);
   const [showCashDialog, setShowCashDialog] = useState<boolean>(false);
+  const [showSquareDialog, setShowSquareDialog] = useState<boolean>(false);
 
   const router = useRouter();
 
@@ -204,69 +206,73 @@ export default function Sell() {
     }
   }, [merchant]);
 
-  useEffect(() => {
-    if (!finalPrice || !finalPriceCalculated) return;
+
   
-    const handleSquarePosPayment = (newSaleFormData: SaleFormData | null) => {
-      const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
-      const priceInCents = Math.round(parseFloat(finalPrice) * 100);
-  
-      if (deviceType === 'iPhone') {
-        const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback/ios`;
-        const dataParameter = {
-          amount_money: {
-            amount: priceInCents,
-            currency_code: 'USD',
-          },
-          callback_url: callbackUrl,
-          client_id: squareClientId,
-          version: "2.0",
-          notes: 'Thank you for your purchase!',
-          customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
-          options: {
-            supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
-            auto_return: true,
-          },
-        };
-  
-        const url = `square-commerce-v1://payment/create?data=${encodeURIComponent(
-          JSON.stringify(dataParameter)
-        )}`;
-  
-        window.location.href = url;
-  
-      } else if (deviceType === 'Android') {
-        const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/squarePayment/poscallback`;
-        const sdkVersion = "v2.0";
-        const currencyCode = "USD";
-        const customerId = newSaleFormData?.customer?.userInfo.squareCustomerId;
-        const tenderTypes = [
-          "com.squareup.pos.TENDER_CARD",
-        ].join(",");
-  
-        const posUrl =
-          "intent:#Intent;" +
-          "action=com.squareup.pos.action.CHARGE;" +
-          "package=com.squareup;" +
-          `S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};` +
-          `S.com.squareup.pos.CLIENT_ID=${squareClientId};` +
-          `S.com.squareup.pos.API_VERSION=${sdkVersion};` +
-          `i.com.squareup.pos.TOTAL_AMOUNT=${priceInCents};` + 
-          `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
-          `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
-          `S.com.squareup.pos.CUSTOMER_ID=${customerId};` + 
-          `S.com.squareup.pos.NOTE=Gogh initiated tap-to-pay` + 
-          "end";
-  
-        window.open(posUrl);
-      }
-    };
-  
-    if (selectedPaymentMethod === 'Square') {
-      handleSquarePosPayment(newSaleFormData);
+  const handleSquarePosPayment = (newSaleFormData: SaleFormData | null) => {
+    if (!finalPrice || !finalPriceCalculated) {
+      setSquarePosError('Missing payment details. Please refresh the page and try again.')
+      return;
+    } 
+
+    //const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
+    const squareClientId = 'sq0idp-Zy45WMkZUPguS3T00fiL7g';
+    const priceInCents = Math.round(parseFloat(finalPrice) * 100);
+
+    if (deviceType === 'iPhone') {
+      const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/ios`;
+      const dataParameter = {
+        amount_money: {
+          amount: priceInCents,
+          currency_code: 'USD',
+        },
+        callback_url: callbackUrl,
+        client_id: squareClientId,
+        version: "2.0",
+        notes: 'Thank you for your purchase!',
+        customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
+        options: {
+          supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+          auto_return: true,
+        },
+      };
+
+      const url = `square-commerce-v1://payment/create?data=${encodeURIComponent(
+        JSON.stringify(dataParameter)
+      )}`;
+
+      window.location.href = url;
+
+    } else if (deviceType === 'Android') {
+      //const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/squarePayment/poscallback`;
+      //const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android`;
+      const callbackUrl = `https://60aa-2600-387-15-1d17-00-7.ngrok-free.app/api/square/payment/pos/callback/android`;
+      //const callbackUrl = 'https://60aa-2600-387-15-1d17-00-7.ngrok-free.app/squarePayment/poscallback';
+      const sdkVersion = "v2.0";
+      const currencyCode = "USD";
+      const customerId = newSaleFormData?.customer?.userInfo.squareCustomerId;
+      const tenderTypes = [
+        "com.squareup.pos.TENDER_CARD",
+      ].join(",");
+
+      const posUrl =
+        "intent:#Intent;" +
+        "action=com.squareup.pos.action.CHARGE;" +
+        "package=com.squareup;" +
+        `S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};` +
+        `S.com.squareup.pos.CLIENT_ID=${squareClientId};` +
+        `S.com.squareup.pos.API_VERSION=${sdkVersion};` +
+        `i.com.squareup.pos.TOTAL_AMOUNT=${priceInCents};` + 
+        `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
+        `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
+        `S.com.squareup.pos.NOTE=${encodeURIComponent('Gogh initiated tap-to-pay')};` +
+        "end;";
+
+        console.log('url:', posUrl)
+
+        window.location.href = posUrl;
     }
-    
-  }, [newSaleFormData, selectedPaymentMethod, finalPrice, finalPriceCalculated, deviceType]);
+  };
+  
 
   /*
   useEffect(() => {
@@ -347,6 +353,10 @@ export default function Sell() {
     } else if (method === 'Cash') {
       setShowCashDialog(true);
       sessionStorage.removeItem('newSaleFormData');
+
+    } else if (method === 'Square') {
+      setShowSquareDialog(true);
+      sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
 
     } else if (method === 'ManualEntry') {
       sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
@@ -898,6 +908,90 @@ export default function Sell() {
                             Confirm
                           </Button>
                         </AlertDialog.Action>
+                      </Flex>
+                    </AlertDialog.Content>
+                  </AlertDialog.Root>
+                )} 
+
+                {newSaleFormData && selectedPaymentMethod === 'Square' && (
+                  <AlertDialog.Root open={showSquareDialog} onOpenChange={setShowSquareDialog}>
+                    <AlertDialog.Trigger>
+                      <Button style={{ display: 'none' }} />
+                    </AlertDialog.Trigger>
+                    <AlertDialog.Content maxWidth="450px">
+                      <AlertDialog.Title size={'8'} align={'center'} mb={'5'}>Tap to pay</AlertDialog.Title>
+                      <VisuallyHidden>
+                        <AlertDialog.Description size="2" mb="4">
+                          Square payment
+                        </AlertDialog.Description>
+                      </VisuallyHidden>
+                      
+                      <Flex direction={'column'} width={'100%'} align={'center'} justify={'center'} gap={'9'}>
+                        {newSaleFormData && finalPriceCalculated && (
+                          <Flex direction={'column'} justify={'center'}>
+                        <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                          <Flex direction={'row'} width={'300px'} justify={'between'}>
+                            <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                            <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                          </Flex>
+                          {rewardsDiscount > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                              {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                              ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                              )}
+                            </Flex>
+                          )}
+
+                          {welcomeDiscount > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                              {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                              ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                              )}
+                            </Flex>
+                          )}
+                      
+                          {newSaleFormData.tax > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Sales tax:</Text>
+                              <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
+                            </Flex>
+                          )}
+                          </Flex>
+                        )}
+                      </Flex>
+
+                      <Callout.Root color="red" style={{width: 'max-content', padding: '7px'}}>
+                        <Callout.Text size={'3'}>
+                          {squarePosError}
+                        </Callout.Text>
+                      </Callout.Root>
+                      
+                      <Flex direction={'column'} gap="7" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                        <AlertDialog.Action>
+                          <Button size={'4'} 
+                            style={{width: '250px'}}
+                            onClick={() => {
+                              handleSavePaymentAndUpdateRewards(newSaleFormData);
+                              setShowZelleDialog(false);
+                            }}>
+                            Tap to pay
+                          </Button>
+                        </AlertDialog.Action>
+                        <AlertDialog.Cancel>
+                          <Button size={'4'} variant="ghost" 
+                            onClick={() => {
+                              handleSquarePosPayment(newSaleFormData);
+                              setShowNewSaleForm(true);
+                            }}>
+                            Cancel
+                          </Button>
+                        </AlertDialog.Cancel>
                       </Flex>
                     </AlertDialog.Content>
                   </AlertDialog.Root>
