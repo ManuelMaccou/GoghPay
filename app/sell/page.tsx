@@ -208,11 +208,11 @@ export default function Sell() {
     if (!finalPrice || !finalPriceCalculated) return;
   
     const handleSquarePosPayment = (newSaleFormData: SaleFormData | null) => {
-      const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback`;
       const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
       const priceInCents = Math.round(parseFloat(finalPrice) * 100);
   
       if (deviceType === 'iPhone') {
+        const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback/ios`;
         const dataParameter = {
           amount_money: {
             amount: priceInCents,
@@ -220,7 +220,7 @@ export default function Sell() {
           },
           callback_url: callbackUrl,
           client_id: squareClientId,
-          version: "1.3",
+          version: "2.0",
           notes: 'Thank you for your purchase!',
           customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
           options: {
@@ -236,8 +236,10 @@ export default function Sell() {
         window.location.href = url;
   
       } else if (deviceType === 'Android') {
+        const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/squarePayment/poscallback`;
         const sdkVersion = "v2.0";
         const currencyCode = "USD";
+        const customerId = newSaleFormData?.customer?.userInfo.squareCustomerId;
         const tenderTypes = [
           "com.squareup.pos.TENDER_CARD",
         ].join(",");
@@ -252,6 +254,8 @@ export default function Sell() {
           `i.com.squareup.pos.TOTAL_AMOUNT=${priceInCents};` + 
           `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
           `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
+          `S.com.squareup.pos.CUSTOMER_ID=${customerId};` + 
+          `S.com.squareup.pos.NOTE=Gogh initiated tap-to-pay` + 
           "end";
   
         window.open(posUrl);
