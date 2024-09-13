@@ -69,7 +69,6 @@ function SellContent() {
   const [squarePosSuccessMessage, setSquarePosSuccessMessage] = useState<string | null>(null);
   const [squarePosErrorMessage, setSquarePosErrorMessage] = useState<string | null>(null);
 
-  
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
   const [showZelleDialog, setShowZelleDialog] = useState<boolean>(false);
   const [showCashDialog, setShowCashDialog] = useState<boolean>(false);
@@ -206,7 +205,6 @@ function SellContent() {
     }
   };
  
-
   const updateTransactionDetails = async (
     squarePaymentId: string | null,
     clientTransactionId: string,
@@ -214,9 +212,7 @@ function SellContent() {
     statusToSave: string
   ) => {
     try {
-
       const accessToken = await getAccessToken();
-
       const response = await fetch('/api/transaction/update', {
         method: 'POST',
         headers: {
@@ -242,8 +238,6 @@ function SellContent() {
 
         console.error('Transaction update failed:', apiError);
       }
-
-      
     } catch (error) {
       console.error(error);
     }
@@ -273,14 +267,11 @@ function SellContent() {
       const responseData = await response.json();
 
       if (!response.ok) {
-          
         const apiError = new ApiError(
           `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
           response.status,
           responseData
         );
-    
-
         console.error(apiError);
         return false;
       } else {
@@ -312,7 +303,6 @@ function SellContent() {
     if (!currentUser) return;
     setIsFetchingCurrentRewardsCustomers(true)
     const accessToken = await getAccessToken();
-
     try {
       const response = await fetch(`/api/rewards/userRewards/customers/?merchantId=${merchantId}&privyId=${currentUser.privyId}`, {
         next: {revalidate: 1},
@@ -416,8 +406,6 @@ function SellContent() {
     }
   }, [merchant]);
 
-
-  
   const handleSquarePosPayment = async (newSaleFormData: SaleFormData | null) => {
     if (!finalPrice || !finalPriceCalculated) {
       setSquarePosError('Missing payment details. Please refresh the page and try again.')
@@ -596,19 +584,11 @@ function SellContent() {
           `S.com.squareup.pos.NOTE=${encodeURIComponent(`Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ${goghTransactionId}`)};` +
           "end;";
       }
-
         console.log('url:', posUrl)
 
         window.location.href = posUrl;
     }
   };
-  
-
-  /*
-  useEffect(() => {
-    setShowVenmoDialog(selectedPaymentMethod === 'Venmo');
-  }, [selectedPaymentMethod]);
-  */
 
   /*
   useEffect(() => {
@@ -722,7 +702,6 @@ function SellContent() {
     let priceAfterDiscount = priceNum;
     let finalPriceCalculation = priceNum;
 
-
     if (newSaleFormData.sellerMerchant?.rewards?.welcome_reward && newSaleFormData.customer?.purchaseCount === 1) {
       welcomeDiscountAmount = newSaleFormData.sellerMerchant?.rewards?.welcome_reward
     }
@@ -759,21 +738,6 @@ function SellContent() {
     setFinalPrice(finalPriceCalculation.toFixed(2));
 
   }, [newSaleFormData])
-
-  /*
-  useEffect(() => {
-    // Clear sessionStorage on page refresh
-    const handleBeforeUnload = () => {
-      sessionStorage.removeItem('newSaleFormData');
-    };
-  
-    window.addEventListener('beforeunload', handleBeforeUnload);
-  
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
-  */
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
@@ -785,11 +749,6 @@ function SellContent() {
     setErrorMessage(null);
     setDiscountUpgradeMessage(null)
   };
-
-  const handleResetForm = () => {
-    setNewSaleFormData(null)
-    sessionStorage.removeItem('newSaleFormData');
-  }
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
     const accessToken = await getAccessToken();
@@ -860,7 +819,6 @@ function SellContent() {
       }
     }
     try {
-      
       const response = await fetch(`/api/transaction`, {
         method: 'POST',
         headers: {
