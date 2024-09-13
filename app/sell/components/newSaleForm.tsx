@@ -21,6 +21,7 @@ interface NewSaleFormProps {
   onStartNewSale: () => void;
   onCustomerRefresh: (merchantId: string) => void;
   formData: SaleFormData | null;
+  checkoutStatus: string | null;
 }
 
 interface SaleFormData {
@@ -44,6 +45,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   onStartNewSale,
   onCustomerRefresh,
   formData,
+  checkoutStatus,
 }) => {
   const [localFormData, setlocalFormData] = useState<SaleFormData>({
     product: formData?.product || "",
@@ -65,6 +67,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   const [ currentCustomer, setCurrentCustomer ] = useState<RewardsCustomer | null>(null);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isPaymentsDialogOpen, setIsPaymentsDialogOpen] = useState(false);
+  const [isCheckingFormStatus, setIsCheckingFormStatus] = useState<boolean>(true);
 
   const paymentTypeLogos: Record<PaymentType, string> = {
     [PaymentType.None]: '/paymentMethodLogos/venmo.png',
@@ -103,7 +106,6 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     } else {
       setSellerMerchant(merchantFromParent);
     }
-    console.log("seller merchant1:", sellerMerchant);
   }, [merchantFromParent, sellerMerchant])
 
   useEffect(() => {
@@ -148,16 +150,50 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   };
 
   useEffect(() => {
+    setIsCheckingFormStatus(true);
     const storedData = sessionStorage.getItem('newSaleFormData');
     
     if (storedData) {
       const parsedData: SaleFormData = JSON.parse(storedData);
-      setCurrentCustomer(parsedData.customer);
-    } else if (formData && formData.customer) {
-      setCurrentCustomer(formData.customer)
+      if (parsedData.hasOwnProperty('tax') && parsedData.tax > 0) {
+        setIsTaxChecked(true);
+      } else if (parsedData.hasOwnProperty('tax') && parsedData.tax === 0) {
+        setIsTaxChecked(false);
+      }
+      if (checkoutStatus === 'success' || !checkoutStatus) {
+        setlocalFormData({
+          product: "",
+          price: "",
+          tax: 0,
+          merchant: "",
+          customer: null,
+          sellerMerchant: merchantFromParent,
+          paymentMethod: PaymentType.None,
+        })
+        setCurrentCustomer(null)
+      } else {
+        setlocalFormData({
+          product: formData?.product || "",
+          price: formData?.price || "",
+          tax: formData?.tax || 0,
+          merchant: formData?.merchant || "",
+          customer: formData?.customer || null,
+          sellerMerchant: formData?.sellerMerchant || merchantFromParent,
+          paymentMethod: formData?.paymentMethod || PaymentType.None,
+        })
+        setCurrentCustomer(parsedData.customer);
+      }
+
+    } else if (formData) {
+      setlocalFormData(formData)
+      if (formData.customer) {
+        setCurrentCustomer(formData.customer)
+      }
+      setIsTaxChecked(formData.tax > 0);
     }
+    setIsCheckingFormStatus(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [formData, checkoutStatus, merchantFromParent]);
 
   const handleSelectPaymentMethod = (paymentMethod: PaymentType) => {
     const updatedFormData = { ...localFormData, paymentMethod };
@@ -228,8 +264,8 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       const result = await generateQrCode({ message: "" }, userId, sellerMerchant, localFormData);
       if (result.signedURL) {
         onQrCodeGenerated(result.signedURL);
+        onMessageUpdate("Scan me to pay");
       }
-      onMessageUpdate("Scan me to pay");
     } catch (error) {
       onMessageUpdate("Failed to generate QR Code");
     }
@@ -237,241 +273,251 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   */
 
   return (
+
     <Flex direction={'column'} align={'center'} justify={'between'} height={'100%'} width={'80%'}>
-      <form onSubmit={handleSubmit} className={styles.formGroup}>
-        <Flex direction={'column'} justify={'center'} height={'100%'}>
-          {merchantFromParent.admin && (
-            <>
-              <label htmlFor="merchant" className={styles.formLabel}>Select Merchant</label>
-              <Select.Root onValueChange={handleSelectChange}>
-                <Select.Trigger variant="surface" placeholder="Select a merchant" mb={'5'} mt={'1'} />
-                <Select.Content>
-                  <Select.Group>
-                      {merchantsList.map(merchant => (
-                        <Select.Item key={merchant._id} value={merchant._id}>
-                          {merchant.name}
-                        </Select.Item>
-                      ))}
-                  </Select.Group>
-                </Select.Content>
-              </Select.Root>
-            </>
-          )}
-          <Dialog.Root open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-            <Dialog.Trigger style={{marginBottom: '20px'}}>
-            {currentCustomer ? (
-              <Button variant='surface' size={'4'} style={{width: "100%"}}>
-                <PersonIcon height={'25px'} width={'25px'} /> 
-                {currentCustomer.userInfo.email}
-              </Button>
-            ) : (
-              <Button variant='surface' size={'4'}>
-                <PersonIcon height={'25px'} width={'25px'} /> 
-                Select customer
-              </Button>
+      {!isCheckingFormStatus && (
+        <form onSubmit={handleSubmit} className={styles.formGroup}>
+          <Flex direction={'column'} justify={'center'} height={'100%'}>
+            {merchantFromParent.admin && (
+              <>
+                <label htmlFor="merchant" className={styles.formLabel}>Select Merchant</label>
+                <Select.Root onValueChange={handleSelectChange}>
+                  <Select.Trigger variant="surface" placeholder="Select a merchant" mb={'5'} mt={'1'} />
+                  <Select.Content>
+                    <Select.Group>
+                        {merchantsList.map(merchant => (
+                          <Select.Item key={merchant._id} value={merchant._id}>
+                            {merchant.name}
+                          </Select.Item>
+                        ))}
+                    </Select.Group>
+                  </Select.Content>
+                </Select.Root>
+              </>
             )}
-            </Dialog.Trigger>
-            
-            <Dialog.Content
-                style={{
-                  position: 'fixed',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '85vh',
-                  borderRadius: '20px 20px 0 0',
-                  padding: '1rem',
-                  backgroundColor: 'white',
-                  overflowY: 'auto',
-                }}
-              >
-                <Flex direction={'column'} align={'end'} mb={'7'}>
-                  <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsCustomerDialogOpen(false)}/>
-                </Flex>
-                  <VisuallyHidden>
-                    <Dialog.Title>Recently checked in</Dialog.Title>
-                  </VisuallyHidden>
-                  <Flex direction={'row'} justify={'between'} align={'center'} width={'85%'} mb={'7'}>
-                  <Text size={'5'} weight={'bold'}>Recently checked in</Text>
-                    <IconButton variant='ghost' onClick={handleCustomerRefresh}>
-                      <UpdateIcon height={'30'} width={'30'} />
-                    </IconButton>
-                </Flex>
-                <VisuallyHidden>
-                  <Dialog.Description>
-                    Recently checked in custoemrs
-                  </Dialog.Description>
-                </VisuallyHidden>
-                {currentCustomer && (
-                  <Flex direction={'column'} align={'center'}>
-                    <Button size={'4'} variant='ghost' color='red' mb={'7'} 
-                      onClick={() => {
-                        handleSelectCustomer(null);
-                        setIsCustomerDialogOpen(false)
-                      }}>
-                        <Text size={'6'}>
-                          Remove customer
-                        </Text>
-                    </Button>
+            <Dialog.Root open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+              <Dialog.Trigger style={{marginBottom: '20px'}}>
+              {currentCustomer ? (
+                <Button variant='surface' size={'4'} style={{width: "100%"}}>
+                  <PersonIcon height={'25px'} width={'25px'} /> 
+                  {currentCustomer.userInfo.email}
+                </Button>
+              ) : (
+                <Button variant='surface' size={'4'}>
+                  <PersonIcon height={'25px'} width={'25px'} /> 
+                  Select customer
+                </Button>
+              )}
+              </Dialog.Trigger>
+              
+              <Dialog.Content
+                  style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '85vh',
+                    borderRadius: '20px 20px 0 0',
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    overflowY: 'auto',
+                  }}
+                >
+                  <Flex direction={'column'} align={'end'} mb={'7'}>
+                    <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsCustomerDialogOpen(false)}/>
                   </Flex>
-                  
-                )}
-                {customers.length > 0 ? (
-                  customers.map((customer: RewardsCustomer) => (
+                    <VisuallyHidden>
+                      <Dialog.Title>Recently checked in</Dialog.Title>
+                    </VisuallyHidden>
+                    <Flex direction={'row'} justify={'between'} align={'center'} width={'85%'} mb={'7'}>
+                    <Text size={'5'} weight={'bold'}>Recently checked in</Text>
+                      <IconButton variant='ghost' onClick={handleCustomerRefresh}>
+                        <UpdateIcon height={'30'} width={'30'} />
+                      </IconButton>
+                  </Flex>
+                  <VisuallyHidden>
+                    <Dialog.Description>
+                      Recently checked in custoemrs
+                    </Dialog.Description>
+                  </VisuallyHidden>
+                  {currentCustomer && (
+                    <Flex direction={'column'} align={'center'}>
+                      <Button size={'4'} variant='ghost' color='red' mb={'7'} 
+                        onClick={() => {
+                          handleSelectCustomer(null);
+                          setIsCustomerDialogOpen(false)
+                        }}>
+                          <Text size={'6'}>
+                            Remove customer
+                          </Text>
+                      </Button>
+                    </Flex>
                     
-                    <Card
-                      key={customer.userInfo._id}
-                      mb={'5'}
-                      variant="surface"
-                      onClick={() => handleSelectCustomer(customer)}
-                      style={{ cursor: 'pointer', padding: '1.5rem' }}
-                    >
-                      {customer.userInfo.name && (
-                        <Text as="div" size={'5'} weight="bold">
-                          {customer.userInfo.name}
-                        </Text>
-                      )}
-                      <Text as="div" color="gray" size="5">
-                        {customer.userInfo.email}
-                      </Text>
-                    </Card>
-                  ))
-                ) : (
-                  <Text as="div" size="2" color="gray">
-                    No customers available.
-                  </Text>
-                )}
-              </Dialog.Content>
-          </Dialog.Root>
-
-          <label htmlFor="product" className={styles.formLabel}>Product Name</label>
-            <TextField.Root
-              mb={'5'}
-              mt={'1'}
-              type="text"
-              size={'3'}
-              name="product"
-              value={localFormData.product}
-              onChange={handleChange}
-              required
-            />
-          <label htmlFor="price" className={styles.formLabel}>Price</label>
-            <TextField.Root
-              mb={'5'}
-              mt={'1'}
-              ref={priceInputRef}
-              type="text"
-              size={'3'}
-              name="price"
-              value={localFormData.price}
-              onChange={handleChange}
-              onFocus={handleFocus}
-              required
-            >
-                <TextField.Slot>
-                <Text size={'4'} weight={'bold'}>$</Text>
-                </TextField.Slot>
-            </TextField.Root>
-          {defaultTax && (
-            <>
-            <Flex direction={'row'} gap={'4'}>
-              <label htmlFor="price" className={styles.formLabel}>Sales tax</label>
-              <Link href='/account/taxes'>Edit</Link>
-            </Flex>
-            
-              <Flex width={'100%'} justify={'between'} mb={'6'}>
-                <Text weight={'bold'} as="label" size="4">
-                {defaultTax.name}
-                </Text>
-                <Flex>
-                  <Text size={'4'}>
-                  {defaultTax.rate}%
-                    <Checkbox 
-                      checked={isTaxChecked}
-                      onCheckedChange={handleTaxCheckboxChange} 
-                      ml={'4'} 
-                      size={'3'}
-                    />
-                  </Text>
-                </Flex>
-            </Flex>
-
-            </>
-          )}
-        </Flex>
-          
-        <Flex direction={'column'} justify={'center'}>
-          <Dialog.Root open={isPaymentsDialogOpen} onOpenChange={setIsPaymentsDialogOpen}>
-          <Button
-            variant='surface'
-            size={'4'}
-            style={{ width: '100%', marginBottom: '20px' }}
-            type='submit'
-            onClick={handleResetParentMessages}
-          >
-            Checkout
-          </Button>
-            
-            <Dialog.Content
-                style={{
-                  position: 'fixed',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '85vh',
-                  borderRadius: '20px 20px 0 0',
-                  padding: '1rem',
-                  backgroundColor: 'white',
-                  overflowY: 'auto',
-                }}
-              >
-                <Flex direction={'column'} align={'end'} mb={'5'}>
-                  <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsPaymentsDialogOpen(false)}/>
-                </Flex>
-                <Dialog.Title mb={'5'}>Select payment method</Dialog.Title>
-                <VisuallyHidden><Dialog.Description>Select payment method</Dialog.Description></VisuallyHidden>
-                {paymentMethods.length > 0 ? (
-                  <Grid
-                    columns={{ initial: '2', xs: '2' }} // Responsive grid columns
-                    gap="4"
-                    style={{ width: '100%', marginTop: '1rem' }}
-                  >
-                    {paymentMethods.map((paymentMethod: PaymentType) => (
+                  )}
+                  {customers.length > 0 ? (
+                    customers.map((customer: RewardsCustomer) => (
+                      
                       <Card
-                        key={paymentMethod}
+                        key={customer.userInfo._id}
+                        mb={'5'}
                         variant="surface"
-                        onClick={() => handleSelectPaymentMethod(paymentMethod)}
-                        style={{ cursor: 'pointer', padding: '1.5rem', alignContent: 'center', height: '150px', position: 'relative' }}
+                        onClick={() => handleSelectCustomer(customer)}
+                        style={{ cursor: 'pointer', padding: '1.5rem' }}
                       >
-                        <Image
-                          src={paymentTypeLogos[paymentMethod]}
-                          alt={paymentMethod}
-                          fill
-                          sizes='300px'
-                          style={{
-                            display: 'block',
-                            objectFit: 'contain',
-                            padding: '20px',
-                            justifySelf: 'center'
-                          }}
-                        />
+                        {customer.userInfo.name && (
+                          <Text as="div" size={'5'} weight="bold">
+                            {customer.userInfo.name}
+                          </Text>
+                        )}
+                        <Text as="div" color="gray" size="5">
+                          {customer.userInfo.email}
+                        </Text>
                       </Card>
-                    ))}
-                  </Grid>
-                ) : (
-                  <Text as="div" size="2" color="gray">
-                    Payment methods not configured
+                    ))
+                  ) : (
+                    <Text as="div" size="2" color="gray">
+                      No customers available.
+                    </Text>
+                  )}
+                </Dialog.Content>
+            </Dialog.Root>
+
+            <label htmlFor="product" className={styles.formLabel}>Product Name</label>
+              <TextField.Root
+                mb={'5'}
+                mt={'1'}
+                type="text"
+                size={'3'}
+                name="product"
+                value={localFormData.product}
+                onChange={handleChange}
+                required
+              />
+            <label htmlFor="price" className={styles.formLabel}>Price</label>
+              <TextField.Root
+                mb={'5'}
+                mt={'1'}
+                ref={priceInputRef}
+                type="text"
+                size={'3'}
+                name="price"
+                value={localFormData.price}
+                onChange={handleChange}
+                onFocus={handleFocus}
+                required
+              >
+                  <TextField.Slot>
+                  <Text size={'4'} weight={'bold'}>$</Text>
+                  </TextField.Slot>
+              </TextField.Root>
+            {defaultTax ? (
+              <>
+              <Flex direction={'row'} gap={'4'}>
+                <label htmlFor="tax" className={styles.formLabel}>Sales tax</label>
+                <Link href='/account/taxes'>Edit</Link>
+              </Flex>
+              
+                <Flex width={'100%'} justify={'between'} mb={'6'}>
+                  <Text weight={'bold'} as="label" size="4">
+                  {defaultTax.name}
                   </Text>
-                )}
-              </Dialog.Content>
-          </Dialog.Root>
+                  <Flex>
+                    <Text size={'4'}>
+                    {defaultTax.rate}%
+                      <Checkbox 
+                        checked={isTaxChecked}
+                        onCheckedChange={handleTaxCheckboxChange} 
+                        ml={'4'} 
+                        size={'3'}
+                      />
+                    </Text>
+                  </Flex>
+              </Flex>
 
-
-          <Flex direction={'column'}>
-            <Text>{errorMessage}</Text>
+              </>
+            ) : (
+              <Flex direction={'column'} align={'end'}>
+                <Link mb={'7'} href='/account/taxes'>Add sales tax</Link>
+              </Flex>
+              
+            )}
           </Flex>
-        </Flex>
-      </form>
+            
+          <Flex direction={'column'} justify={'center'}>
+            <Dialog.Root open={isPaymentsDialogOpen} onOpenChange={setIsPaymentsDialogOpen}>
+            <Button
+              variant='surface'
+              size={'4'}
+              style={{ width: '100%', marginBottom: '20px' }}
+              type='submit'
+              onClick={handleResetParentMessages}
+            >
+              Checkout
+            </Button>
+            
+              
+              <Dialog.Content
+                  style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '85vh',
+                    borderRadius: '20px 20px 0 0',
+                    padding: '1rem',
+                    backgroundColor: 'white',
+                    overflowY: 'auto',
+                  }}
+                >
+                  <Flex direction={'column'} align={'end'} mb={'5'}>
+                    <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsPaymentsDialogOpen(false)}/>
+                  </Flex>
+                  <Dialog.Title mb={'5'}>Select payment method</Dialog.Title>
+                  <VisuallyHidden><Dialog.Description>Select payment method</Dialog.Description></VisuallyHidden>
+                  {paymentMethods.length > 0 ? (
+                    <Grid
+                      columns={{ initial: '2', xs: '2' }} // Responsive grid columns
+                      gap="4"
+                      style={{ width: '100%', marginTop: '1rem' }}
+                    >
+                      {paymentMethods.map((paymentMethod: PaymentType) => (
+                        <Card
+                          key={paymentMethod}
+                          variant="surface"
+                          onClick={() => handleSelectPaymentMethod(paymentMethod)}
+                          style={{ cursor: 'pointer', padding: '1.5rem', alignContent: 'center', height: '150px', position: 'relative' }}
+                        >
+                          <Image
+                            src={paymentTypeLogos[paymentMethod]}
+                            alt={paymentMethod}
+                            fill
+                            sizes='300px'
+                            style={{
+                              display: 'block',
+                              objectFit: 'contain',
+                              padding: '20px',
+                              justifySelf: 'center'
+                            }}
+                          />
+                        </Card>
+                      ))}
+                    </Grid>
+                  ) : (
+                    <Text as="div" size="2" color="gray">
+                      Payment methods not configured
+                    </Text>
+                  )}
+                </Dialog.Content>
+            </Dialog.Root>
+
+
+            <Flex direction={'column'}>
+              <Text>{errorMessage}</Text>
+            </Flex>
+          </Flex>
+        </form>
+        
+      )}
     </Flex>
   );
 };

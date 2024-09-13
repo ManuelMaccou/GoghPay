@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, FormEvent, useEffect, useCallback } from 'react';
+import React, { useState, FormEvent, useEffect, useCallback, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode.react';
 import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWallets } from '@privy-io/react-auth';
@@ -14,14 +14,17 @@ import { Header } from '../components/Header';
 import { useUser } from '../contexts/UserContext';
 import { logAdminError } from '../utils/logAdminError';
 import { ApiError } from '../utils/ApiError';
+import { useDeviceType } from '../contexts/DeviceType';
+import { useSearchParams } from 'next/navigation';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Sell() {
-  const { appUser, setIsFetchingUser, setAppUser } = useUser();
+function SellContent() {
+  const { appUser} = useUser();
   const { ready, authenticated, user, login } = usePrivy();
+  const deviceType = useDeviceType();
 
   const [currentUser, setCurrentUser] = useState<User>();
 
@@ -62,12 +65,18 @@ export default function Sell() {
   const [successMessage1, setSuccessMessage1] = useState<string | null>(null);
   const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
   const [discountUpgradeMessage, setDiscountUpgradeMessage] = useState<string | null>(null);
+  const [squarePosError, setSquarePosError] = useState<string | null>(null);
+  const [squarePosSuccessMessage, setSquarePosSuccessMessage] = useState<string | null>(null);
+  const [squarePosErrorMessage, setSquarePosErrorMessage] = useState<string | null>(null);
+
   
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
   const [showZelleDialog, setShowZelleDialog] = useState<boolean>(false);
   const [showCashDialog, setShowCashDialog] = useState<boolean>(false);
+  const [showSquareDialog, setShowSquareDialog] = useState<boolean>(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
 
@@ -88,6 +97,212 @@ export default function Sell() {
       router.push('/');
     }
   })
+
+  const resetUrl = (newUrl: string) => {
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", newUrl);
+    }
+  };
+
+  useEffect(() => {
+    // Extract query parameters from the URL
+    const statusParam = searchParams.get('status');
+    const statusToSave = searchParams.get('statusToSave') || 'PENDING';
+    const clientTransactionId = searchParams.get('clientTransactionId') || '';
+    const serverTransactionId = searchParams.get('serverTransactionId');
+    const messageParam = searchParams.get('message') || '';
+    const merchantId = searchParams.get('merchantId');
+    const transactionIdToUpdate = searchParams.get('goghTransactionId');
+    const rewardsCustomer = searchParams.get('rewardsCustomer') || '';
+
+    // If the transaction is successful and we have a transaction ID, fetch payment details
+    if (statusParam === 'success' && merchantId && transactionIdToUpdate && currentUser) {
+      setShowNewSaleForm(false);
+      setSuccessMessage1(null);
+      setSuccessMessage2(null);
+      setErrorMessage(null);
+      setDiscountUpgradeMessage(null)
+
+      setSquarePosSuccessMessage(messageParam);
+
+      fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer);
+    } else if (statusParam === 'error' && messageParam) {
+      setShowNewSaleForm(true);
+      setSquarePosErrorMessage(messageParam);
+    }
+  }, [searchParams, currentUser]);
+
+  const fetchAndUpdatePaymentDetails = async (
+    serverTransactionId: string | null,
+    clientTransactionId: string,
+    merchantId: string,
+    transactionIdToUpdate: string,
+    statusToSave: string,
+    rewardsCustomer: string
+  ) => {  
+    try {
+      let squarePaymentId = '';
+
+      if (serverTransactionId) {
+        // Fetch Square payment ID using the server transaction ID
+        const fetchedSquarePaymentId = await fetchSquarePaymentId(
+          serverTransactionId,
+          merchantId
+        );
+
+        if (fetchedSquarePaymentId) {
+          squarePaymentId = fetchedSquarePaymentId;
+        }
+      }
+
+      await updateTransactionDetails(
+        squarePaymentId,
+        clientTransactionId,
+        transactionIdToUpdate,
+        statusToSave
+      );
+      if (rewardsCustomer && rewardsCustomer !== '') {
+        await updateRewards(newSaleFormData)
+      } 
+
+      sessionStorage.removeItem('newSaleFormData');
+      resetUrl("/sell");
+      setNewSaleFormData(null);
+      setShowNewSaleForm(true);
+    } catch (error) {
+      console.error('Error updating payment details:', error);
+    }
+  };
+
+  const fetchSquarePaymentId = async (
+    serverTransactionId: string,
+    merchantId: string
+  ): Promise<string | null> => {
+    try {
+      const response = await fetch(
+        `/api/square/orders?serverTransactionId=${serverTransactionId}&merchantId=${merchantId}`
+      );
+      const data = await response.json();
+      
+      if (response.ok) {
+        if (data.tenders?.length > 0 && data.tenders[0].id) {
+          // If tenders are available, update transaction details
+          return data.tenders[0].id;
+        } else if (data.message) {
+          // Handle valid cash transaction (no order)
+          return null;
+        } else {
+          setError('Failed to fetch payment details from Square.');
+          return null;
+        }
+      } else {
+        setError('Failed to fetch payment details from Square.');
+        return null;
+      }
+    } catch (err) {
+      console.error('Error fetching payment details:', err);
+      setError('An error occurred while fetching payment details.');
+      return null
+    }
+  };
+ 
+
+  const updateTransactionDetails = async (
+    squarePaymentId: string | null,
+    clientTransactionId: string,
+    transactionIdToUpdate: string,
+    statusToSave: string
+  ) => {
+    try {
+
+      const accessToken = await getAccessToken();
+
+      const response = await fetch('/api/transaction/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({
+          privyId: currentUser?.privyId,
+          transactionId: transactionIdToUpdate,
+          clientTransactionId,
+          status: statusToSave,
+          squarePaymentId,
+        }),
+      });
+      const responseData = await response.json();
+  
+      if (!response.ok) {
+        const apiError = new ApiError(
+          `API Error11: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+          response.status,
+          responseData
+        );
+
+        console.error('Transaction update failed:', apiError);
+      }
+
+      
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  const updateRewards = async (newSaleFormData: SaleFormData | null) => {
+    const accessToken = await getAccessToken();
+    if (!newSaleFormData || !newSaleFormData.customer) {
+      await logAdminError('Unknown seller', 'Missing form data to update rewards after a manual credit card transaction.', { error: 'No formData provided' });
+      console.error('missing form data to update rewards')
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/rewards/userRewards/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: currentUser?.privyId,
+          purchaseData: newSaleFormData,
+          finalPrice,
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+          
+        const apiError = new ApiError(
+          `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+          response.status,
+          responseData
+        );
+    
+
+        console.error(apiError);
+        return false;
+      } else {
+        setSuccessMessage1('Customer rewards have been saved.');
+
+        if (responseData.discountUpgradeMessage) {
+          setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
+        }
+
+        return true;
+      }
+    } catch (error) {
+      // Catch any other errors and log them with their full details
+      await logAdminError(newSaleFormData.sellerMerchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction. User: ${newSaleFormData.customer.userInfo._id}. Amount: ${newSaleFormData.price}.`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    
+      console.error(error);
+      return false;
+    }
+  }
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
@@ -110,7 +325,6 @@ export default function Sell() {
 
       if (response.ok) {
         const rewardsCustomers = await response.json();
-        console.log('rewards data from get:', rewardsCustomers)
         setCurrentRewardsCustomers(rewardsCustomers);
 
       } else if (response.status === 401) {
@@ -202,46 +416,193 @@ export default function Sell() {
     }
   }, [merchant]);
 
-  useEffect(() => {
-    if (!finalPrice) return
-    const handleSquarePosPayment = (newSaleFormData: SaleFormData | null) => {
-      const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/pos/callback`;
-      const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!
-      
-      const priceNumForPOS = parseFloat(finalPrice) * 100; // finalPrice in cents
-      
 
-      const dataParameter = {
-        amount_money: {
-          amount: priceNumForPOS,
-          currency_code: 'USD',
-        },
-        callback_url: callbackUrl,
-        client_id: squareClientId,
-        version: "1.3",
-        notes: 'Thank you for your purchase!',
-        customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
-        options: {
-          supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
-          auto_return: true,
-        },
-      };
   
+  const handleSquarePosPayment = async (newSaleFormData: SaleFormData | null) => {
+    if (!finalPrice || !finalPriceCalculated) {
+      setSquarePosError('Missing payment details. Please refresh the page and try again.')
+      return;
+    } 
+
+    if (!newSaleFormData) {
+      setSquarePosError('Missing sale details. Please refresh the page and try again.')
+      return;
+    } 
+
+    let goghTransactionId;
+
+    const priceNum = parseFloat(newSaleFormData.price);
+    const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
+
+    //const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
+    const squareClientId = 'sq0idp-Zy45WMkZUPguS3T00fiL7g';
+    const priceInCents = Math.round(parseFloat(finalPrice) * 100);
+    const rewardsCustomer = newSaleFormData.customer?.userInfo._id || ""
+
+    if (deviceType === 'iPhone') {
+      const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/ios`;
+      const state = {
+        merchantId: newSaleFormData.sellerMerchant?._id,
+        goghTransactionId: goghTransactionId,
+        rewardsCustomer: rewardsCustomer,
+      };
+      
+      let dataParameter;
+
+      if (newSaleFormData?.customer?.userInfo.squareCustomerId) {
+        dataParameter = {
+          amount_money: {
+            amount: priceInCents,
+            currency_code: 'USD',
+          },
+          callback_url: callbackUrl,
+          client_id: squareClientId,
+          version: "2.0",
+          notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
+          customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
+          state: JSON.stringify(state),
+          options: {
+            supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+            auto_return: true,
+            clear_default_fees: true,
+          },
+        };
+      } else {
+        dataParameter = {
+          amount_money: {
+            amount: priceInCents,
+            currency_code: 'USD',
+          },
+          callback_url: callbackUrl,
+          client_id: squareClientId,
+          version: "2.0",
+          notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
+          state: JSON.stringify(state),
+          options: {
+            supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+            auto_return: true,
+            clear_default_fees: true,
+          },
+        };
+      }
+      
       const url = `square-commerce-v1://payment/create?data=${encodeURIComponent(
         JSON.stringify(dataParameter)
       )}`;
-  
-      console.log("url:", url);
-  
-      // Redirect to Square Point of Sale app
+
+      console.log('ios POS url:', url);
+
       window.location.href = url;
-    };
 
-    if (selectedPaymentMethod === 'Square') {
-      handleSquarePosPayment(newSaleFormData);
+    } else if (deviceType === 'Android') {
+
+      try {
+        const accessToken = await getAccessToken();
+        const response = await fetch(`/api/transaction`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            privyId: currentUser?.privyId,
+            buyerPrivyId: currentUser?.privyId,
+            buyerId: newSaleFormData.customer?.userInfo._id,
+            merchantId: newSaleFormData.sellerMerchant?._id,
+            productName: newSaleFormData.product,
+            productPrice: newSaleFormData.price,
+            discountType: newSaleFormData.customer?.currentDiscount.type,
+            discountAmount: newSaleFormData.customer?.currentDiscount.amount,
+            welcomeDiscount: welcomeDiscount,
+            salesTax: calculatedSalesTax,
+            paymentType: newSaleFormData.paymentMethod,
+            status: 'PENDING',
+          }),
+        });
+  
+        const data = await response.json();
+        goghTransactionId = data.transaction._id
+    
+        if (!response.ok) {
+          
+          const apiError = new ApiError(
+            `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+            response.status,
+            data
+          );
+      
+          await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
+            message: apiError.message,
+            status: apiError.status,
+            responseBody: apiError.responseBody,
+            stack: apiError.stack,
+          });
+      
+          console.error(error);
+        } else {
+
+          console.log('Transaction from POS saved successfully:', data);
+        }
+      } catch (error) {
+  
+        await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      }
+
+      //const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android?merchantId=${merchantId}&goghTransactionId=${goghTransactionId}`;
+      const callbackUrl = `https://clear-terms-doubt.loca.lt/api/square/payment/pos/callback/android`;
+      const sdkVersion = "v2.0";
+      const currencyCode = "USD";
+      const customerId = newSaleFormData?.customer?.userInfo.squareCustomerId;
+      const tenderTypes = [
+        "com.squareup.pos.TENDER_CARD",
+        "com.squareup.pos.TENDER_CASH",
+        "com.squareup.pos.TENDER_CARD_ON_FILE",
+      ].join(",");
+
+      let posUrl
+      if (customerId) {
+        posUrl =
+        "intent:#Intent;" +
+        "action=com.squareup.pos.action.CHARGE;" +
+        "package=com.squareup;" +
+        "l.com.squareup.pos.AUTO_RETURN_TIMEOUT_MS=3200;" +
+        `S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};` +
+        `S.com.squareup.pos.CLIENT_ID=${squareClientId};` +
+        `S.com.squareup.pos.API_VERSION=${sdkVersion};` +
+        `i.com.squareup.pos.TOTAL_AMOUNT=${priceInCents};` + 
+        `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
+        `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
+        `S.com.squareup.pos.CUSTOMER_ID=${customerId};` +
+        `S.com.squareup.pos.REQUEST_METADATA={"merchantId":"${newSaleFormData.sellerMerchant?._id}","goghTransactionId":"${goghTransactionId}","rewardsCustomer":"${rewardsCustomer}"};` +
+        `S.com.squareup.pos.NOTE=${encodeURIComponent(`Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`)};` +
+        "end;";
+
+      } else {
+        posUrl =
+          "intent:#Intent;" +
+          "action=com.squareup.pos.action.CHARGE;" +
+          "package=com.squareup;" +
+          "l.com.squareup.pos.AUTO_RETURN_TIMEOUT_MS=3200;" +
+          `S.com.squareup.pos.WEB_CALLBACK_URI=${encodeURIComponent(callbackUrl)};` +
+          `S.com.squareup.pos.CLIENT_ID=${squareClientId};` +
+          `S.com.squareup.pos.API_VERSION=${sdkVersion};` +
+          `i.com.squareup.pos.TOTAL_AMOUNT=${priceInCents};` + 
+          `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
+          `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
+          `S.com.squareup.pos.REQUEST_METADATA={"merchantId":"${newSaleFormData.sellerMerchant?._id}","goghTransactionId":"${goghTransactionId}","rewardsCustomer":"${rewardsCustomer}"};` +
+          `S.com.squareup.pos.NOTE=${encodeURIComponent(`Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ${goghTransactionId}`)};` +
+          "end;";
+      }
+
+        console.log('url:', posUrl)
+
+        window.location.href = posUrl;
     }
-
-  }, [newSaleFormData, selectedPaymentMethod, finalPrice])
+  };
+  
 
   /*
   useEffect(() => {
@@ -323,6 +684,12 @@ export default function Sell() {
       setShowCashDialog(true);
       sessionStorage.removeItem('newSaleFormData');
 
+    } else if (method === 'Square') {
+      setShowSquareDialog(true);
+      sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
+      console.log('session storage:', sessionStorage)
+      router.replace('/sell?status=square');
+
     } else if (method === 'ManualEntry') {
       sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
       router.push('/checkout/manual');
@@ -336,6 +703,7 @@ export default function Sell() {
       const parsedData = JSON.parse(storedData);
       setNewSaleFormData(parsedData);
     }
+    console.log('session data:', sessionStorage)
   }, []);
 
   useEffect(() => {
@@ -392,6 +760,7 @@ export default function Sell() {
 
   }, [newSaleFormData])
 
+  /*
   useEffect(() => {
     // Clear sessionStorage on page refresh
     const handleBeforeUnload = () => {
@@ -404,6 +773,7 @@ export default function Sell() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
+  */
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
@@ -413,18 +783,13 @@ export default function Sell() {
     setSuccessMessage1(null);
     setSuccessMessage2(null);
     setErrorMessage(null);
+    setDiscountUpgradeMessage(null)
   };
 
-  const handlePaymentSuccess = (result: any) => {
-    console.log('Payment successful!', result);
-    alert('Payment processed successfully!');
-  };
-
-  const handlePaymentFailure = (error: any) => {
-    console.error('Payment failed!', error);
-    alert('Payment failed. Please try again.');
-  };
-
+  const handleResetForm = () => {
+    setNewSaleFormData(null)
+    sessionStorage.removeItem('newSaleFormData');
+  }
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
     const accessToken = await getAccessToken();
@@ -592,11 +957,9 @@ export default function Sell() {
           boxShadow: 'var(--shadow-6)'
         }}
       >
-       {authenticated ? (
+       {ready && authenticated ? (
           user && merchant ? (
-            isDeterminingMerchantStatus ? (
-              <Spinner />
-            ) : merchantVerified ? (
+            merchantVerified ? (
               <>         
                 {newSaleFormData && selectedPaymentMethod === 'Venmo' && (
                   newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage ? (
@@ -868,11 +1231,97 @@ export default function Sell() {
                           <Button size={'4'} 
                             onClick={() => {
                               handleSavePaymentAndUpdateRewards(newSaleFormData);
-                              setShowZelleDialog(false);
+                              setShowCashDialog(false);
                             }}>
                             Confirm
                           </Button>
                         </AlertDialog.Action>
+                      </Flex>
+                    </AlertDialog.Content>
+                  </AlertDialog.Root>
+                )} 
+
+                {newSaleFormData && selectedPaymentMethod === 'Square' && (
+                  <AlertDialog.Root open={showSquareDialog} onOpenChange={setShowSquareDialog}>
+                    <AlertDialog.Trigger>
+                      <Button style={{ display: 'none' }} />
+                    </AlertDialog.Trigger>
+                    <AlertDialog.Content maxWidth="450px">
+                      <AlertDialog.Title size={'8'} align={'center'} mb={'5'}>Tap to pay</AlertDialog.Title>
+                      <VisuallyHidden>
+                        <AlertDialog.Description size="2" mb="4">
+                          Square payment
+                        </AlertDialog.Description>
+                      </VisuallyHidden>
+                      
+                      <Flex direction={'column'} width={'100%'} align={'center'} justify={'center'} gap={'9'}>
+                        {newSaleFormData && finalPriceCalculated && (
+                          <Flex direction={'column'} justify={'center'}>
+                        <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                          <Flex direction={'row'} width={'300px'} justify={'between'}>
+                            <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                            <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                          </Flex>
+                          {rewardsDiscount > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                              {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                              ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                              )}
+                            </Flex>
+                          )}
+
+                          {welcomeDiscount > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                              {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
+                              ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                              )}
+                            </Flex>
+                          )}
+                      
+                          {newSaleFormData.tax > 0 && (
+                            <Flex direction={'row'} width={'300px'} justify={'between'}>
+                              <Text size={'5'} align={'left'}>Sales tax:</Text>
+                              <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
+                            </Flex>
+                          )}
+                          </Flex>
+                        )}
+                      </Flex>
+
+                      {squarePosError && (
+                        <Callout.Root color="red" style={{width: 'max-content', padding: '7px'}}>
+                        <Callout.Text size={'3'}>
+                          {squarePosError}
+                        </Callout.Text>
+                      </Callout.Root>
+                      )}
+                      
+                      <Flex direction={'column'} gap="7" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                        <AlertDialog.Action>
+                          <Button size={'4'} 
+                            style={{width: '250px'}}
+                            onClick={() => {
+                              handleSquarePosPayment(newSaleFormData);
+                              setShowSquareDialog(false);
+                            }}>
+                            Tap to pay
+                          </Button>
+                        </AlertDialog.Action>
+                        <AlertDialog.Cancel>
+                          <Button size={'4'} variant="ghost" 
+                            onClick={() => {
+                              setSelectedPaymentMethod(null);
+                              setShowNewSaleForm(true);
+                            }}>
+                            Cancel
+                          </Button>
+                        </AlertDialog.Cancel>
                       </Flex>
                     </AlertDialog.Content>
                   </AlertDialog.Root>
@@ -894,6 +1343,7 @@ export default function Sell() {
                     onStartNewSale={handleResetMessages}
                     onCustomerRefresh={fetchCheckedInCustomers}
                     formData={newSaleFormData}
+                    checkoutStatus={searchParams.get('status')}
                   />
                 ) : null}
 
@@ -932,13 +1382,35 @@ export default function Sell() {
                     </Callout.Root>
                   )}
 
+                  {squarePosSuccessMessage && (
+                    <Callout.Root mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'6'}>
+                        {squarePosSuccessMessage}
+                      </Callout.Text>
+                    </Callout.Root>
+                  )}
+
                   {errorMessage && (
                     <Callout.Root color='red' mx={'4'}>
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}>
+                      <Callout.Text size={'6'}  wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
                         {errorMessage}
+                      </Callout.Text>
+                    </Callout.Root>
+                  )}
+
+                  {squarePosErrorMessage && (
+                    <Callout.Root color='red' mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'6'} wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
+                        {squarePosErrorMessage}
                       </Callout.Text>
                     </Callout.Root>
                   )}
@@ -967,12 +1439,20 @@ export default function Sell() {
                 </Flex>
               )
           ) : null
-        ) : (
+        ) : ready && !authenticated && (
           <Button size={'4'} style={{ width: '250px' }} onClick={login}>
             Log in
           </Button>
         )}
       </Flex>
     </Flex>
+  );
+}
+
+export default function Sell() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <SellContent />
+    </Suspense>
   );
 }

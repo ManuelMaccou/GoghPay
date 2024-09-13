@@ -4,7 +4,7 @@ import Transaction from '@/app/models/Transaction';
 
 export async function POST(req: NextRequest) {
   try {
-    const { privyId, squarePaymentId, transactionId, status } = await req.json();
+    const { privyId, squarePaymentId, clientTransactionId, transactionId, status } = await req.json();
     const userIdFromToken = req.headers.get('x-user-id');
 
     if (!privyId) {
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       { _id: transactionId },
       { $set: {
         'payment.squarePaymentId': squarePaymentId,
+        'payment.offineTransactionId': clientTransactionId,
         'payment.status': status,
       } },
       { new: true }

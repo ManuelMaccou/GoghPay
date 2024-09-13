@@ -567,7 +567,7 @@ function BuyContent() {
           checkout_method: "wallet",
         });
     
-        router.push(`/checkout/success?${params.toString()}`);
+        router.push(`/checkout/success/crypto?${params.toString()}`);
   
       } catch (error) {
         if (isError(error)) {
@@ -627,7 +627,7 @@ function BuyContent() {
           checkout_method: "wallet",
         });
     
-        router.push(`/checkout/success?${params.toString()}`);
+        router.push(`/checkout/success/crypto?${params.toString()}`);
   
       } catch (error) {
         if (isError(error)) {

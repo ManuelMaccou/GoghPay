@@ -1099,10 +1099,10 @@ function TransferContent() {
                     )}
                     {merchantAddress && merchantAddressUpdated && isValidMerchantAddress && (
                       <Callout.Root color="green" style={{width: 'max-content', padding: '7px'}}>
-                      <Callout.Text size={'3'}>
-                        Your USDC address is ready.
-                      </Callout.Text>
-                    </Callout.Root>
+                        <Callout.Text size={'3'}>
+                          Your USDC address is ready.
+                        </Callout.Text>
+                      </Callout.Root>
                     )}
                     <Flex direction={'row'} gap={'2'} align={'center'} justify={'center'} mt={'-2'} mb={'3'}>
                       <ExclamationTriangleIcon />

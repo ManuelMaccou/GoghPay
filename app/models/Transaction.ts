@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
 const paymentTypes = ['Venmo', 'Zelle', 'Square', 'ManualEntry', 'Cash', 'sponsored crypto', 'crypto', 'mobile pay'];
-const transactionStatus = ['COMPLETE', 'PENDING'];
+const transactionStatus = ['COMPLETE', 'COMPLETE_OFFLINE', 'PENDING'];
 
 const transactionSchema = new Schema({
   type: { type: String },
@@ -23,6 +23,7 @@ const transactionSchema = new Schema({
     salesTax: { type: Number },
     transactionHash: { type: String },
     status: { type: String, enum: transactionStatus },
+    offineTransactionId: { type: String },
     squarePaymentId: { type: String },
   }
 }, { timestamps: true });
