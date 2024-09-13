@@ -29,6 +29,7 @@ export enum PaymentTypes {
 enum TransactionStatus {
   PENDING = 'PENDING',
   COMPLETE = 'COMPLETE',
+  COMPLETE_OFFLINE = 'COMPLETE_OFFLINE'
 }
 
 export enum PaymentType {
@@ -99,6 +100,7 @@ export interface Transaction {
     salesTax: number;
     transactionHash: string;
     status?: TransactionStatus;
+    offineTransactionId?: string;
     squarePaymentId?: string;
   };
   createdAt: Date;

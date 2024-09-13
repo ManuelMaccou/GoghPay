@@ -706,7 +706,7 @@ export default function ManualCreditCardPayment() {
                   size={'4'}
                   onClick={(e) => {
                     e.preventDefault();
-                    router.back(); 
+                    router.push('/sell?status=cancel'); 
                   }}
                 >
                   Cancel
@@ -716,10 +716,10 @@ export default function ManualCreditCardPayment() {
                 size={'4'}
                 onClick={(e) => {
                   e.preventDefault();
-                  router.back();
+                  router.push('/sell');
                 }}
               >
-                Finish
+                New sale
               </Button>
               )}
               
