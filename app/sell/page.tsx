@@ -605,13 +605,14 @@ function SellContent() {
     fetchInventory();
     
   }, [locations, merchant]);
-  */
+  
 
   const fetchSquareCatelog = async () => {
     setLoadingCatalog(true);
     
     // PLACEHOLDER FOR FETCHING CATELOG
   } 
+    */
 
   const fetchLocations = async (merchantId: string) => {
     setIsFetchingLocations(true);
