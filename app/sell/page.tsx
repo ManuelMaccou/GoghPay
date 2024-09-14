@@ -102,6 +102,93 @@ function SellContent() {
       window.history.replaceState(null, "", newUrl);
     }
   };
+  
+  const updateTransactionDetails = useCallback(async (
+    squarePaymentId: string | null,
+    clientTransactionId: string,
+    transactionIdToUpdate: string,
+    statusToSave: string
+  ) => {
+    try {
+      console.log('current user:', user)
+      const accessToken = await getAccessToken();
+      const response = await fetch('/api/transaction/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          transactionId: transactionIdToUpdate,
+          clientTransactionId,
+          status: statusToSave,
+          squarePaymentId,
+        }),
+      });
+      const responseData = await response.json();
+  
+      if (!response.ok) {
+        const apiError = new ApiError(
+          `API Error11: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+          response.status,
+          responseData
+        );
+
+        console.error('Transaction update failed:', apiError);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, [user])
+
+  const updateRewards = useCallback(async (newSaleFormData: SaleFormData) => {
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/rewards/userRewards/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          purchaseData: newSaleFormData,
+          finalPrice,
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        const apiError = new ApiError(
+          `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+          response.status,
+          responseData
+        );
+        console.error(apiError);
+        return false;
+      } else {
+        setSuccessMessage1('Customer rewards have been saved.');
+
+        if (responseData.discountUpgradeMessage) {
+          setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
+        }
+
+        return true;
+      }
+    } catch (error) {
+      // Catch any other errors and log them with their full details
+      await logAdminError(newSaleFormData.sellerMerchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction. User: ${newSaleFormData.customer?.userInfo._id}. Amount: ${newSaleFormData.price}.`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    
+      console.error(error);
+      return false;
+    }
+  }, [finalPrice, user?.id])
 
   const fetchAndUpdatePaymentDetails = useCallback(
     async (
@@ -134,7 +221,7 @@ function SellContent() {
           transactionIdToUpdate,
           statusToSave
         );
-        if (rewardsCustomer && rewardsCustomer !== '') {
+        if (newSaleFormData && rewardsCustomer && rewardsCustomer !== '') {
           await updateRewards(newSaleFormData)
         } 
 
@@ -146,7 +233,7 @@ function SellContent() {
         console.error('Error updating payment details:', error);
       }
     },
-  [newSaleFormData]
+  [newSaleFormData, updateTransactionDetails, updateRewards]
 );
 
   useEffect(() => {
@@ -209,97 +296,6 @@ function SellContent() {
       return null
     }
   };
- 
-  const updateTransactionDetails = async (
-    squarePaymentId: string | null,
-    clientTransactionId: string,
-    transactionIdToUpdate: string,
-    statusToSave: string
-  ) => {
-    try {
-      console.log('current user:', user)
-      const accessToken = await getAccessToken();
-      const response = await fetch('/api/transaction/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`, 
-        },
-        body: JSON.stringify({
-          privyId: user?.id,
-          transactionId: transactionIdToUpdate,
-          clientTransactionId,
-          status: statusToSave,
-          squarePaymentId,
-        }),
-      });
-      const responseData = await response.json();
-  
-      if (!response.ok) {
-        const apiError = new ApiError(
-          `API Error11: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
-          response.status,
-          responseData
-        );
-
-        console.error('Transaction update failed:', apiError);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  const updateRewards = async (newSaleFormData: SaleFormData | null) => {
-    const accessToken = await getAccessToken();
-    if (!newSaleFormData || !newSaleFormData.customer) {
-      await logAdminError('Unknown seller', 'Missing form data to update rewards after a manual credit card transaction.', { error: 'No formData provided' });
-      console.error('missing form data to update rewards')
-      return false;
-    }
-    try {
-      const response = await fetch(`/api/rewards/userRewards/update`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          privyId: user?.id,
-          purchaseData: newSaleFormData,
-          finalPrice,
-        }),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        const apiError = new ApiError(
-          `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
-          response.status,
-          responseData
-        );
-        console.error(apiError);
-        return false;
-      } else {
-        setSuccessMessage1('Customer rewards have been saved.');
-
-        if (responseData.discountUpgradeMessage) {
-          setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
-        }
-
-        return true;
-      }
-    } catch (error) {
-      // Catch any other errors and log them with their full details
-      await logAdminError(newSaleFormData.sellerMerchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction. User: ${newSaleFormData.customer.userInfo._id}. Amount: ${newSaleFormData.price}.`, {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-    
-      console.error(error);
-      return false;
-    }
-  }
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
@@ -341,7 +337,7 @@ function SellContent() {
     } finally {
       setIsFetchingCurrentRewardsCustomers(false);
     }
-  }, [currentUser]);
+  }, [currentUser, user?.id]);
 
   useEffect(() => {
     if (!ready || !authenticated) {
