@@ -280,8 +280,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
           setMerchant(data || null);
 
           if (data?.branding) {
-            setPrimaryColor(data.branding.primary_color || primaryColor);
-            setSecondaryColor(data.branding.secondary_color || secondaryColor);
+            setPrimaryColor(() => data.branding?.primary_color || "#FFFFFF"); // Use functional update
+            setSecondaryColor(() => data.branding?.secondary_color || "#000000"); // Use functional update
           }
 
         } catch (err) {

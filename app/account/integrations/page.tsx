@@ -323,12 +323,16 @@ function IntegrationsContent() {
   }, [ready, authenticated, user?.id, setMerchant]); 
 
   useEffect(() => {
-    if(!merchant?.paymentMethods.venmoQrCodeImage || !merchant?.paymentMethods) return
-    setVenmoQrCode(merchant?.paymentMethods.venmoQrCodeImage)
-  }, [merchant])
+    if (!merchant?.paymentMethods) return;
+    if (!merchant.paymentMethods.venmoQrCodeImage) return;
+  
+    setVenmoQrCode(merchant.paymentMethods.venmoQrCodeImage);
+  }, [merchant]);
 
   useEffect(() => {
-    if(!merchant?.paymentMethods.zelleQrCodeImage || !merchant?.paymentMethods) return
+    if (!merchant?.paymentMethods) return;
+    if (!merchant.paymentMethods.zelleQrCodeImage) return;
+    
     setZelleQrCode(merchant.paymentMethods.zelleQrCodeImage)
   }, [merchant])
 
