@@ -173,7 +173,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
           paymentMethod: PaymentType.None,
         })
         setCurrentCustomer(null)
-      } else {
+      } else if (checkoutStatus === 'error' || checkoutStatus === 'cancel' || checkoutStatus === 'square') {
         setlocalFormData({
           product: formData?.product || "",
           price: formData?.price || "",

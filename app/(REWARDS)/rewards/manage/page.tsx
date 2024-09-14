@@ -432,6 +432,36 @@ export default function ManageRewards({ params }: { params: { merchantId: string
               ) : null
             ) : (
               <Flex direction={'column'} align={'center'} justify={'between'} width={'100%'} height={'100%'}>
+                <Flex direction={'row'} justify={'end'} width={'90vw'} mb={'4'}>
+                {rewardsUpdateOperation === 'modify' && (
+                  <AlertDialog.Root>
+                    <AlertDialog.Trigger>
+                      <Button size={'3'} variant="ghost" color="red">Remove milstone</Button>
+                    </AlertDialog.Trigger>
+                    <AlertDialog.Content maxWidth="450px">
+                      <VisuallyHidden>
+                        <AlertDialog.Title>Delete rewards milestone</AlertDialog.Title>
+                      </VisuallyHidden>
+                      <AlertDialog.Description size="2">
+                        Delete rewards milestone?
+                      </AlertDialog.Description>
+  
+                      <Flex gap="3" mt="4" justify='between'>
+                        <AlertDialog.Cancel>
+                          <Button variant="soft" color="gray">
+                            Cancel
+                          </Button>
+                        </AlertDialog.Cancel>
+                        <AlertDialog.Action>
+                          <Button variant="solid" color="red" onClick={() => handleDelete(rewardsTierIdToUpdate!)}>
+                            Yes
+                          </Button>
+                        </AlertDialog.Action>
+                      </Flex>
+                    </AlertDialog.Content>
+                  </AlertDialog.Root>
+                )}
+                </Flex>
                 <form onSubmit={handleSubmit} className={styles.formGroup}>
                   <Flex direction={'column'} justify={'center'}>
                     <label htmlFor="name" className={styles.formLabel}>
@@ -532,34 +562,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       </Button>
                     </Flex>
       
-                    {rewardsUpdateOperation === 'modify' && (
-                      <AlertDialog.Root>
-                        <AlertDialog.Trigger>
-                          <Button size={'3'} variant="ghost" color="red">Remove milstone</Button>
-                        </AlertDialog.Trigger>
-                        <AlertDialog.Content maxWidth="450px">
-                          <VisuallyHidden>
-                            <AlertDialog.Title>Delete rewards milestone</AlertDialog.Title>
-                          </VisuallyHidden>
-                          <AlertDialog.Description size="2">
-                            Delete rewards milestone?
-                          </AlertDialog.Description>
-      
-                          <Flex gap="3" mt="4" justify='between'>
-                            <AlertDialog.Cancel>
-                              <Button variant="soft" color="gray">
-                                Cancel
-                              </Button>
-                            </AlertDialog.Cancel>
-                            <AlertDialog.Action>
-                              <Button variant="solid" color="red" onClick={() => handleDelete(rewardsTierIdToUpdate!)}>
-                                Yes
-                              </Button>
-                            </AlertDialog.Action>
-                          </Flex>
-                        </AlertDialog.Content>
-                      </AlertDialog.Root>
-                    )}
+                    
                   </Flex>
                 </form>
               </Flex>
