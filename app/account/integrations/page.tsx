@@ -261,7 +261,13 @@ function IntegrationsContent() {
         const data = await response.json();
         setMerchant(data);
         fetchLocations(data._id);
-        setSquareLocationName(data.square.location_name);
+
+        if (data.square?.location_name) {
+          setSquareLocationName(data.square.location_name);
+        } else {
+          setSquareLocationName(null);
+        }
+
       } catch (err) {
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);
@@ -299,12 +305,12 @@ function IntegrationsContent() {
   }, [ready, authenticated, user?.id, setMerchant]); 
 
   useEffect(() => {
-    if(!merchant?.paymentMethods.venmoQrCodeImage) return
+    if(!merchant?.paymentMethods.venmoQrCodeImage || !merchant?.paymentMethods) return
     setVenmoQrCode(merchant?.paymentMethods.venmoQrCodeImage)
   }, [merchant])
 
   useEffect(() => {
-    if(!merchant?.paymentMethods.zelleQrCodeImage) return
+    if(!merchant?.paymentMethods.zelleQrCodeImage || !merchant?.paymentMethods) return
     setZelleQrCode(merchant.paymentMethods.zelleQrCodeImage)
   }, [merchant])
 
