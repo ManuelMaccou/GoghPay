@@ -184,6 +184,7 @@ function IntegrationsContent() {
     setIsFetchingLocations(true);
     try {
       const response = await fetch(`/api/square/locations?merchantId=${merchantId}`);
+      console.log('location response:', response);
       if (response.status === 401) {
         const errorText = await response.text();
         if (errorText.includes('expired')) {
@@ -320,17 +321,14 @@ function IntegrationsContent() {
     >
       <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
         <Heading size={'8'} style={{color: "white"}}>Integrations</Heading>
-        
-        <BalanceProvider walletForPurchase={walletForPurchase}>
-          <Header
-            color={"white"}
-            merchant={currentUser?.merchant}
-            embeddedWallet={embeddedWallet}
-            authenticated={authenticated}
-            walletForPurchase={walletForPurchase}
-            currentUser={currentUser}
-          />
-        </BalanceProvider>
+        <Header
+          color={"white"}
+          merchant={currentUser?.merchant}
+          embeddedWallet={embeddedWallet}
+          authenticated={authenticated}
+          walletForPurchase={walletForPurchase}
+          currentUser={currentUser}
+        />
       </Flex>
       <Flex
         flexGrow={'1'}
@@ -405,6 +403,11 @@ function IntegrationsContent() {
                                 <RedCircle />
                               </Flex>
                               <Text>{locationError}</Text>
+                              <Button asChild size={'4'} style={{width: '250px'}}>
+                                <Link href={squareAuthUrl}>
+                                  Connect Square
+                                </Link>
+                              </Button>
                             </Flex>
                           ) : (
                             <>

@@ -154,7 +154,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
       const accessToken = await getAccessToken();
 
       const requestBody: any = {
-        privyId: appUser.privyId,
+        privyId: user?.id,
         operation: rewardsUpdateOperation,
       };
 
@@ -308,16 +308,14 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     >
       <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
         <Heading size={'8'} style={{color: "white"}}>Manage rewards</Heading>
-        <BalanceProvider walletForPurchase={walletForPurchase}>
-          <Header
-            color={"white"}
-            merchant={currentUser?.merchant}
-            embeddedWallet={embeddedWallet}
-            authenticated={authenticated}
-            walletForPurchase={walletForPurchase}
-            currentUser={currentUser}
-          />
-        </BalanceProvider>
+        <Header
+          color={"white"}
+          merchant={currentUser?.merchant}
+          embeddedWallet={embeddedWallet}
+          authenticated={authenticated}
+          walletForPurchase={walletForPurchase}
+          currentUser={currentUser}
+        />
       </Flex>
       <Flex
         flexGrow={'1'}
@@ -439,13 +437,12 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       <Button size={'3'} variant="ghost" color="red">Remove milstone</Button>
                     </AlertDialog.Trigger>
                     <AlertDialog.Content maxWidth="450px">
+                      <AlertDialog.Title>Delete rewards milestone?</AlertDialog.Title>
                       <VisuallyHidden>
-                        <AlertDialog.Title>Delete rewards milestone</AlertDialog.Title>
+                        <AlertDialog.Description size="2">
+                          Delete rewards milestone?
+                        </AlertDialog.Description>
                       </VisuallyHidden>
-                      <AlertDialog.Description size="2">
-                        Delete rewards milestone?
-                      </AlertDialog.Description>
-  
                       <Flex gap="3" mt="4" justify='between'>
                         <AlertDialog.Cancel>
                           <Button variant="soft" color="gray">
