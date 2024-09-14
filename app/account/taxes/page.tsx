@@ -125,11 +125,14 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         }),
       });
 
-      const updatedMerchant = await response.json();
-      setMerchant(updatedMerchant.merchant);
-      setTaxes(updatedMerchant.merchant.taxes);
-      setIsDialogOpen(false);
-  
+      if (response.ok) {
+        const updatedMerchant = await response.json();
+        setMerchant(updatedMerchant.merchant);
+        setTaxes(updatedMerchant.merchant.taxes);
+        setIsDialogOpen(false);
+      } else {
+        console.error("Failed to fetch merchant", response.statusText)
+      }
     } catch (error) {
       if (isError(error)) {
         console.error('Error updating merchant taxes:', error.message);
@@ -164,12 +167,15 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         }),
       });
 
-      const updatedMerchant = await response.json();
-      setMerchant(updatedMerchant.merchant);
-      setTaxes(updatedMerchant.merchant.taxes);
-      setSelectedTax(updatedMerchant.merchant.taxes.find((tax: Tax) => tax.default) || null);
-      setConfirmMessage("Default tax set");
-
+      if (response.ok) {
+        const updatedMerchant = await response.json();
+        setMerchant(updatedMerchant.merchant);
+        setTaxes(updatedMerchant.merchant.taxes);
+        setSelectedTax(updatedMerchant.merchant.taxes.find((tax: Tax) => tax.default) || null);
+        setConfirmMessage("Default tax set");
+      } else (
+        console.error('Failed to update merchant', response.statusText)
+      )
     } catch (error) {
       console.error('Error setting default tax:', error);
       setConfirmMessage('Failed to set default tax. Please try again.');
@@ -219,11 +225,16 @@ export default function Taxes({ params }: { params: { userId: string } }) {
       try {
         const privyId = id
         const response = await fetch(`/api/merchant/privyId/${privyId}`);
-        const data = await response.json();
-        setMerchant(data);
-        setTaxes(data.taxes)
-        const defaultTax = data.taxes.find((tax: Tax) => tax.default);
-        setSelectedTax(defaultTax || null);
+        if (response.ok) {
+          const data = await response.json();
+          setMerchant(data);
+          setTaxes(data.taxes)
+          const defaultTax = data.taxes.find((tax: Tax) => tax.default);
+          setSelectedTax(defaultTax || null);
+        } else {
+          console.error('Failed to fetch merchant', response.statusText)
+        }
+       
       } catch (err) {
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);

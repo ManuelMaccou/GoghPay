@@ -49,7 +49,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
 
   useEffect(() => {
     if (appUser) {
-      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress;
+      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress || null;
       setWalletForPurchase(walletAddress);
     }
   }, [appUser]);
@@ -57,7 +57,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   useEffect(() => {
     if (!merchant) return;
   
-    if (merchant.rewards?.tiers) {
+    if (merchant.rewards && merchant.rewards?.tiers) {
       setCurrentRewardsTiers(merchant.rewards.tiers);
     }
   }, [merchant]);
