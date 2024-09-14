@@ -408,26 +408,20 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       console.log('checkpoint 1')
 
       if (!currentUserMerchantRewards) {
-        console.log('No user rewards available.');
         return null;
       }
-      console.log('checkpoint 2')
 
+      const discountEarned = currentUserMerchantRewards.currentDiscount.amount;
       const totalSpent = currentUserMerchantRewards.totalSpent;
-      console.log('total spent after definition:', totalSpent)
 
       if (totalSpent === null || totalSpent === undefined) return;
-      console.log('checkpoint 3')
-      console.log ('total spent is null/undefined')
     
       const tiers = merchant?.rewards?.tiers || [];
     
       if (!tiers.length) {
-        console.log('No tiers configured')
         setErrorCheckingSquareDirectory("Seller does not have rewards available.")
         return null;
       }
-      console.log('checkpoint 4')
     
       const sortedTiers = tiers.sort((a, b) => a.milestone - b.milestone);
     
@@ -436,6 +430,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
     
       for (const tier of sortedTiers) {
         if (totalSpent >= tier.milestone) {
+          highestTier = tier;
+        } else if (discountEarned >= tier.discount) {
           highestTier = tier;
         } else {
           nextMilestone = tier.milestone;
@@ -551,7 +547,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                     <Heading size={'8'}>Welcome</Heading>
                   )}
 
-                  {usersCurrentRewardsTier && usersCurrentRewardsTier._id !== sortedMilestoneTiers[0]?._id ? (
+                  {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[0]?._id ? (
                     <Flex direction={'row'} width={'100%'} justify={'between'} align={'center'}>
                     <Text wrap={'wrap'} size={'5'} weight={'bold'} style={{ maxWidth: '200px' }}>
                       Remaining until next upgrade:
@@ -559,7 +555,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                     <Text size={'8'}>${amountToNextRewardsTier}</Text>
                   </Flex>
                     
-                  ) : (
+                  ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[0]?._id && (
                     <Flex direction={'column'} width={'100vw'} align={'center'} justify={'center'}>
                       <Callout.Root color="green" style={{ width: '100vw', padding: '7px', display: 'flex', justifyContent: 'center' }}>
                         <Callout.Text size={'4'} weight={'bold'} align={'center'}>

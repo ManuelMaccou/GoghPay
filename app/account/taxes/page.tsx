@@ -182,9 +182,9 @@ export default function Taxes({ params }: { params: { userId: string } }) {
       'crypto': { label: 'Crypto', color: '#8E004B' },
       'mobile pay': { label: 'Mobile Pay', color: '#2196F3' },
       'Venmo': { label: 'Venmo', color: '#0084F7' },
-      'ManualEntry': { label: 'Manual CC', color: '#ea7100' },
+      'ManualEntry': { label: 'Credit', color: '#ea7100' },
       'Cash': { label: 'Cash', color: '#4CAF50' },
-      'Square': { label: 'Square', color: '#000000' },
+      'Square': { label: 'Credit', color: '#ea7100' },
       'Zelle': { label: 'Zelle', color: '#6C1CD3' },
     };
     return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };

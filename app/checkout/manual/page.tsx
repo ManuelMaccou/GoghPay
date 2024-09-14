@@ -517,7 +517,6 @@ export default function ManualCreditCardPayment() {
   }
 
   const updateRewards = async (formData: SaleFormData | null) => {
-    console.log('updating rewards after manual cc.')
     const accessToken = await getAccessToken();
     if (!formData || !formData.customer) {
       await logAdminError('Unknown seller', 'Missing form data to update rewards after a manual credit card transaction.', { error: 'No formData provided' });
