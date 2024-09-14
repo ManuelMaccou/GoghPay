@@ -545,7 +545,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                           </Callout.Text>
                         )}
                     </Callout.Root>
-                    <Flex direction={'column'} mt={'5'} justify={'center'}>
+                    <Flex direction={'column'} mt={errorMessage? '5' : '0'} justify={'center'}>
                       {errorMessage && <Text align={'center'} color="red">{errorMessage}</Text>}
                     </Flex>
                   
@@ -557,7 +557,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                         }}>
                         Cancel
                       </Button>
-                      <Button my={'4'} size={'4'} type="submit" loading={isLoading} style={{width: '150px'}}>
+                      <Button size={'4'} type="submit" loading={isLoading} style={{width: '150px'}}>
                         Submit
                       </Button>
                     </Flex>
