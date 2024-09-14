@@ -36,8 +36,7 @@ export async function POST(req: NextRequest) {
     const { clientTransactionId, serverTransactionId, errorField, metadata } = parseTransactionDetailsFromQuery(searchParams);
     const { merchantId = '', goghTransactionId = '', rewardsCustomer = '' } = metadata;
 
-    //let redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/sell?status=`;
-    let redirectUrl = `https://clear-terms-doubt.loca.lt/sell?status=`;
+    let redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/sell?status=`;
     let status = "error";
     let statusToSave = 'PENDING'
     let message = "Unknown error occurred.";
@@ -85,7 +84,7 @@ export async function GET(req: NextRequest) {
     const { merchantId = '', goghTransactionId = '', rewardsCustomer = '' } = metadata;
 
     //let redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/sell?status=`;
-    let redirectUrl = `https://clear-terms-doubt.loca.lt/sell?status=`;
+    let redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/sell?status=`;
     let status = "error";
     let statusToSave = 'PENDING'
     let message = "Unknown error occurred.";

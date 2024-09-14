@@ -424,8 +424,7 @@ function SellContent() {
     const priceNum = parseFloat(newSaleFormData.price);
     const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
 
-    //const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
-    const squareClientId = 'sq0idp-Zy45WMkZUPguS3T00fiL7g';
+    const squareClientId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!;
     const priceInCents = Math.round(parseFloat(finalPrice) * 100);
     const rewardsCustomer = newSaleFormData.customer?.userInfo._id || ""
 
@@ -542,7 +541,7 @@ function SellContent() {
       }
 
       //const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android?merchantId=${merchantId}&goghTransactionId=${goghTransactionId}`;
-      const callbackUrl = `https://clear-terms-doubt.loca.lt/api/square/payment/pos/callback/android`;
+      const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android`;
       const sdkVersion = "v2.0";
       const currencyCode = "USD";
       const customerId = newSaleFormData?.customer?.userInfo.squareCustomerId;
