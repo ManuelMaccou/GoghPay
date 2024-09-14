@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Button, Callout, Dialog, Flex, Link, RadioGroup, Spinner, Strong, Table, Text, VisuallyHidden } from "@radix-ui/themes";
+import { Badge, Box, Button, Callout, Dialog, Flex, Heading, Link, RadioGroup, Spinner, Strong, Table, Text, VisuallyHidden } from "@radix-ui/themes";
 
 import axios from "axios";
 import { useRouter } from 'next/navigation';
@@ -26,6 +26,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
   const [merchant, setMerchant] = useState<Merchant>();
   const [transactiosnwithTaxes, setTransactiosnwithTaxes] = useState<Transaction[] | null>(null);
   const [totalTaxAmount, setTotalTaxAmount] = useState<number>(0);
+  const [totalTaxAmountExcludingCash, setTotalTaxAmountExcludingCash] = useState<number>(0);
   const [taxes, setTaxes] = useState<Tax[] | null>(null);
   const [selectedTax, setSelectedTax] = useState<Tax | null>(null); 
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
@@ -40,14 +41,6 @@ export default function Taxes({ params }: { params: { userId: string } }) {
   const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : 8453;
 
   const router = useRouter();
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
@@ -185,9 +178,14 @@ export default function Taxes({ params }: { params: { userId: string } }) {
 
   const getPaymentTypeInfo = (paymentType: string) => {
     const types: { [key: string]: { label: string; color: string } } = {
-      'sponsored crypto': { label: 'Crypto', color: '#4CAF50' },
-      'crypto': { label: 'Crypto', color: '#4CAF50' },
-      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' }
+      'sponsored crypto': { label: 'Crypto', color: '#8E004B' },
+      'crypto': { label: 'Crypto', color: '#8E004B' },
+      'mobile pay': { label: 'Mobile Pay', color: '#2196F3' },
+      'Venmo': { label: 'Venmo', color: '#0084F7' },
+      'ManualEntry': { label: 'Credit', color: '#ea7100' },
+      'Cash': { label: 'Cash', color: '#4CAF50' },
+      'Square': { label: 'Credit', color: '#ea7100' },
+      'Zelle': { label: 'Zelle', color: '#6C1CD3' },
     };
     return types[paymentType] || { label: 'Unknown', color: '#9E9E9E' };
   };
@@ -263,14 +261,22 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         // Filter transactions to get all the taxes
         console.log('sortedTotalTransactions', sortedTotalTransactions);
         const transactionsWithTaxes = sortedTotalTransactions
-          .filter((transaction: Transaction) => transaction.salesTax !== undefined && transaction.salesTax !== null);
+          .filter((transaction: Transaction) => transaction.payment.salesTax !== undefined && transaction.payment.salesTax !== null && transaction.payment.salesTax !== 0);
 
+        const transactionsWithTaxesExcludingCash = sortedTotalTransactions
+          .filter((transaction: Transaction) => transaction.payment.salesTax !== undefined && transaction.payment.salesTax !== null && transaction.payment.salesTax !== 0 && transaction.payment.paymentType !== "Cash");
+        
         const totalTaxAmount = transactionsWithTaxes.reduce((sum: number, transaction: Transaction) => {
-          return sum + (transaction.salesTax || 0);
+          return sum + (transaction.payment.salesTax || 0);
+        }, 0);
+
+        const totalTaxAmountExcludingCash = transactionsWithTaxesExcludingCash.reduce((sum: number, transaction: Transaction) => {
+          return sum + (transaction.payment.salesTax || 0);
         }, 0);
 
         setTransactiosnwithTaxes(transactionsWithTaxes);
         setTotalTaxAmount(totalTaxAmount);
+        setTotalTaxAmountExcludingCash(totalTaxAmountExcludingCash);
 
       } catch (err) {
         if (isError(err)) {
@@ -287,168 +293,198 @@ export default function Taxes({ params }: { params: { userId: string } }) {
   }, [merchant]);
 
   return (
-    <Flex direction={"column"} pt={"9"} pb={"4"} px={"4"} gap={"5"} maxHeight={'100vh'} overflow={'hidden'}>
-      {ready && authenticated && currentUser && (
+    <Flex
+      direction='column'
+      position='relative'
+      minHeight='100vh'
+      width='100%'
+      style={{
+        background: 'linear-gradient(to bottom, #890080 0%,#630063 36%'
+      }}
+    >
+      <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
+        <Heading size={'8'} style={{color: "white"}}>Taxes</Heading>
+      
         <BalanceProvider walletForPurchase={walletForPurchase}>
           <Header
+            color={"white"}
             merchant={currentUser?.merchant}
             embeddedWallet={embeddedWallet}
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
         </BalanceProvider>
-      )}
+      </Flex>
+      <Flex
+        flexGrow={'1'}
+        py={'7'}
+        px={'4'}
+        direction={'column'}
+        justify={'between'}
+        align={'center'}
+        height={'100%'}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '20px 20px 0px 0px',
+          boxShadow: 'var(--shadow-6)'
+        }}
+      >
+        {ready && !isFetchingMerchant ? (
+          authenticated && merchant ? (
+            <>
+              <Flex
+                direction={"column"}
+                width={'100%'}
+                gap={"4"}
+                p={"4"}
+                style={{
+                  boxShadow: "var(--shadow-2)",
+                  borderRadius: "10px",
+                }}
+              >
+                <Text weight={'bold'} size={'5'} align={'left'} >
+                  Select a default tax or create a new one. 
+                </Text>
+                {taxes && (
+                  <RadioGroup.Root
+                    size={'3'}
+                    value={selectedTax?._id || ""}
+                    onValueChange={handleTaxSelection}
+                    name="taxes"
+                  >
+                    {taxes.map((tax) => (
+                      <RadioGroup.Item key={tax._id} value={tax._id} disabled={!merchant} style={{marginBottom: '15px'}}>
+                        <Flex direction={'row'} gap={'4'} ml={'3'}>
+                          <Text size={'5'} as="label">{tax.name}</Text>
+                          <Text size={'5'}>{tax.rate}%</Text>
+                        </Flex>
+                      </RadioGroup.Item>
+                    ))}
+                  </RadioGroup.Root>
+                )}
 
-      <Text size={"6"} weight={"bold"} style={{ color: "black" }}>
-        Taxes
-      </Text>
-      <Text>
-        Select a default tax or create a new one. 
-      </Text>
+                {confirmMessage && <Text color="green">{confirmMessage}</Text>}
+            
+                <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}> 
+                  <Dialog.Trigger>
+                  <Button size={'4'} variant="ghost" onClick={() => setIsDialogOpen(true)}>+ Create New Tax</Button>
+                  </Dialog.Trigger>
+                    <Dialog.Content>
+                      <Dialog.Title>Create New Tax</Dialog.Title>
+                      <VisuallyHidden>
+                        <Dialog.Description>
+                          Create new sales tax
+                        </Dialog.Description>
+                      </VisuallyHidden>
+                      <NewTaxForm
+                        onMessageUpdate={() => {}} 
+                        onAddTax={handleAddTax}
+                        onCancel={() => setIsDialogOpen(false)}
+                      />
+                    </Dialog.Content>
+                </Dialog.Root>
 
-      {ready && !isFetchingMerchant ? (
-        authenticated && merchant ? (
-          <>
-            <Flex
-              direction={"column"}
-              gap={"4"}
-              align={"center"}
-              p={"4"}
-              style={{
-                boxShadow: "var(--shadow-2)",
-                borderRadius: "10px",
-              }}
-            >
-              {taxes && (
-                <RadioGroup.Root
-                  size={'3'}
-                  value={selectedTax?._id || ""}
-                  onValueChange={handleTaxSelection}
-                  name="taxes"
-                >
-                  {taxes.map((tax) => (
-                    <RadioGroup.Item key={tax._id} value={tax._id} disabled={!merchant}>
-                      <Flex direction={'row'} gap={'4'} ml={'3'}>
-                        <Text size={'5'} as="label">{tax.name}</Text>
-                        <Text size={'5'}>{tax.rate}%</Text>
-                      </Flex>
-                    </RadioGroup.Item>
-                  ))}
-                </RadioGroup.Root>
-              )}
+              </Flex>
 
-              {confirmMessage && <Text color="green">{confirmMessage}</Text>}
+              <Flex direction={'column'} gap={'4'} flexGrow={'1'} justify={'between'} width={'100%'} maxHeight={'50vh'} overflow={'auto'}>
+                <Box>
+                  <Table.Root size="1">
+                    <Table.Header>
+                      <Table.Row>
+                        <Table.ColumnHeaderCell>Tax amount</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
+                      </Table.Row>
+                    </Table.Header>
           
-              <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}> 
-                <Dialog.Trigger>
-                <Button variant="ghost" onClick={() => setIsDialogOpen(true)}>+ Create New Tax</Button>
-                </Dialog.Trigger>
-                  <Dialog.Content>
-                    <Dialog.Title>Create New Tax</Dialog.Title>
-                    <VisuallyHidden>
-                      <Dialog.Description>
-                        Create new sales tax
-                      </Dialog.Description>
-                    </VisuallyHidden>
-                    <NewTaxForm
-                      onMessageUpdate={() => {}} 
-                      onAddTax={handleAddTax}
-                      onCancel={() => setIsDialogOpen(false)}
-                    />
-                  </Dialog.Content>
-              </Dialog.Root>
-
+                    <Table.Body>
+                      {transactiosnwithTaxes?.map((transaction) => {
+                        const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
+                        return (
+                          <Table.Row key={transaction._id}>
+                            <Table.RowHeaderCell>${transaction.payment.salesTax.toFixed(2)}</Table.RowHeaderCell>
+                            <Table.Cell>
+                              <Text wrap={'nowrap'}>
+                                {transaction.product.name}
+                              </Text>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <Badge radius="large" style={{ backgroundColor: color, color: 'white', padding: '3px 7px 3px 7px' }}>{label}</Badge>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <Text wrap={'nowrap'}>
+                                {transaction.createdAt ? format(new Date(transaction.createdAt), 'MMM dd, yyyy') : 'N/A'}
+                              </Text>
+                            </Table.Cell>
+                          </Table.Row>
+                        );
+                      })}
+                    </Table.Body>
+                  </Table.Root>
+                </Box>
+              </Flex>
+              <Flex direction={'column'} width={'100%'} gap={'4'}>
+                <Flex direction={'row'} justify={'between'} width={'100%'}>
+                  <Text weight={'bold'} size={'3'}>
+                    Total sales tax collected:
+                  </Text>
+                  <Text>
+                    ${totalTaxAmount.toFixed(2)}
+                  </Text>
+                </Flex>
+                <Flex direction={'row'} justify={'between'} width={'100%'} mb={'4'}>
+                  <Text weight={'bold'} size={'3'}>
+                    Total sales tax collected (excluding cash):
+                  </Text>
+                  <Text>
+                    ${totalTaxAmountExcludingCash.toFixed(2)}
+                  </Text>
+                </Flex>
+              </Flex>
+              
+            </>
+          ) : authenticated && !merchant ? (
+            <Flex direction={"column"} flexGrow={"1"} px={"5"} justify={"center"} align={"center"} gap={"9"}>
+              <Callout.Root color="red" role="alert">
+                <Callout.Icon>
+                  <ExclamationTriangleIcon />
+                </Callout.Icon>
+                <Callout.Text>
+                  <Strong>Unauthorized.</Strong> This page is for merchants only. You can{" "}
+                  <Link href="https://www.ongogh.com" target="_blank" rel="noopener noreferrer">
+                    request access here.
+                  </Link>
+                  . If you think this is a mistake, please{" "}
+                  <Link href="mailto:hello@ongogh.com" target="_blank" rel="noopener noreferrer">
+                    contact us.
+                  </Link>
+                </Callout.Text>
+              </Callout.Root>
+              <Button onClick={logout} style={{ width: "250px" }} size={"4"}>
+                Log out
+              </Button>
             </Flex>
-
-            <Flex direction={'column'} gap={'4'} flexGrow={'1'} justify={'between'} width={'100%'} maxHeight={'50vh'} overflow={'auto'}>
-              <Box>
-                <Table.Root size="1">
-                  <Table.Header>
-                    <Table.Row>
-                      <Table.ColumnHeaderCell>Tax amount</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Type</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
-                    </Table.Row>
-                  </Table.Header>
-        
-                  <Table.Body>
-                    {transactiosnwithTaxes?.map((transaction) => {
-                      const { label, color } = getPaymentTypeInfo(transaction.paymentType);
-                      return (
-                        <Table.Row key={transaction._id}>
-                          <Table.RowHeaderCell>${transaction.salesTax.toFixed(2)}</Table.RowHeaderCell>
-                          <Table.Cell>
-                            <Text wrap={'nowrap'}>
-                              {transaction.productName}
-                            </Text>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <Badge radius="large" style={{ backgroundColor: color, color: 'white', padding: '3px 7px 3px 7px' }}>{label}</Badge>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <Text wrap={'nowrap'}>
-                              {transaction.createdAt ? format(new Date(transaction.createdAt), 'MMM dd, yyyy') : 'N/A'}
-                            </Text>
-                          </Table.Cell>
-                        </Table.Row>
-                      );
-                    })}
-                  </Table.Body>
-                </Table.Root>
-              </Box>
+          ) : (
+            <Flex direction={"column"} height={"80vh"} align={"center"} justify={"center"} gap={"5"}>
+              <Text align={"center"}>Please log in to view this page</Text>
+              <Button
+                size={"4"}
+                style={{
+                  width: "250px",
+                  backgroundColor: "#0051FD",
+                }}
+                onClick={login}
+              >
+                Log in
+              </Button>
             </Flex>
-            <Flex direction={'row'} justify={'between'} width={'100%'} mb={'4'}>
-              <Text weight={'bold'} size={'3'}>
-                Total sales tax collected:
-              </Text>
-              <Text>
-                ${totalTaxAmount.toFixed(2)}
-              </Text>
-            </Flex>
-          </>
-        ) : authenticated && !merchant ? (
-          <Flex direction={"column"} flexGrow={"1"} px={"5"} justify={"center"} align={"center"} gap={"9"}>
-            <Callout.Root color="red" role="alert">
-              <Callout.Icon>
-                <ExclamationTriangleIcon />
-              </Callout.Icon>
-              <Callout.Text>
-                <Strong>Unauthorized.</Strong> This page is for merchants only. You can{" "}
-                <Link href="https://www.ongogh.com" target="_blank" rel="noopener noreferrer">
-                  request access here.
-                </Link>
-                . If you think this is a mistake, please{" "}
-                <Link href="mailto:hello@ongogh.com" target="_blank" rel="noopener noreferrer">
-                  contact us.
-                </Link>
-              </Callout.Text>
-            </Callout.Root>
-            <Button onClick={logout} style={{ width: "250px" }} size={"4"}>
-              Log out
-            </Button>
-          </Flex>
+          )
         ) : (
-          <Flex direction={"column"} height={"80vh"} align={"center"} justify={"center"} gap={"5"}>
-            <Text align={"center"}>Please log in to view this page</Text>
-            <Button
-              size={"4"}
-              style={{
-                width: "250px",
-                backgroundColor: "#0051FD",
-              }}
-              onClick={login}
-            >
-              Log in
-            </Button>
-          </Flex>
-        )
-      ) : (
-        <Spinner />
-      )}
+          <Spinner />
+        )}
+      </Flex>
     </Flex>
   );
 }

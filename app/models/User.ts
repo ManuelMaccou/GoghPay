@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   privyId: { type: String },
+  squareCustomerId: { type: String },
+  shopifyCustomerId: { type: String },
   walletAddress: { type: String },
   smartAccountAddress: { type: String },
   coinbaseAddress: { type: String },

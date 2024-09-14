@@ -3,7 +3,7 @@
 import {PrivyProvider} from '@privy-io/react-auth';
 import {base, baseSepolia} from 'viem/chains';
 
-export default function UserProvider({children}: {children: React.ReactNode}) {
+export default function PrivyUserProvider({children}: {children: React.ReactNode}) {
   return (
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}

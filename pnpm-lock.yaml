@@ -50,6 +50,12 @@ dependencies:
   '@radix-ui/themes':
     specifier: ^3.0.5
     version: 3.0.5(@types/react-dom@18.3.0)(@types/react@18.3.2)(react-dom@18.3.1)(react@18.3.1)
+  '@square/web-payments-sdk-types':
+    specifier: ^1.60.7
+    version: 1.60.7
+  '@square/web-sdk':
+    specifier: ^2.0.1
+    version: 2.0.1
   '@stitches/react':
     specifier: ^1.2.8
     version: 1.2.8(react@18.3.1)
@@ -59,6 +65,9 @@ dependencies:
   '@stripe/stripe-js':
     specifier: ^4.3.0
     version: 4.3.0
+  '@types/json-bigint':
+    specifier: ^1.0.4
+    version: 1.0.4
   '@types/node-fetch':
     specifier: ^2.6.11
     version: 2.6.11
@@ -83,12 +92,21 @@ dependencies:
   ethers:
     specifier: ^6.12.1
     version: 6.12.1
+  joi:
+    specifier: ^17.13.3
+    version: 17.13.3
   js-cookie:
     specifier: ^3.0.5
     version: 3.0.5
+  json-bigint:
+    specifier: ^1.0.0
+    version: 1.0.0
   jsonwebtoken:
     specifier: ^9.0.2
     version: 9.0.2
+  lodash:
+    specifier: ^4.17.21
+    version: 4.17.21
   mongodb:
     specifier: ^6.6.2
     version: 6.6.2
@@ -142,12 +160,18 @@ devDependencies:
   '@types/crypto-js':
     specifier: ^4.2.2
     version: 4.2.2
+  '@types/joi':
+    specifier: ^17.2.3
+    version: 17.2.3
   '@types/js-cookie':
     specifier: ^3.0.6
     version: 3.0.6
   '@types/jsonwebtoken':
     specifier: ^9.0.6
     version: 9.0.6
+  '@types/lodash':
+    specifier: ^4.17.7
+    version: 4.17.7
   '@types/node':
     specifier: ^20.12.12
     version: 20.12.12
@@ -1060,6 +1084,14 @@ packages:
       prop-types: 15.8.1
       react: 18.3.1
     dev: false
+
+  /@hapi/hoek@9.3.0:
+    resolution: {integrity: sha512-/c6rf4UJlmHlC9b5BaNvzAcFv7HZ2QHaV0D4/HNlBdvFnvQq8RI4kYdhyPCl7Xj+oWvTWQ8ujhqS53LIgAe6KQ==}
+
+  /@hapi/topo@5.1.0:
+    resolution: {integrity: sha512-foQZKJig7Ob0BMAYBfcJk8d77QtOe7Wo4ox7ff1lQYoNNAb6jwcY1ncdoy2e9wQZzvNy7ODZCYJkK8kzmcAnAg==}
+    dependencies:
+      '@hapi/hoek': 9.3.0
 
   /@headlessui/react@1.7.19(react-dom@18.3.1)(react@18.3.1):
     resolution: {integrity: sha512-Ll+8q3OlMJfJbAKM/+/Y2q6PPYbryqNTXDbryx7SXLIDamkF6iQFbriYHga0dY44PvDhvvBWCx1Xj4U5+G4hOw==}
@@ -3524,6 +3556,17 @@ packages:
       '@scure/base': 1.1.6
     dev: false
 
+  /@sideway/address@4.1.5:
+    resolution: {integrity: sha512-IqO/DUQHUkPeixNQ8n0JA6102hT9CmaljNTPmQ1u8MEhBo/R4Q8eKLN/vGZxuebwOroDB4cbpjheD4+/sKFK4Q==}
+    dependencies:
+      '@hapi/hoek': 9.3.0
+
+  /@sideway/formula@3.0.1:
+    resolution: {integrity: sha512-/poHZJJVjx3L+zVD6g9KgHfYnb443oi7wLu/XKojDviHy6HOEOA6z1Trk5aR1dGcmPenJEgb2sK2I80LeS3MIg==}
+
+  /@sideway/pinpoint@2.0.0:
+    resolution: {integrity: sha512-RNiOoTPkptFtSVzQevY/yWtZwf/RxyVnPy/OcA9HBM3MlGDnBEYL5B41H0MTn0Uec8Hi+2qUtTfG2WWZBmMejQ==}
+
   /@simplewebauthn/browser@9.0.1:
     resolution: {integrity: sha512-wD2WpbkaEP4170s13/HUxPcAV5y4ZXaKo1TfNklS5zDefPinIgXOpgz1kpEvobAsaLPa2KeH7AKKX/od1mrBJw==}
     dependencies:
@@ -3532,6 +3575,19 @@ packages:
 
   /@simplewebauthn/types@9.0.1:
     resolution: {integrity: sha512-tGSRP1QvsAvsJmnOlRQyw/mvK9gnPtjEc5fg2+m8n+QUa+D7rvrKkOYyfpy42GTs90X3RDOnqJgfHt+qO67/+w==}
+    dev: false
+
+  /@square/web-payments-sdk-types@1.60.7:
+    resolution: {integrity: sha512-jIIfu4IKfby+8vmo2StV7HmBLK6teO0RDLrcUIPdR+bpSxuiJM+OxCinuT7V7/3zITEBQIXgDMHPKEv/gy4U5w==}
+    dependencies:
+      typescript: 4.9.5
+    dev: false
+
+  /@square/web-sdk@2.0.1:
+    resolution: {integrity: sha512-m+pauPLJUHO4qzBNKlHRMe+qDAhQdbEd7g/v/SW8BWZARwJC0liHB4AnVAJuM/7JMFEPiT2ZO3SRt1VQsCeoYg==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dependencies:
+      '@square/web-payments-sdk-types': 1.60.7
     dev: false
 
   /@stablelib/aead@1.0.1:
@@ -3740,9 +3796,20 @@ packages:
       hoist-non-react-statics: 3.3.2
     dev: true
 
+  /@types/joi@17.2.3:
+    resolution: {integrity: sha512-dGjs/lhrWOa+eO0HwgxCSnDm5eMGCsXuvLglMghJq32F6q5LyyNuXb41DHzrg501CKNOSSAHmfB7FDGeUnDmzw==}
+    deprecated: This is a stub types definition. joi provides its own type definitions, so you do not need this installed.
+    dependencies:
+      joi: 17.13.3
+    dev: true
+
   /@types/js-cookie@3.0.6:
     resolution: {integrity: sha512-wkw9yd1kEXOPnvEeEV1Go1MmxtBJL0RR79aOTAApecWFVu7w0NNXNqhcWgvw2YgZDYadliXkl14pa3WXw5jlCQ==}
     dev: true
+
+  /@types/json-bigint@1.0.4:
+    resolution: {integrity: sha512-ydHooXLbOmxBbubnA7Eh+RpBzuaIiQjh8WGJYQB50JFGFrdxW7JzVlyEV7fAXw0T2sqJ1ysTneJbiyNLqZRAag==}
+    dev: false
 
   /@types/json5@0.0.29:
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
@@ -3752,6 +3819,10 @@ packages:
     resolution: {integrity: sha512-/5hndP5dCjloafCXns6SZyESp3Ldq7YjH3zwzwczYnjxIT0Fqzk5ROSYVGfFyczIue7IUEj8hkvLbPoLQ18vQw==}
     dependencies:
       '@types/node': 20.12.12
+    dev: true
+
+  /@types/lodash@4.17.7:
+    resolution: {integrity: sha512-8wTvZawATi/lsmNu10/j2hk1KEP0IvjubqPE3cu1Xz7xfXXt5oCq3SNUz4fMIP4XGF9Ky+Ue2tBA3hcS7LSBlA==}
     dev: true
 
   /@types/ms@0.7.34:
@@ -6520,6 +6591,15 @@ packages:
     hasBin: true
     dev: false
 
+  /joi@17.13.3:
+    resolution: {integrity: sha512-otDA4ldcIx+ZXsKHWmp0YizCweVRZG96J10b0FevjfuncLO1oX59THoAmHkNubYJ+9gWsYsp5k8v4ib6oDv1fA==}
+    dependencies:
+      '@hapi/hoek': 9.3.0
+      '@hapi/topo': 5.1.0
+      '@sideway/address': 4.1.5
+      '@sideway/formula': 3.0.1
+      '@sideway/pinpoint': 2.0.0
+
   /jose@4.15.5:
     resolution: {integrity: sha512-jc7BFxgKPKi94uOvEmzlSWFFe2+vASyXaKUpdQKatWAESU2MWjDfFf0fdfc83CDKcA5QecabZeNLyfhe3yKNkg==}
     dev: false
@@ -6556,6 +6636,12 @@ packages:
     resolution: {integrity: sha512-OYu7XEzjkCQ3C5Ps3QIZsQfNpqoJyZZA99wd9aWd05NCtC5pWOkShK2mkL6HXQR6/Cy2lbNdPlZBpuQHXE63gA==}
     engines: {node: '>=4'}
     hasBin: true
+    dev: false
+
+  /json-bigint@1.0.0:
+    resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
+    dependencies:
+      bignumber.js: 9.1.2
     dev: false
 
   /json-buffer@3.0.1:
@@ -8427,6 +8513,12 @@ packages:
     resolution: {integrity: sha512-zdu8XMNEDepKKR+XYOXAVPtWui0ly0NtohUscw+UmaHiAWT8hrV1rr//H6V+0DvJ3OQ19S979M0laLfX8rm82Q==}
     dependencies:
       is-typedarray: 1.0.0
+    dev: false
+
+  /typescript@4.9.5:
+    resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
     dev: false
 
   /typescript@5.4.5:
