@@ -611,6 +611,7 @@ function SellContent() {
     setLoadingCatalog(true);
     
     // PLACEHOLDER FOR FETCHING CATELOG
+
   } 
     */
 
