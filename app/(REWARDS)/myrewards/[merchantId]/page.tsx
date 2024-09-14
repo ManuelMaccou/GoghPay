@@ -172,7 +172,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       if (response.ok) {
         const data = await response.json();
 
-        await updateGoghUserWithSquareId(data.newSquareCustomer.id)
+        await updateGoghUserWithSquareId(data.newSquareCustomer?.id)
       } else if (response.status === 503) {
         setErrorCheckingSquareDirectory('The was an error with Square. Please wait a few minutes and try again.');
       } else if (response.status === 401) {
@@ -419,8 +419,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         return null;
       }
 
-      const discountEarned = currentUserMerchantRewards.currentDiscount.amount;
-      const totalSpent = currentUserMerchantRewards.totalSpent;
+      const discountEarned = currentUserMerchantRewards?.currentDiscount?.amount;
+      const totalSpent = currentUserMerchantRewards?.totalSpent;
 
       if (totalSpent === null || totalSpent === undefined) return;
     
