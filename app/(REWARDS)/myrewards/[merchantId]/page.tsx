@@ -449,10 +449,10 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       console.log('Highest tier met:', highestTier);
       console.log('Next milestone:', nextMilestone);
 
-      const amountToNextTier = nextMilestone ? nextMilestone - totalSpent : null;
+      const amountToNextTier = nextMilestone ? nextMilestone - totalSpent : 0;
 
       setUsersCurrentRewardsTier(highestTier);
-      setAmountToNextRewardsTier(amountToNextTier)
+      setAmountToNextRewardsTier(Math.round(amountToNextTier * 100) / 100);
     };
 
     checkMilestone();  
@@ -486,7 +486,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
               <Avatar.Root>
                 <Avatar.Image 
                   className="MerchantLogo"
-                  src={merchant?.branding?.logo || '/logos/gogh_logo_white.svg'}
+                  src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
                   alt="Merchant Logo"
                   style={{objectFit: "contain", maxWidth: '200px'}}
                   />
@@ -519,7 +519,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                 <Avatar.Root>
                   <Avatar.Image 
                   className="MerchantLogo"
-                  src={merchant?.branding?.logo || '/logos/gogh_logo_white.svg'}
+                  src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
                   alt="Merchant Logo"
                   style={{objectFit: "contain", maxWidth: '200px'}}
                   />
