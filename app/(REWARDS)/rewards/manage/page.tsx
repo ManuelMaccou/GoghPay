@@ -252,7 +252,6 @@ export default function ManageRewards({ params }: { params: { merchantId: string
       return;
     }
     
-    console.log('tierId for delete:', tierId);
     updateMerchant('delete', 0, 0, undefined, tierId);
   };
   const handleWelcomeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
