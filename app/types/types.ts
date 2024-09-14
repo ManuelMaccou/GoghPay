@@ -69,7 +69,7 @@ export interface Merchant {
   square?: Square;
   paymentMethods: PaymentMethod;
   rewards?: Rewards;
-  branding: Branding;
+  branding?: Branding;
 }
 
 export interface Square {
@@ -156,9 +156,9 @@ export interface Rewards {
 }
 
 export interface Branding {
-  primary_color: string;
-  secondary_color: string;
-  logo: string;
+  primary_color?: string;
+  secondary_color?: string;
+  logo?: string;
 }
 
 export interface UserReward {
