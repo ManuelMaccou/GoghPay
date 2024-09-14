@@ -173,7 +173,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
           paymentMethod: PaymentType.None,
         })
         setCurrentCustomer(null)
-      } else {
+      } else if (checkoutStatus === 'error' || checkoutStatus === 'cancel' || checkoutStatus === 'square') {
         setlocalFormData({
           product: formData?.product || "",
           price: formData?.price || "",
@@ -364,7 +364,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                         mb={'5'}
                         variant="surface"
                         onClick={() => handleSelectCustomer(customer)}
-                        style={{ cursor: 'pointer', padding: '1.5rem' }}
+                        style={{ padding: '1.5rem' }}
                       >
                         <Flex direction={'column'}>
                           {user?.google && user?.google.name && (
