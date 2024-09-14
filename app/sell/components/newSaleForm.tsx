@@ -364,7 +364,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                         mb={'5'}
                         variant="surface"
                         onClick={() => handleSelectCustomer(customer)}
-                        style={{ cursor: 'pointer', padding: '1.5rem' }}
+                        style={{ padding: '1.5rem' }}
                       >
                         <Flex direction={'column'}>
                           {user?.google && user?.google.name && (
