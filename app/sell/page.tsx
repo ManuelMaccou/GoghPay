@@ -103,7 +103,54 @@ function SellContent() {
     }
   };
 
+  const fetchAndUpdatePaymentDetails = useCallback(
+    async (
+      serverTransactionId: string | null,
+      clientTransactionId: string,
+      merchantId: string,
+      transactionIdToUpdate: string,
+      statusToSave: string,
+      rewardsCustomer: string
+    ) => {  
+      try {
+        console.log('fetchAndUpdatePaymentDetails is running');
+        let squarePaymentId = '';
+
+        if (serverTransactionId) {
+          // Fetch Square payment ID using the server transaction ID
+          const fetchedSquarePaymentId = await fetchSquarePaymentId(
+            serverTransactionId,
+            merchantId
+          );
+
+          if (fetchedSquarePaymentId) {
+            squarePaymentId = fetchedSquarePaymentId;
+          }
+        }
+
+        await updateTransactionDetails(
+          squarePaymentId,
+          clientTransactionId,
+          transactionIdToUpdate,
+          statusToSave
+        );
+        if (rewardsCustomer && rewardsCustomer !== '') {
+          await updateRewards(newSaleFormData)
+        } 
+
+        sessionStorage.removeItem('newSaleFormData');
+        resetUrl("/sell");
+        setNewSaleFormData(null);
+        setShowNewSaleForm(true);
+      } catch (error) {
+        console.error('Error updating payment details:', error);
+      }
+    },
+  [newSaleFormData]
+);
+
   useEffect(() => {
+    if (!currentUser) return;
     // Extract query parameters from the URL
     const statusParam = searchParams.get('status');
     const statusToSave = searchParams.get('statusToSave') || 'PENDING';
@@ -129,49 +176,7 @@ function SellContent() {
       setShowNewSaleForm(true);
       setSquarePosErrorMessage(messageParam);
     }
-  }, [searchParams, currentUser]);
-
-  const fetchAndUpdatePaymentDetails = async (
-    serverTransactionId: string | null,
-    clientTransactionId: string,
-    merchantId: string,
-    transactionIdToUpdate: string,
-    statusToSave: string,
-    rewardsCustomer: string
-  ) => {  
-    try {
-      let squarePaymentId = '';
-
-      if (serverTransactionId) {
-        // Fetch Square payment ID using the server transaction ID
-        const fetchedSquarePaymentId = await fetchSquarePaymentId(
-          serverTransactionId,
-          merchantId
-        );
-
-        if (fetchedSquarePaymentId) {
-          squarePaymentId = fetchedSquarePaymentId;
-        }
-      }
-
-      await updateTransactionDetails(
-        squarePaymentId,
-        clientTransactionId,
-        transactionIdToUpdate,
-        statusToSave
-      );
-      if (rewardsCustomer && rewardsCustomer !== '') {
-        await updateRewards(newSaleFormData)
-      } 
-
-      sessionStorage.removeItem('newSaleFormData');
-      resetUrl("/sell");
-      setNewSaleFormData(null);
-      setShowNewSaleForm(true);
-    } catch (error) {
-      console.error('Error updating payment details:', error);
-    }
-  };
+  }, [searchParams, currentUser, fetchAndUpdatePaymentDetails]);
 
   const fetchSquarePaymentId = async (
     serverTransactionId: string,
@@ -212,6 +217,7 @@ function SellContent() {
     statusToSave: string
   ) => {
     try {
+      console.log('current user:', user)
       const accessToken = await getAccessToken();
       const response = await fetch('/api/transaction/update', {
         method: 'POST',
@@ -220,7 +226,7 @@ function SellContent() {
           'Authorization': `Bearer ${accessToken}`, 
         },
         body: JSON.stringify({
-          privyId: currentUser?.privyId,
+          privyId: user?.id,
           transactionId: transactionIdToUpdate,
           clientTransactionId,
           status: statusToSave,
@@ -258,7 +264,7 @@ function SellContent() {
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          privyId: currentUser?.privyId,
+          privyId: user?.id,
           purchaseData: newSaleFormData,
           finalPrice,
         }),
@@ -304,7 +310,7 @@ function SellContent() {
     setIsFetchingCurrentRewardsCustomers(true)
     const accessToken = await getAccessToken();
     try {
-      const response = await fetch(`/api/rewards/userRewards/customers/?merchantId=${merchantId}&privyId=${currentUser.privyId}`, {
+      const response = await fetch(`/api/rewards/userRewards/customers/?merchantId=${merchantId}&privyId=${user?.id}`, {
         next: {revalidate: 1},
         method: 'GET',
         headers: {
@@ -493,8 +499,8 @@ function SellContent() {
             'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
-            privyId: currentUser?.privyId,
-            buyerPrivyId: currentUser?.privyId,
+            privyId: user?.id,
+            buyerPrivyId: user?.id,
             buyerId: newSaleFormData.customer?.userInfo._id,
             merchantId: newSaleFormData.sellerMerchant?._id,
             productName: newSaleFormData.product,
@@ -767,7 +773,7 @@ function SellContent() {
             'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
-            privyId: currentUser?.privyId,
+            privyId: user?.id,
             purchaseData: newSaleFormData,
             finalPrice,
           }),
@@ -826,8 +832,8 @@ function SellContent() {
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          privyId: currentUser?.privyId,
-          buyerPrivyId: currentUser?.privyId, // Needs to be the current user for auth purposes. Special case since the merchant is triggering the purchase for the buyer
+          privyId: user?.id,
+          buyerPrivyId: user?.id, // Needs to be the current user for auth purposes. Special case since the merchant is triggering the purchase for the buyer
           buyerId: newSaleFormData.customer?.userInfo._id,
           merchantId: newSaleFormData.sellerMerchant?._id,
           productName: newSaleFormData.product,

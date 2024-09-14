@@ -183,7 +183,7 @@ export default function ManualCreditCardPayment() {
       welcomeDiscountAmount = formData.sellerMerchant?.rewards?.welcome_reward
     }
 
-    if (formData. customer && formData.customer.currentDiscount.amount) {
+    if (formData.customer && formData.customer.currentDiscount.amount) {
       rewardsDiscountAmount = formData.customer.currentDiscount.amount
     }
 
@@ -214,14 +214,7 @@ export default function ManualCreditCardPayment() {
     setFinalPriceCalculated(true);
     setFinalPrice(finalPriceCalculation.toFixed(2));
 
-    console.log('priceNum:', priceNum)
-    console.log('tax:', formData?.tax)
-    console.log('rewards discount:', rewardsDiscount)
-    console.log('welcome discount:', welcomeDiscount)
-    console.log('price after discount:', priceAfterDiscount)
-    console.log('final price:', finalPrice)
-
-  }, [formData])
+  }, [formData, finalPrice, rewardsDiscount, welcomeDiscount])
 
   const handlePaymentMethodSubmission = async (event: React.FormEvent) => {
     setError(null);
@@ -678,7 +671,6 @@ export default function ManualCreditCardPayment() {
           </Flex>
         )}
           
-        
         <Flex direction={'column'} width={'90%'}>
           <form id="payment-form" onSubmit={handlePaymentMethodSubmission}>
             <style>

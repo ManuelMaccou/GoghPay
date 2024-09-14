@@ -69,6 +69,8 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   const [isPaymentsDialogOpen, setIsPaymentsDialogOpen] = useState(false);
   const [isCheckingFormStatus, setIsCheckingFormStatus] = useState<boolean>(true);
 
+  const {user} = usePrivy();
+
   const paymentTypeLogos: Record<PaymentType, string> = {
     [PaymentType.None]: '/paymentMethodLogos/venmo.png',
     [PaymentType.Venmo]: '/paymentMethodLogos/venmo.png',
@@ -300,7 +302,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
               {currentCustomer ? (
                 <Button variant='surface' size={'4'} style={{width: "100%"}}>
                   <PersonIcon height={'25px'} width={'25px'} /> 
-                  {currentCustomer.userInfo.email}
+                  {user?.google?.name? user.google.name : currentCustomer.userInfo.email}
                 </Button>
               ) : (
                 <Button variant='surface' size={'4'}>
@@ -364,14 +366,17 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                         onClick={() => handleSelectCustomer(customer)}
                         style={{ cursor: 'pointer', padding: '1.5rem' }}
                       >
-                        {customer.userInfo.name && (
-                          <Text as="div" size={'5'} weight="bold">
-                            {customer.userInfo.name}
+                        <Flex direction={'column'}>
+                          {user?.google && user?.google.name && (
+                            <Text size={'5'} weight="bold">
+                              {user.google.name}
+                            </Text>
+                          )}
+                          <Text color="gray" size="5">
+                            {customer.userInfo.email}
                           </Text>
-                        )}
-                        <Text as="div" color="gray" size="5">
-                          {customer.userInfo.email}
-                        </Text>
+                        </Flex>
+                        
                       </Card>
                     ))
                   ) : (
