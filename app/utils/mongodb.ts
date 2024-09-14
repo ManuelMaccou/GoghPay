@@ -5,6 +5,7 @@ import Transaction from '../models/Transaction';
 import Transfer from '../models/Transfer';
 import Subscription from '../models/Subscription';
 import AdminError from '../models/AdminError';
+import { UserReward } from '../models/UserReward';
 
 const MONGODB_URI = process.env.MONGODB_URI as string;
 
@@ -38,6 +39,7 @@ async function connectToDatabase() {
       mongoose.model('Transaction', Transaction.schema);
       mongoose.model('Subscription', Subscription.schema);
       mongoose.model('AdminError', AdminError.schema);
+      mongoose.model('UserReward', UserReward.schema);
 
       return mongoose;
     }).catch((error) => {

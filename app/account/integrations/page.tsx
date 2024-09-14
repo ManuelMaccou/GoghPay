@@ -2,7 +2,8 @@
 
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, User, Location } from "@/app/types/types";
+import { useMerchant } from "@/app/contexts/MerchantContext";
+import { Merchant, User, Location, FileData } from "@/app/types/types";
 import { AlertDialog, Box, Button, Dialog, Flex, Heading, Link, RadioGroup, Spinner, Strong, Text, VisuallyHidden } from "@radix-ui/themes";
 import * as Avatar from '@radix-ui/react-avatar';
 import { Suspense, useEffect, useState } from "react";
@@ -12,6 +13,8 @@ import { setCookie } from 'nookies';
 import { useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import NotificationMessage from "@/app/components/Notification";
+import UploadImage from "@/app/components/UploadImage";
+import { Cross2Icon } from "@radix-ui/react-icons";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -24,7 +27,6 @@ function IntegrationsContent() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
-  const [merchant, setMerchant] = useState<Merchant>();
   const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string>('');
@@ -33,11 +35,15 @@ function IntegrationsContent() {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [squareLocationName, setSquareLocationName] = useState<string | null>(null);
   const [showLocationDialog, setShowLocationDialog] = useState<boolean>(false);
-  // const [merchantSet, setMerchantSet] = useState<boolean>(false);
+
+  const [venmoQrCode, setVenmoQrCode] = useState<string | null>(null);
+  const [zelleQrCode, setZelleQrCode] = useState<string | null>(null);
 
   const { login, user, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+
+  const { merchant, isFetchingMerchant, setMerchant } = useMerchant();
 
   const searchParams = useSearchParams();
 
@@ -75,10 +81,8 @@ function IntegrationsContent() {
         secure: process.env.SECURE_ENV === 'true', // Secure flag set based on environment
         sameSite: 'lax' // Changed from 'strict' to 'lax'
       });
-      console.log('CSRF Token in client useEffect:', token);
     } else {
       setCsrfToken(token);
-      console.log('CSRF token retrieved from cookie:', token);
     }
   }, []);
 
@@ -122,14 +126,6 @@ function IntegrationsContent() {
   const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
   const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=${csrfToken}&redirect_uri=${redirectUri}`
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   const handleRevokeSquareAccess = async () => {
     setError(null)
     setRevokeError(null)
@@ -153,7 +149,6 @@ function IntegrationsContent() {
       }
       const result = await response.json();
       if (result.success) {
-        console.log('Square access successfully revoked');
         setRevokeSuccess('Access revoked')
 
         await fetch(`/api/merchant/update`, {
@@ -162,7 +157,17 @@ function IntegrationsContent() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`, 
           },
-          body: JSON.stringify({ privyId: currentUser?.privyId, square_access_token: null })
+          body: JSON.stringify({ 
+            privyId: currentUser?.privyId,
+            square: {
+              access_token: "",
+              refresh_token: "",
+              merchant_id: "",
+              token_expires_at: "",
+              location_id: "",
+              location_name: "",
+            }
+          })
         });
 
         await fetchLocations(merchant._id);
@@ -179,6 +184,7 @@ function IntegrationsContent() {
     setIsFetchingLocations(true);
     try {
       const response = await fetch(`/api/square/locations?merchantId=${merchantId}`);
+      console.log('location response:', response);
       if (response.status === 401) {
         const errorText = await response.text();
         if (errorText.includes('expired')) {
@@ -212,8 +218,6 @@ function IntegrationsContent() {
     }
   };
 
-  console.log('locations:', locations);
-
   const handleLocationSelect = async () => {
     setError(null);
     setRevokeError(null);
@@ -229,7 +233,13 @@ function IntegrationsContent() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`, 
         },
-        body: JSON.stringify({ privyId: currentUser?.privyId, square_location_id: selectedLocation.id, square_location_name: selectedLocation.name })
+        body: JSON.stringify({
+          privyId: currentUser?.privyId,
+          square: {
+            location_id: selectedLocation.id,
+            location_name: selectedLocation.name
+          },
+        })
       });
       if (!response.ok) {
         throw new Error('Failed to update selected location');
@@ -249,10 +259,9 @@ function IntegrationsContent() {
         const privyId = id
         const response = await fetch(`/api/merchant/privyId/${privyId}`);
         const data = await response.json();
-        console.log('Fetched merchant:', data);
         setMerchant(data);
         fetchLocations(data._id);
-        setSquareLocationName(data.square_location_name);
+        setSquareLocationName(data.square.location_name);
       } catch (err) {
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);
@@ -287,210 +296,312 @@ function IntegrationsContent() {
     if (ready && authenticated) {
       fetchUser();
     }
-  }, [ready, authenticated, user?.id]); 
-
-  console.log('location name:', squareLocationName);
+  }, [ready, authenticated, user?.id, setMerchant]); 
 
   useEffect(() => {
-    if (merchant) {
-      // setMerchantSet(true);
-      console.log('Checking Square auth token with merchant:', merchant);
+    if(!merchant?.paymentMethods.venmoQrCodeImage) return
+    setVenmoQrCode(merchant?.paymentMethods.venmoQrCodeImage)
+  }, [merchant])
 
-    }
-  }, [merchant]);
+  useEffect(() => {
+    if(!merchant?.paymentMethods.zelleQrCodeImage) return
+    setZelleQrCode(merchant.paymentMethods.zelleQrCodeImage)
+  }, [merchant])
+
   
   return (
-    <Flex direction={'column'} gap={'4'} minHeight={'100vh'} width={'100%'} pb={'9'} pt={'6'} px={'5'}>  
-      {ready && authenticated && (
-        <BalanceProvider walletForPurchase={walletForPurchase}>
-          <Header
-            merchant={currentUser?.merchant}
-            embeddedWallet={embeddedWallet}
-            authenticated={authenticated}
-            walletForPurchase={walletForPurchase}
-            currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
-          />
-        </BalanceProvider>
-      )}
-      <Text size={'6'} weight={'bold'} style={{color: 'black'}}>Integrations</Text>
-      <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'start'} gap={'4'}>
-        {ready && (
-          authenticated ? (
-            <>
-              {currentUser && currentUser.merchant && (
-                <>
-                 <Flex direction={'column'} flexGrow={'1'} gap={'4'} align={'center'} p={'4'} style={{
-                    boxShadow: 'var(--shadow-2)',
-                    borderRadius: '10px'
-                    }}>
-                    <Avatar.Root>
-                      <Avatar.Image 
-                      className="SquareLogo"
-                      src='/logos/Square_LogoLockup_Black.png'
-                      alt="Square Integration"
-                      style={{objectFit: "contain", maxWidth: '200px'}}
-                      />
-                    </Avatar.Root>
+    <Flex
+      direction='column'
+      position='relative'
+      minHeight='100vh'
+      width='100%'
+      style={{
+        background: 'linear-gradient(to bottom, #45484d 0%,#000000 100%)'
+      }}
+    >
+      <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
+        <Heading size={'8'} style={{color: "white"}}>Integrations</Heading>
+        <Header
+          color={"white"}
+          merchant={currentUser?.merchant}
+          embeddedWallet={embeddedWallet}
+          authenticated={authenticated}
+          walletForPurchase={walletForPurchase}
+          currentUser={currentUser}
+        />
+      </Flex>
+      <Flex
+        flexGrow={'1'}
+        p={'5'}
+        direction={'column'}
+        justify={'between'}
+        align={'center'}
+        height={'100%'}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '20px 20px 0px 0px',
+          boxShadow: 'var(--shadow-6)'
+        }}
+      >
+        <Flex direction={'column'} flexGrow={'1'} width={'100%'} justify={'start'} gap={'4'}>
+          {ready && (
+            authenticated ? (
+              <>
+                {currentUser && currentUser.merchant && (
+                  <>
+                  <Flex direction={'column'} gap={'4'} align={'center'} p={'4'} style={{
+                      boxShadow: 'var(--shadow-2)',
+                      borderRadius: '10px'
+                      }}>
+                      <Avatar.Root>
+                        <Avatar.Image 
+                        className="SquareLogo"
+                        src='/logos/Square_LogoLockup_Black.png'
+                        alt="Square Integration"
+                        style={{objectFit: "contain", maxWidth: '200px'}}
+                        />
+                      </Avatar.Root>
 
-                    {locations.length === 0 && (
-                      <Button asChild size={'4'} style={{width: '250px'}} loading={isFetchingLocations}>
-                        <Link href={squareAuthUrl}>
-                          Connect Square
-                        </Link>
-                      </Button>
-                    )}
-                    
-                    {/* Placeholder for error messaging */}
+                      <AlertDialog.Root open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+                        <AlertDialog.Trigger>
+                          <Button style={{ display: 'none' }} />
+                        </AlertDialog.Trigger>
+                        <AlertDialog.Content maxWidth="450px">
+                          <AlertDialog.Title>Select a location for inventory</AlertDialog.Title>
+                          <VisuallyHidden>
+                            <AlertDialog.Description size="2" mb="4">
+                              Select a location for inventory.
+                            </AlertDialog.Description>
+                          </VisuallyHidden>
+                          {!isFetchingLocations ? (
+                            <RadioGroup.Root value={selectedLocation?.id || ''} onValueChange={(value) => setSelectedLocation(locations.find(loc => loc.id === value) || null)} name="locations">
+                              {locations.map((location) => (
+                                <RadioGroup.Item key={location.id} value={location.id} disabled={!merchant}>
+                                  <Text as='label'>{location.name}</Text>
+                                </RadioGroup.Item>
+                              ))}
+                            </RadioGroup.Root>
+                          ) : (
+                            <Spinner />
+                          )}
+                          <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                            <AlertDialog.Action>
+                              <Button onClick={handleLocationSelect}>
+                                  Continue
+                              </Button>
+                            </AlertDialog.Action>
+                          </Flex>
+                        </AlertDialog.Content>
+                      </AlertDialog.Root>
 
-
-                    <Dialog.Root open={showLocationDialog} onOpenChange={setShowLocationDialog}>
-                      <Dialog.Trigger>
-                        <Button style={{ display: 'none' }} />
-                      </Dialog.Trigger>
-
-                      <Dialog.Content maxWidth="450px">
-                        <Dialog.Title>Select a location for inventory</Dialog.Title>
-                        <VisuallyHidden>
-                          <Dialog.Description size="2" mb="4">
-                            Select a location for inventory.
-                          </Dialog.Description>
-                        </VisuallyHidden>
+                      <Flex direction={'column'} gap={'4'}>
                         {!isFetchingLocations ? (
-                          <RadioGroup.Root value={selectedLocation?.id || ''} onValueChange={(value) => setSelectedLocation(locations.find(loc => loc.id === value) || null)} name="locations">
-                            {locations.map((location) => (
-                              <RadioGroup.Item key={location.id} value={location.id} disabled={!merchant}>
-                                <Text as='label'>{location.name}</Text>
-                              </RadioGroup.Item>
-                            ))}
-                          </RadioGroup.Root>
+                          locationError ? (
+                            <Flex direction={'column'} gap={'2'}>
+                              <Flex direction={'row'} gap={'2'}>
+                                <Text><Strong>Status:</Strong> Not connected</Text>
+                                <RedCircle />
+                              </Flex>
+                              <Text>{locationError}</Text>
+                              <Button asChild size={'4'} style={{width: '250px'}}>
+                                <Link href={squareAuthUrl}>
+                                  Connect Square
+                                </Link>
+                              </Button>
+                            </Flex>
+                          ) : (
+                            <>
+                              {locations.length > 0 ? (
+                                <>
+                                  <Flex direction={'row'} gap={'2'}>
+                                    <Text><Strong>Status:</Strong> Connected</Text>
+                                    <GreenCircle />
+                                  </Flex>
+
+                                  {squareLocationName ? (
+                                    <>
+                                
+                                      <Flex direction={'row'} gap={'4'} align={'center'} mb={'4'}>
+                                        <Text><Strong>Location:</Strong> {squareLocationName}</Text>
+                                        <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
+                                          Change location
+                                        </Button>
+                                      </Flex>
+                                    
+                                    </>
+                                  ) : (
+                                    <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
+                                      Select location
+                                    </Button>
+                                  )}
+
+                                  <AlertDialog.Root>
+                                    <AlertDialog.Trigger>
+                                      <Button color="red">Revoke access</Button>
+                                    </AlertDialog.Trigger>
+                                    <AlertDialog.Content maxWidth="450px">
+                                      <AlertDialog.Title>Revoke access</AlertDialog.Title>
+                                      <AlertDialog.Description size="2">
+                                        Are you sure? Square will no longer be accessible and any
+                                        existing sessions will be expired.
+                                      </AlertDialog.Description>
+
+                                      <Flex gap="3" mt="4" justify="between">
+                                        <AlertDialog.Cancel>
+                                          <Button variant="soft" color="gray">
+                                            Cancel
+                                          </Button>
+                                        </AlertDialog.Cancel>
+                                        <AlertDialog.Action>
+                                          <Button variant="solid" color="red" onClick={handleRevokeSquareAccess}>
+                                            Revoke access
+                                          </Button>
+                                        </AlertDialog.Action>
+                                      </Flex>
+                                    </AlertDialog.Content>
+                                  </AlertDialog.Root>
+                                </>
+                              ) : (
+                                <Button asChild size={'4'} style={{width: '250px'}}>
+                                  <Link href={squareAuthUrl}>
+                                    Connect Square
+                                  </Link>
+                                </Button>
+                              )}
+                            </>
+                          )
                         ) : (
                           <Spinner />
                         )}
-                        
-                        <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
-                          <Dialog.Close>
-                            <Button variant="ghost">
-                              Skip
-                            </Button>
-                          </Dialog.Close>
-                          <Dialog.Close>
-                            <Button onClick={handleLocationSelect}>
-                                Continue
-                            </Button>
-                          </Dialog.Close>
-                        </Flex>
-                      </Dialog.Content>
-                    </Dialog.Root>
+                      </Flex>
 
-                    <Flex direction={'column'} gap={'4'}>
-                      {!isFetchingLocations ? (
-                        locationError ? (
-                          <Flex direction={'column'} gap={'2'}>
-                            <Flex direction={'row'} gap={'2'}>
-                              <Text><Strong>Status:</Strong> Not connected</Text>
-                              <RedCircle />
-                            </Flex>
-                            <Text>{locationError}</Text>
-                          </Flex>
-                        ) : (
-                          <>
-                            {locations.length > 0 && (
-                              <>
-                                <Flex direction={'row'} gap={'2'}>
-                                  <Text><Strong>Status:</Strong> Connected</Text>
-                                  <GreenCircle />
-                                </Flex>
-
-                                {squareLocationName ? (
-                                  <>
-                              
-                                    <Flex direction={'row'} gap={'4'} align={'center'} mb={'4'}>
-                                      <Text><Strong>Location:</Strong> {squareLocationName}</Text>
-                                      <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
-                                        Change location
-                                      </Button>
-                                    </Flex>
-                                   
-                                  </>
-                                ) : (
-                                  <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
-                                    Select location
-                                  </Button>
-                                )}
-
-                                <AlertDialog.Root>
-                                  <AlertDialog.Trigger>
-                                    <Button color="red">Revoke access</Button>
-                                  </AlertDialog.Trigger>
-                                  <AlertDialog.Content maxWidth="450px">
-                                    <AlertDialog.Title>Revoke access</AlertDialog.Title>
-                                    <AlertDialog.Description size="2">
-                                      Are you sure? Square will no longer be accessible and any
-                                      existing sessions will be expired.
-                                    </AlertDialog.Description>
-
-                                    <Flex gap="3" mt="4" justify="between">
-                                      <AlertDialog.Cancel>
-                                        <Button variant="soft" color="gray">
-                                          Cancel
-                                        </Button>
-                                      </AlertDialog.Cancel>
-                                      <AlertDialog.Action>
-                                        <Button variant="solid" color="red" onClick={handleRevokeSquareAccess}>
-                                          Revoke access
-                                        </Button>
-                                      </AlertDialog.Action>
-                                    </Flex>
-                                  </AlertDialog.Content>
-                                </AlertDialog.Root>
-                              </>
-                            )}
-                          </>
-                        )
-                      ) : (
-                        <Spinner />
+                      {revokeError && (
+                        <Box mx={'3'}>
+                          <NotificationMessage message={revokeError} type="error" />
+                        </Box>
                       )}
+                      {revokeSuccess && (
+                        <Box mx={'3'}>
+                          <NotificationMessage message={revokeSuccess} type="success" />
+                        </Box>
+                      )}
+                      {error && (
+                        <Box mx={'3'}>
+                          <NotificationMessage message={error} type="error" />
+                        </Box>
+                      )}
+
+                    
                     </Flex>
 
-                    {revokeError && (
-                      <Box mx={'3'}>
-                        <NotificationMessage message={revokeError} type="error" />
-                      </Box>
-                    )}
-                    {revokeSuccess && (
-                      <Box mx={'3'}>
-                        <NotificationMessage message={revokeSuccess} type="success" />
-                      </Box>
-                    )}
-                    {error && (
-                      <Box mx={'3'}>
-                        <NotificationMessage message={error} type="error" />
-                      </Box>
-                    )}
 
-                  
-                  </Flex>
-                </>
-              )}
-            </>
-          ) : (
-            <Flex direction={'column'} height={'80vh'} align={'center'} justify={'center'} gap={'5'}>
-              <Text align={'center'}>
-                Please log in to view this page
-              </Text>
-              <Button size={'4'}
-              style={{
-                width: '250px',
-                backgroundColor: '#0051FD'
-              }}
-              onClick={login}>
-              Log in
-            </Button>
-            </Flex>
-          )
-        )}
+                    <Flex direction={'column'} gap={'4'} align={'center'} p={'4'} style={{
+                      boxShadow: 'var(--shadow-2)',
+                      borderRadius: '10px'
+                      }}>
+                      <Avatar.Root>
+                        <Avatar.Image 
+                        src='/paymentMethodLogos/venmo.png'
+                        alt="Venmo Integration"
+                        style={{objectFit: "contain", maxWidth: '100px'}}
+                        />
+                      </Avatar.Root>
+                      {!isFetchingMerchant && (
+                        <>
+                          {merchant && !venmoQrCode? (
+                            <Flex direction={'column'}>
+                              <UploadImage 
+                                merchantId={merchant._id}
+                                paymentProvider='Venmo'
+                                onUploadSuccess={(updatedMerchant: Merchant) => setMerchant(updatedMerchant)} 
+                              />
+                            </Flex>
+                          ) : ( 
+                            venmoQrCode && (
+                              <Flex direction={'column'} gap={'5'}>
+                                <Avatar.Root>
+                                  <Avatar.Image
+                                    src={venmoQrCode}
+                                    alt="Venmo QR Code"
+                                    style={{objectFit: "contain", maxWidth: '150px'}}
+                                  />
+                                </Avatar.Root>
+                                <Button variant="ghost" color="red" size={'4'}
+                                    onClick={() => setVenmoQrCode(null)}
+                                  >
+                                  <Cross2Icon />
+                                  Edit
+                                </Button>
+                              </Flex>
+                            )
+                          )}
+                        </>
+                      )}
+                    </Flex>
+    
+                    <Flex direction={'column'} gap={'4'} align={'center'} p={'4'} style={{
+                      boxShadow: 'var(--shadow-2)',
+                      borderRadius: '10px'
+                      }}>
+                      <Avatar.Root>
+                        <Avatar.Image 
+                        src='/paymentMethodLogos/zelle.png'
+                        alt="Zelle Integration"
+                        style={{objectFit: "contain", maxWidth: '100px'}}
+                        />
+                      </Avatar.Root>
+                      {!isFetchingMerchant && (
+                        <>
+                          {merchant && !zelleQrCode ? (
+                            <Flex direction={'column'}>
+                              <UploadImage 
+                                merchantId={merchant._id}
+                                paymentProvider='Zelle'
+                                onUploadSuccess={(updatedMerchant: Merchant) => setMerchant(updatedMerchant)} 
+                              />
+                            </Flex>
+                          ) : ( 
+                            zelleQrCode && (
+                              <Flex direction={'column'} gap={'5'}>
+                                <Avatar.Root>
+                                  <Avatar.Image
+                                    src={zelleQrCode}
+                                    alt="Zelle QR Code"
+                                    style={{objectFit: "contain", maxWidth: '150px'}}
+                                  />
+                                </Avatar.Root>
+                                <Button variant="ghost" color="red" size={'4'}
+                                    onClick={() => setZelleQrCode(null)}
+                                  >
+                                  <Cross2Icon />
+                                  Edit
+                                </Button>
+                              </Flex>
+                            )
+                          )}
+                        </>
+                      )}
+                    </Flex>
+                  </>
+                )}
+              </>
+            ) : (
+              <Flex direction={'column'} height={'80vh'} align={'center'} justify={'center'} gap={'5'}>
+                <Text align={'center'}>
+                  Please log in to view this page
+                </Text>
+                <Button size={'4'}
+                style={{
+                  width: '250px',
+                  backgroundColor: '#0051FD'
+                }}
+                onClick={login}>
+                Log in
+              </Button>
+              </Flex>
+            )
+          )}
+        </Flex>
       </Flex>
     </Flex>
   )

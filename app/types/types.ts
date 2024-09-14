@@ -1,7 +1,52 @@
+import { Payment } from "square";
+
+enum DiscountType {
+  Dollar = 'dollar',
+  Percent = 'percent',
+}
+
+enum MilestoneType {
+  DollarsSpent = 'dollars_spent',
+  NumberOfVisits = 'number_of_visits',
+}
+
+enum PaymentProvider {
+  Venmo = 'Venmo',
+  Zelle = 'Zelle',
+}
+
+export enum PaymentTypes {
+  Venmo = 'Venmo',
+  Zelle = 'Zelle',
+  Square = 'Square',
+  ManualEntry = 'ManualEntry',
+  SponsoredCrypto = 'sponsored crypto',
+  crypto = 'crypto',
+  MobilePay = 'mobile pay',
+  Cash = 'Cash',
+}
+
+enum TransactionStatus {
+  PENDING = 'PENDING',
+  COMPLETE = 'COMPLETE',
+  COMPLETE_OFFLINE = 'COMPLETE_OFFLINE'
+}
+
+export enum PaymentType {
+  None = 'None',
+  Venmo = 'Venmo',
+  Zelle = 'Zelle',
+  Square = 'Square',
+  ManualEntry = 'ManualEntry',
+  Cash = 'Cash'
+}
+
 export interface User {
   _id: string;
   privyId?: string;
-  walletAddress?: string;
+  squareCustomerId?: string;
+  shopifyCustomerId?: string;
+  walletAddress: string;
   name?: string;
   email?: string;
   merchant?: boolean;
@@ -20,24 +65,44 @@ export interface Merchant {
   promo?: boolean;
   admin: boolean;
   taxes: Tax[];
-  square_access_token: string;
-  square_merchant_id: string;
-  square_refresh_token: string;
-  square_token_expires_at: string;
-  square_location_id: string;
-  square_location_name: string;
+  shopify?: Shopify;
+  square?: Square;
+  paymentMethods: PaymentMethod;
+  rewards?: Rewards;
+  branding: Branding;
+}
+
+export interface Square {
+  access_token?: string;
+  merchant_id?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  location_id?: string;
+  location_name?: string;
 }
 
 export interface Transaction {
   _id: string;
   merchant: Merchant;
   buyer: User;
-  productName: string;
-  productPrice: number;
-  tipAmount: number;
-  salesTax: number;
-  transactionHash: string;
-  paymentType: string; // 'sponsored crypto', 'crypto', 'mobile pay'
+  product: {
+    name: string;
+    price: number;
+  };
+  discount: {
+    type: string;
+    amount: number;
+    welcome: number;
+  };
+  payment: {
+    paymentType: PaymentTypes;
+    tipAmount: number;
+    salesTax: number;
+    transactionHash: string;
+    status?: TransactionStatus;
+    offineTransactionId?: string;
+    squarePaymentId?: string;
+  };
   createdAt: Date;
 }
 
@@ -69,4 +134,88 @@ export interface Location {
 export interface SquareCatalog {
   id: string;
   name: string;
+}
+
+export interface Shopify {
+  shopName: string;
+  accessToken: string;
+}
+
+export interface RewardsTier {
+  _id?: string;
+  name: string;
+  discount: number;
+  milestone: number; // dollars or visits
+}
+
+export interface Rewards {
+  discount_type: DiscountType;  // Using enum
+  milestone_type: MilestoneType;  // Using enum
+  welcome_reward: number; // Has to fit the discount_type
+  tiers: RewardsTier[];  // Array of RewardsTier objects
+}
+
+export interface Branding {
+  primary_color: string;
+  secondary_color: string;
+  logo: string;
+}
+
+export interface UserReward {
+  _id: string;
+  customerId: string;
+  merchantId: string;
+  totalSpent: number;
+  purchaseCount: number;
+  lastVisit: Date;
+  currentDiscount: {
+    type: DiscountType;
+    amount: number;
+  }
+  welcomeDiscount: number;
+  nextTier: string;
+}
+
+export interface RewardsCustomer {
+  totalSpent: number,
+  purchaseCount: number,
+  lastVisit: Date,
+  currentDiscount: {
+    type: string,
+    amount: number,
+  }
+  userInfo: {
+    _id: string,
+    name: string,
+    email: string,
+    squareCustomerId: string,
+    privyId: string,
+  }
+}
+
+export interface PaymentMethod {
+  types: PaymentType[];
+  venmoQrCodeImage?: string;
+  zelleQrCodeImage?: string;
+}
+
+export interface QrCodeImage {
+  paymentProvider: PaymentProvider
+  contentType: string;
+  data: Buffer
+}
+
+export interface FileData {
+  url: string;
+  contentType: string;
+}
+
+export interface SaleFormData {
+  product: string;
+  price: string;
+  tax: number;
+  merchant: string;
+  customer: RewardsCustomer | null;
+  sellerMerchant: Merchant | null;
+  paymentMethod: PaymentType;
 }

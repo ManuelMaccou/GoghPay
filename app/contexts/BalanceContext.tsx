@@ -17,7 +17,6 @@ export const BalanceProvider: React.FC<{ children: React.ReactNode, walletForPur
   const [error, setError] = useState<string>('');
 
   const fetchBalance = useCallback(async () => {
-    console.log("running balance context");
     if (!walletForPurchase) return;
 
     setIsBalanceLoading(true);
@@ -28,9 +27,7 @@ export const BalanceProvider: React.FC<{ children: React.ReactNode, walletForPur
       if (!response.ok) throw new Error(data.message || 'Failed to fetch balance');
       
       setBalance(parseFloat(data.balance));
-      console.log('balance from context:', data.balance);
     } catch (error) {
-      console.error('Error fetching balance:', error);
       setError('Failed to check balance');
     } finally {
       setIsBalanceLoading(false);

@@ -75,14 +75,6 @@ function BuyContent() {
   const {user} = usePrivy();
   const {getAccessToken} = usePrivy();
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleSetWalletForPurchase = (wallet: string | null) => {
-    setWalletForPurchase(wallet);
-  };
-
   // Get params to verify signed URL
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
@@ -575,7 +567,7 @@ function BuyContent() {
           checkout_method: "wallet",
         });
     
-        router.push(`/checkout/success?${params.toString()}`);
+        router.push(`/checkout/success/crypto?${params.toString()}`);
   
       } catch (error) {
         if (isError(error)) {
@@ -635,7 +627,7 @@ function BuyContent() {
           checkout_method: "wallet",
         });
     
-        router.push(`/checkout/success?${params.toString()}`);
+        router.push(`/checkout/success/crypto?${params.toString()}`);
   
       } catch (error) {
         if (isError(error)) {
@@ -796,8 +788,6 @@ function BuyContent() {
   useEffect(() => {
     if (merchant) {
       checkAndRefreshToken(merchant._id)
-      console.log('Checking Square auth token with merchant:', merchant);
-
     }
   }, [merchant]);
 
@@ -841,8 +831,6 @@ function BuyContent() {
             authenticated={authenticated}
             walletForPurchase={walletForPurchase}
             currentUser={currentUser}
-            setCurrentUser={handleSetCurrentUser}
-            setWalletForPurchase={handleSetWalletForPurchase}
           />
           </BalanceProvider>
        )}

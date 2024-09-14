@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}&merchantId=${merchantId}&merchantWalletAddress=${merchantWalletAddress}&productName=${product}&price=${finalPrice}`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success/crypto?session_id={CHECKOUT_SESSION_ID}&merchantId=${merchantId}&merchantWalletAddress=${merchantWalletAddress}&productName=${product}&price=${finalPrice}`,
       cancel_url: redirectURL,
     },
     {
