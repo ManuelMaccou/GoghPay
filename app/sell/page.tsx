@@ -446,7 +446,7 @@ function SellContent() {
           },
           callback_url: callbackUrl,
           client_id: squareClientId,
-          version: "2.0",
+          version: "1.3",
           notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
           customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
           state: JSON.stringify(state),
@@ -464,7 +464,7 @@ function SellContent() {
           },
           callback_url: callbackUrl,
           client_id: squareClientId,
-          version: "2.0",
+          version: "1.3",
           notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
           state: JSON.stringify(state),
           options: {
@@ -542,7 +542,7 @@ function SellContent() {
 
       //const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android?merchantId=${merchantId}&goghTransactionId=${goghTransactionId}`;
       const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android`;
-      const sdkVersion = "v2.0";
+      const sdkVersion = "v1.3";
       const currencyCode = "USD";
       const customerId = newSaleFormData?.customer?.userInfo.squareCustomerId;
       const tenderTypes = [
