@@ -6,7 +6,7 @@ import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
-import { Button, Callout, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Button, Callout, Card, Flex, Heading, Spinner, Text, Separator } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
@@ -548,28 +548,29 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   <Card style={{marginRight: '20px', marginLeft: '20px'}}>
                     <Flex direction={'column'} align={'center'} gap={'4'} px={'2'}>
                       <Heading>{merchant?.name}</Heading>
-                      <Flex direction={'row'} justify={'between'} 
-                      width={'100%'}
-                      >
+                     
                         {usersCurrentRewardsTier ? (
-                          <>
+                          <Flex direction={'row'} justify={'between'} width={'100%'}>
                             <Text weight={'bold'} size={'6'}>{usersCurrentRewardsTier.name}</Text>
-                            <Text weight={'bold'} size={'6'}>{usersCurrentRewardsTier.discount}%</Text>
-                          </>
+                            <Text weight={'bold'} size={'6'}>{usersCurrentRewardsTier.discount}% off</Text>
+                          </Flex>
                         ) : (
-                          <Heading size={'8'}>Welcome</Heading>
+                          <Flex direction={'row'} justify={'center'} width={'100%'}>
+                            <Heading align={'center'} size={'8'}>Welcome</Heading>
+                          </Flex>
                         )}
-                      </Flex>
+                      
+                      <Separator size="3" />
                     
 
                         {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id ? (
                           <Flex direction={'row'} 
                           width={'100%'} 
                           justify={'between'} align={'center'}>
-                            <Text wrap={'wrap'} size={'5'} weight={'bold'}>
+                            <Text wrap={'wrap'} size={'5'}>
                               Remaining until<br></br> next upgrade:
                             </Text>
-                            <Text size={'8'}>${amountToNextRewardsTier}</Text>
+                            <Text size={'5'}>${amountToNextRewardsTier}</Text>
                           </Flex>
                         
                         ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id && (  
