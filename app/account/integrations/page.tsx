@@ -258,16 +258,30 @@ function IntegrationsContent() {
       try {
         const privyId = id
         const response = await fetch(`/api/merchant/privyId/${privyId}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to fetch merchant');
+        }
+
         const data = await response.json();
         setMerchant(data);
-        fetchLocations(data._id);
-        setSquareLocationName(data.square.location_name);
+        await fetchLocations(data._id);
+
+        if (data.square && data.square?.location_name) {
+          setSquareLocationName(data.square.location_name);
+        } else {
+          setSquareLocationName(null);
+        }
+
       } catch (err) {
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);
         } else {
           console.error('Error fetching merchant');
         }
+      } finally {
+        setIsFetchingLocations(false);
       }
     }
 
@@ -276,20 +290,30 @@ function IntegrationsContent() {
 
       try {
         const response = await fetch(`/api/user/me/${user.id}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to fetch user');
+        }
         const userData = await response.json();
 
-        if (!response.ok) throw new Error(userData.message || 'Failed to fetch user');
+        if (!userData.user) {
+          throw new Error('No user data found');
+        }
 
         setCurrentUser(userData.user);
-        const walletAddress = userData.user.smartAccountAddress || userData.user.walletAddress;
+
+        const walletAddress = userData.user.smartAccountAddress || userData.user.walletAddress || null;
         setWalletForPurchase(walletAddress);
 
-        if (userData.user.merchant) {
-          fetchMerchant(userData.user.privyId)
+        if (userData.user.merchant && userData.user.privyId) {
+          await fetchMerchant(userData.user.privyId);
         }
 
       } catch (error) {
         console.error('Error fetching user:', error);
+      } finally {
+        setIsFetchingLocations(false);
       }
     };
 
@@ -299,12 +323,16 @@ function IntegrationsContent() {
   }, [ready, authenticated, user?.id, setMerchant]); 
 
   useEffect(() => {
-    if(!merchant?.paymentMethods.venmoQrCodeImage) return
-    setVenmoQrCode(merchant?.paymentMethods.venmoQrCodeImage)
-  }, [merchant])
+    if (!merchant?.paymentMethods) return;
+    if (!merchant.paymentMethods.venmoQrCodeImage) return;
+  
+    setVenmoQrCode(merchant.paymentMethods.venmoQrCodeImage);
+  }, [merchant]);
 
   useEffect(() => {
-    if(!merchant?.paymentMethods.zelleQrCodeImage) return
+    if (!merchant?.paymentMethods) return;
+    if (!merchant.paymentMethods.zelleQrCodeImage) return;
+    
     setZelleQrCode(merchant.paymentMethods.zelleQrCodeImage)
   }, [merchant])
 

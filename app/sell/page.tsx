@@ -605,13 +605,15 @@ function SellContent() {
     fetchInventory();
     
   }, [locations, merchant]);
-  */
+  
 
   const fetchSquareCatelog = async () => {
     setLoadingCatalog(true);
     
     // PLACEHOLDER FOR FETCHING CATELOG
+
   } 
+    */
 
   const fetchLocations = async (merchantId: string) => {
     setIsFetchingLocations(true);
@@ -921,7 +923,7 @@ function SellContent() {
             merchantVerified ? (
               <>         
                 {newSaleFormData && selectedPaymentMethod === 'Venmo' && (
-                  newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage ? (
+                  newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage ? (
                     <AlertDialog.Root open={showVenmoDialog} onOpenChange={setShowVenmoDialog}>
                       <AlertDialog.Trigger>
                         <Button style={{ display: 'none' }} />
@@ -978,7 +980,7 @@ function SellContent() {
 
                           <Avatar.Root>
                             <Avatar.Image 
-                              src={ newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage }
+                              src={ newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage }
                               alt="Venmo QR code"
                             style={{objectFit: "contain", maxWidth: '100%'}}
                             />
@@ -1008,7 +1010,7 @@ function SellContent() {
                         </Flex>
                       </AlertDialog.Content>
                     </AlertDialog.Root>
-                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods.venmoQrCodeImage && (
+                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage && (
                     <Callout.Root color='red' mx={'4'}>
                       <Callout.Icon>
                         <InfoCircledIcon />

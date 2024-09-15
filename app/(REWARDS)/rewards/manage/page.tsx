@@ -49,7 +49,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
 
   useEffect(() => {
     if (appUser) {
-      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress;
+      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress || null;
       setWalletForPurchase(walletAddress);
     }
   }, [appUser]);
@@ -57,7 +57,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   useEffect(() => {
     if (!merchant) return;
   
-    if (merchant.rewards?.tiers) {
+    if (merchant.rewards && merchant.rewards?.tiers) {
       setCurrentRewardsTiers(merchant.rewards.tiers);
     }
   }, [merchant]);
@@ -252,7 +252,6 @@ export default function ManageRewards({ params }: { params: { merchantId: string
       return;
     }
     
-    console.log('tierId for delete:', tierId);
     updateMerchant('delete', 0, 0, undefined, tierId);
   };
   const handleWelcomeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

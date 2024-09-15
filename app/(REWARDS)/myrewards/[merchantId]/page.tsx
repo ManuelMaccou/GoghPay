@@ -110,7 +110,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
   useEffect(() => {
     if (appUser) {
-      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress;
+      const walletAddress = appUser.smartAccountAddress || appUser.walletAddress || null;
       setWalletForPurchase(walletAddress);
     }
   }, [appUser]);
@@ -172,7 +172,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       if (response.ok) {
         const data = await response.json();
 
-        await updateGoghUserWithSquareId(data.newSquareCustomer.id)
+        await updateGoghUserWithSquareId(data.newSquareCustomer?.id)
       } else if (response.status === 503) {
         setErrorCheckingSquareDirectory('The was an error with Square. Please wait a few minutes and try again.');
       } else if (response.status === 401) {
@@ -211,7 +211,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       if (response.ok) {
         const data = await response.json();
         // Update the user with the returned customer ID
-        if (data.customers.length > 0) {
+        if (data.customers && data.customers.length > 0) {
           await updateGoghUserWithSquareId(data.customers[0].id);
         } else {
           await createNewSquareCustomer();
@@ -277,9 +277,13 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         try {
           const response = await fetch(`/api/merchant/${merchantId}`);
           const data:Merchant = await response.json();
-          setMerchant(data);
-          setPrimaryColor(data.branding.primary_color);
-          setSecondaryColor(data.branding.secondary_color);
+          setMerchant(data || null);
+
+          if (data?.branding) {
+            setPrimaryColor(() => data.branding?.primary_color || "#FFFFFF"); // Use functional update
+            setSecondaryColor(() => data.branding?.secondary_color || "#000000"); // Use functional update
+          }
+
         } catch (err) {
           if (isError(err)) {
             setError(`Error fetching merchant: ${err.message}`);
@@ -340,8 +344,12 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
 
         if (response.ok) {
           const userRewardsData = await response.json();
-          setCurrentUserMerchantRewards(userRewardsData.userReward);
-          console.log('user rewards after creating new one:', userRewardsData.userReward);
+
+          if (userRewardsData?.userReward) {
+            setCurrentUserMerchantRewards(userRewardsData.userReward);
+          } else {
+            console.error('No valid user reward data returned');
+          }
         } else {
           console.error('Failed to create new reward:', response.statusText);
         }
@@ -411,8 +419,8 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         return null;
       }
 
-      const discountEarned = currentUserMerchantRewards.currentDiscount.amount;
-      const totalSpent = currentUserMerchantRewards.totalSpent;
+      const discountEarned = currentUserMerchantRewards?.currentDiscount?.amount;
+      const totalSpent = currentUserMerchantRewards?.totalSpent;
 
       if (totalSpent === null || totalSpent === undefined) return;
     
@@ -441,10 +449,10 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       console.log('Highest tier met:', highestTier);
       console.log('Next milestone:', nextMilestone);
 
-      const amountToNextTier = nextMilestone ? nextMilestone - totalSpent : null;
+      const amountToNextTier = nextMilestone ? nextMilestone - totalSpent : 0;
 
       setUsersCurrentRewardsTier(highestTier);
-      setAmountToNextRewardsTier(amountToNextTier)
+      setAmountToNextRewardsTier(Math.round(amountToNextTier * 100) / 100);
     };
 
     checkMilestone();  
@@ -478,7 +486,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
               <Avatar.Root>
                 <Avatar.Image 
                   className="MerchantLogo"
-                  src={merchant?.branding.logo }
+                  src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
                   alt="Merchant Logo"
                   style={{objectFit: "contain", maxWidth: '200px'}}
                   />
@@ -511,7 +519,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                 <Avatar.Root>
                   <Avatar.Image 
                   className="MerchantLogo"
-                  src={merchant?.branding.logo }
+                  src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
                   alt="Merchant Logo"
                   style={{objectFit: "contain", maxWidth: '200px'}}
                   />
