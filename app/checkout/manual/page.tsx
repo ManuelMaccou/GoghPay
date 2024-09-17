@@ -98,67 +98,94 @@ export default function ManualCreditCardPayment() {
   }, [paymentProcessed]);
 
   useEffect(() => {
-    setFormNotReady(false)
-    setError(null)
+    setFormNotReady(false);
+    setError(null);
 
     if (!applicationId) {
       setIsLoading(false);
+      console.log('Application ID is missing');
       return;
     }
 
     const initializeSquare = async () => {
-      if (window.Square && !card) {
-        await setupSquare();
-      } else if (!window.Square) {
-        const script = document.createElement('script');
-        script.src = process.env.NEXT_PUBLIC_WEB_SDK_DOMAIN!;
-        script.onload = async () => {
+      try {
+        console.log('Attempting to initialize Square...');
+
+        if (window.Square && !card) {
+          console.log('Square is already available, setting up card.');
           await setupSquare();
-        };
-        script.onerror = () => {
-          setError('There was an error loading the credit card form. Please try again. 1');
-          setFormNotReady(true)
-          setIsLoading(false);
-        };
-        document.body.appendChild(script);
+        } else if (!window.Square) {
+          console.log('Square not available, loading SDK from script...');
+
+          const script = document.createElement('script');
+          script.src = process.env.NEXT_PUBLIC_WEB_SDK_DOMAIN!;
+          script.onload = async () => {
+            console.log('Square SDK loaded, setting up card.');
+            await setupSquare();
+          };
+          script.onerror = () => {
+            console.error('Error loading the Square SDK script.');
+            setError('There was an error loading the credit card form. Please try again. [Script Load Error]');
+            setFormNotReady(true);
+            setIsLoading(false);
+          };
+          document.body.appendChild(script);
+        }
+      } catch (err) {
+        console.error('Unexpected error initializing Square:', err);
+        setError('Unexpected error during Square initialization.');
+        setIsLoading(false);
       }
     };
 
     const setupSquare = async () => {
       if (!window.Square) {
-        setError('There was an error loading the credit card form. Please try again. 2');
+        console.error('Square object not available after SDK load.');
+        setError('There was an error loading the credit card form. Please try again. [Square SDK Missing]');
         return;
       }
 
       try {
+        console.log('Setting up Square payments with Application ID:', applicationId, 'and Location ID:', locationId);
+
         const payments = window.Square.payments(applicationId, locationId);
+        console.log('Square payments instance created:', payments);
+
         const cardPayment = await payments.card({
           style: {
             input: {
-              fontSize: '20px'
-            }
-          }
+              fontSize: '20px',
+            },
+          },
         });
 
         if (cardContainerRef.current) {
+          console.log('Attaching card form to DOM element:', cardContainerRef.current);
           await cardPayment.attach(cardContainerRef.current);
           setCard(cardPayment);
+          console.log('Card successfully attached to the DOM.');
         } else {
+          console.error('Card container element not found.');
           throw new Error('Card container element not found');
         }
       } catch (err) {
-        setError('Failed to initialize card');
+        console.error('Error during Square setup:', err);
+        setError('Failed to initialize card. [Setup Error]');
       } finally {
         setIsLoading(false);
       }
     };
 
     if (applicationId) {
+      console.log('Application ID is set, initializing Square.');
       initializeSquare();
+    } else {
+      console.log('Application ID is not available, skipping Square initialization.');
     }
 
     return () => {
       if (card) {
+        console.log('Destroying card instance...');
         card.destroy();
       }
     };
