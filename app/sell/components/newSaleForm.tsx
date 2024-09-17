@@ -251,6 +251,8 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       return;
     }
 
+    
+
     const taxRate = isTaxChecked && defaultTax ? defaultTax.rate : 0;
     setlocalFormData(prevState => ({ ...prevState, tax: taxRate, sellerMerchant }));
 

@@ -699,11 +699,15 @@ function SellContent() {
     if (!newSaleFormData.price) return;
 
     const priceNum = parseFloat(newSaleFormData.price)
+    console.log('priceNum', priceNum);
 
     let rewardsDiscountAmount = 0;
     let welcomeDiscountAmount = 0;
     let priceAfterDiscount = priceNum;
+    console.log('priceAfterDiscount 1', priceAfterDiscount);
+
     let finalPriceCalculation = priceNum;
+    console.log('finalPriceCalculation', finalPriceCalculation.toFixed(2));
 
     if (newSaleFormData.sellerMerchant?.rewards?.welcome_reward && newSaleFormData.customer?.purchaseCount === 1) {
       welcomeDiscountAmount = newSaleFormData.sellerMerchant?.rewards?.welcome_reward
@@ -712,20 +716,27 @@ function SellContent() {
     if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.amount) {
       rewardsDiscountAmount = newSaleFormData.customer.currentDiscount.amount
     }
+    
 
     const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
+    console.log('totalDiscountAmount', totalDiscountAmount);
 
     if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'percent') {
       if (totalDiscountAmount > 100) {
         priceAfterDiscount = 0
+        console.log('priceAfterDiscount 2', priceAfterDiscount);
+
       } else {
         priceAfterDiscount = priceNum - ((totalDiscountAmount/100) * priceNum)
+        console.log('priceAfterDiscount 3', priceAfterDiscount);
       }
 
     } else if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'dollar') {
       priceAfterDiscount = priceNum - totalDiscountAmount
+      console.log('priceAfterDiscount 4', priceAfterDiscount);
       if (priceAfterDiscount < 0) {
         priceAfterDiscount = 0
+        console.log('priceAfterDiscount 5', priceAfterDiscount);
       }
     }
     
@@ -740,7 +751,17 @@ function SellContent() {
     setFinalPriceCalculated(true);
     setFinalPrice(finalPriceCalculation.toFixed(2));
 
+    console.log('final price calc:', finalPriceCalculation.toFixed(2))
+
   }, [newSaleFormData])
+
+  useEffect(() => {
+    console.log(
+      "final price:", finalPrice,
+      'welcome discount:', welcomeDiscount,
+      'rewards discount:', rewardsDiscount
+    )
+  }, [finalPrice, welcomeDiscount, rewardsDiscount])
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
@@ -940,7 +961,7 @@ function SellContent() {
                         
                         <Flex direction={'column'} width={'100%'} justify={'center'} align={'center'} gap={'6'}>
                           
-                          {newSaleFormData && finalPriceCalculated && (
+                          {newSaleFormData && finalPriceCalculated && finalPrice && (
                             <Flex direction={'column'} justify={'center'}>
                               <Text size={'9'} align={'center'}>${finalPrice}</Text>
                               <Flex direction={'row'} width={'300px'} justify={'between'}>
