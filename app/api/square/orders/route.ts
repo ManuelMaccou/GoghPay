@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSquareClient } from '@/app/lib/square';
 import Merchant from '@/app/models/Merchant';
 import { decrypt } from '@/app/lib/encrypt-decrypt';
+import JSONBig from 'json-bigint';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -39,8 +40,10 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
+    const ordersResponse = response.result.order
+    const sanitizedResponse = JSONBig.stringify(ordersResponse);
     // Return the order details if found
-    return NextResponse.json(response.result, { status: 200 });
+    return NextResponse.json(sanitizedResponse, { status: 200 });
 
   } catch (error: any) {
     console.error('Error fetching order:', error);
