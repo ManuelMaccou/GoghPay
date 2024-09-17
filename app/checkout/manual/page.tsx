@@ -34,6 +34,7 @@ export default function ManualCreditCardPayment() {
   const [card, setCard] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formNotReady, setFormNotReady] = useState<boolean>(false);
 
   const [sessionStorageError, setSessionStorageError] = useState<boolean>(false);
 
@@ -97,8 +98,10 @@ export default function ManualCreditCardPayment() {
   }, [paymentProcessed]);
 
   useEffect(() => {
+    setFormNotReady(false)
+    setError(null)
 
-    if (!applicationId || !locationId) {
+    if (!applicationId) {
       setIsLoading(false);
       return;
     }
@@ -113,7 +116,8 @@ export default function ManualCreditCardPayment() {
           await setupSquare();
         };
         script.onerror = () => {
-          setError('Failed to load Square.js');
+          setError('There was an error loading the credit card form. Please try again. 1');
+          setFormNotReady(true)
           setIsLoading(false);
         };
         document.body.appendChild(script);
@@ -122,7 +126,7 @@ export default function ManualCreditCardPayment() {
 
     const setupSquare = async () => {
       if (!window.Square) {
-        setError('Square.js is not available after script load');
+        setError('There was an error loading the credit card form. Please try again. 2');
         return;
       }
 
@@ -134,8 +138,6 @@ export default function ManualCreditCardPayment() {
               fontSize: '20px'
             }
           }
-
-    
         });
 
         if (cardContainerRef.current) {
@@ -151,7 +153,7 @@ export default function ManualCreditCardPayment() {
       }
     };
 
-    if (applicationId && locationId) {
+    if (applicationId) {
       initializeSquare();
     }
 
@@ -582,14 +584,17 @@ export default function ManualCreditCardPayment() {
 
   if (sessionStorageError || !formData) {
     return (
-      <Callout.Root color='red' mx={'4'}>
-        <Callout.Icon>
-          <InfoCircledIcon />
-        </Callout.Icon>
-        <Callout.Text size={'6'}>
-          There was an issue loading sale information. Please go back and try again.
-        </Callout.Text>
-      </Callout.Root>
+      <Flex direction={'column'} height={'100vh'} justify={'center'}>
+        <Callout.Root color='red' mx={'4'}>
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text size={'6'}>
+            There was an issue loading sale information. Please go back and try again.
+          </Callout.Text>
+        </Callout.Root>
+      </Flex>
+      
     );
   }
   
@@ -685,7 +690,7 @@ export default function ManualCreditCardPayment() {
             {error && <p className="error">{error}</p>}
             <Flex mb={'5'} id="payment-status-container"></Flex>
             <Flex direction={'column'} gap={'8'} justify={'center'}>
-              <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed} style={{width: '100%'}}>
+              <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed || formNotReady} style={{width: '100%'}}>
               {isLoading 
                 ? 'Processing...' 
                 : `Charge $${finalPrice}`
