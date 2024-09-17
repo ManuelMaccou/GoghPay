@@ -35,7 +35,6 @@ function SellContent() {
   const [signedUrl, setSignedUrl] = useState('');
   const [merchant, setMerchant] = useState<Merchant>();
   const [ merchantVerified, setMerchantVerified ] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentType[]>([]);
 
   const [newSaleFormData, setNewSaleFormData] = useState<SaleFormData | null>(null);
   const [showNewSaleForm, setShowNewSaleForm] = useState<boolean>(true);
@@ -73,6 +72,13 @@ function SellContent() {
   const [showZelleDialog, setShowZelleDialog] = useState<boolean>(false);
   const [showCashDialog, setShowCashDialog] = useState<boolean>(false);
   const [showSquareDialog, setShowSquareDialog] = useState<boolean>(false);
+
+  const paymentMethods: PaymentType[] = [
+    PaymentType.Venmo,
+    PaymentType.Zelle,
+    PaymentType.Square,
+    PaymentType.Cash,
+  ];
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -413,12 +419,6 @@ function SellContent() {
       fetchCheckedInCustomers(merchant._id);
     }
   }, [authenticated, ready, currentUser, merchant, fetchCheckedInCustomers]);
-
-  useEffect(() => {
-    if (merchant && merchant.paymentMethods.types.length > 0) {
-      setPaymentMethods(merchant.paymentMethods.types);
-    }
-  }, [merchant]);
 
   const handleSquarePosPayment = async (newSaleFormData: SaleFormData | null) => {
     if (!finalPrice || !finalPriceCalculated) {
