@@ -244,7 +244,7 @@ function SellContent() {
     const clientTransactionId = searchParams.get('clientTransactionId') || '';
     const serverTransactionId = searchParams.get('serverTransactionId');
     console.log('servertransactionId:', serverTransactionId);
-    
+
     const messageParam = searchParams.get('message') || '';
     const merchantId = searchParams.get('merchantId');
     const transactionIdToUpdate = searchParams.get('goghTransactionId');
@@ -273,7 +273,7 @@ function SellContent() {
   ): Promise<string | null> => {
     try {
       const response = await fetch(
-        `/api/square/orders?serverTransactionId=${serverTransactionId}&merchantId=${merchantId}`
+        `/api/square/orders?transactionId=${serverTransactionId}&merchantId=${merchantId}`
       );
       const data = await response.json();
       
