@@ -429,6 +429,63 @@ function SellContent() {
     const rewardsCustomer = newSaleFormData.customer?.userInfo._id || ""
 
     if (deviceType === 'iPhone') {
+
+
+      try {
+        const accessToken = await getAccessToken();
+        const response = await fetch(`/api/transaction`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            privyId: user?.id,
+            buyerPrivyId: user?.id,
+            buyerId: newSaleFormData.customer?.userInfo._id,
+            merchantId: newSaleFormData.sellerMerchant?._id,
+            productName: newSaleFormData.product,
+            productPrice: newSaleFormData.price,
+            discountType: newSaleFormData.customer?.currentDiscount.type,
+            discountAmount: newSaleFormData.customer?.currentDiscount.amount,
+            welcomeDiscount: welcomeDiscount,
+            salesTax: calculatedSalesTax,
+            paymentType: newSaleFormData.paymentMethod,
+            status: 'PENDING',
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+        
+          const apiError = new ApiError(
+            `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+            response.status,
+            data
+          );
+      
+          await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
+            message: apiError.message,
+            status: apiError.status,
+            responseBody: apiError.responseBody,
+            stack: apiError.stack,
+          });
+      
+          console.error(error);
+        } else {
+          goghTransactionId = data.transaction._id
+          console.log('Transaction from POS saved successfully:', data);
+        }
+      } catch (error) {
+  
+        await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      }
+
+
       const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/ios`;
       const state = {
         merchantId: newSaleFormData.sellerMerchant?._id,
@@ -451,7 +508,7 @@ function SellContent() {
           customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
           state: JSON.stringify(state),
           options: {
-            supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+            supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE"],
             auto_return: true,
             clear_default_fees: true,
           },
@@ -468,7 +525,7 @@ function SellContent() {
           notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
           state: JSON.stringify(state),
           options: {
-            supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+            supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE"],
             auto_return: true,
             clear_default_fees: true,
           },
@@ -510,10 +567,9 @@ function SellContent() {
         });
   
         const data = await response.json();
-        goghTransactionId = data.transaction._id
     
         if (!response.ok) {
-          
+        
           const apiError = new ApiError(
             `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
             response.status,
@@ -529,7 +585,7 @@ function SellContent() {
       
           console.error(error);
         } else {
-
+          goghTransactionId = data.transaction._id
           console.log('Transaction from POS saved successfully:', data);
         }
       } catch (error) {
@@ -547,7 +603,6 @@ function SellContent() {
       const customerId = newSaleFormData?.customer?.userInfo.squareCustomerId;
       const tenderTypes = [
         "com.squareup.pos.TENDER_CARD",
-        "com.squareup.pos.TENDER_CASH",
         "com.squareup.pos.TENDER_CARD_ON_FILE",
       ].join(",");
 
@@ -654,7 +709,7 @@ function SellContent() {
 
   const handlePaymentMethodChange = (method: PaymentType, newSaleForm: SaleFormData) => {
     setSelectedPaymentMethod(method);
-    console.log('method:', method);
+
     if (method === 'Venmo') {
       setShowVenmoDialog(true);
       sessionStorage.removeItem('newSaleFormData');
@@ -699,15 +754,12 @@ function SellContent() {
     if (!newSaleFormData.price) return;
 
     const priceNum = parseFloat(newSaleFormData.price)
-    console.log('priceNum', priceNum);
 
     let rewardsDiscountAmount = 0;
     let welcomeDiscountAmount = 0;
     let priceAfterDiscount = priceNum;
-    console.log('priceAfterDiscount 1', priceAfterDiscount);
 
     let finalPriceCalculation = priceNum;
-    console.log('finalPriceCalculation', finalPriceCalculation.toFixed(2));
 
     if (newSaleFormData.sellerMerchant?.rewards?.welcome_reward && newSaleFormData.customer?.purchaseCount === 1) {
       welcomeDiscountAmount = newSaleFormData.sellerMerchant?.rewards?.welcome_reward
@@ -719,24 +771,19 @@ function SellContent() {
     
 
     const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
-    console.log('totalDiscountAmount', totalDiscountAmount);
 
     if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'percent') {
       if (totalDiscountAmount > 100) {
         priceAfterDiscount = 0
-        console.log('priceAfterDiscount 2', priceAfterDiscount);
 
       } else {
         priceAfterDiscount = priceNum - ((totalDiscountAmount/100) * priceNum)
-        console.log('priceAfterDiscount 3', priceAfterDiscount);
       }
 
     } else if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'dollar') {
       priceAfterDiscount = priceNum - totalDiscountAmount
-      console.log('priceAfterDiscount 4', priceAfterDiscount);
       if (priceAfterDiscount < 0) {
         priceAfterDiscount = 0
-        console.log('priceAfterDiscount 5', priceAfterDiscount);
       }
     }
     
@@ -751,17 +798,7 @@ function SellContent() {
     setFinalPriceCalculated(true);
     setFinalPrice(finalPriceCalculation.toFixed(2));
 
-    console.log('final price calc:', finalPriceCalculation.toFixed(2))
-
   }, [newSaleFormData])
-
-  useEffect(() => {
-    console.log(
-      "final price:", finalPrice,
-      'welcome discount:', welcomeDiscount,
-      'rewards discount:', rewardsDiscount
-    )
-  }, [finalPrice, welcomeDiscount, rewardsDiscount])
   
   const handleQrCodeGenerated = (url: string) => {
     setSignedUrl(url);
@@ -776,7 +813,6 @@ function SellContent() {
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
     const accessToken = await getAccessToken();
-    console.log('status before transaction:', newSaleFormData.paymentMethod)
     console.log('newsaleformdata:', newSaleFormData);
 
     const priceNum = parseFloat(newSaleFormData.price);

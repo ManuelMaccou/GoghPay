@@ -78,7 +78,6 @@ export default function ManualCreditCardPayment() {
   } else {
     priceInCents = priceNum * 100;
   }
-  console.log('price in cents:', priceInCents);
 
   useEffect(() => {
     const storedData = sessionStorage.getItem('newSaleFormData');
@@ -98,102 +97,73 @@ export default function ManualCreditCardPayment() {
   }, [paymentProcessed]);
 
   useEffect(() => {
-    setFormNotReady(false);
-    setError(null);
-
+    setFormNotReady(false)
+  
     if (!applicationId) {
       setIsLoading(false);
       console.log('Application ID is missing');
       return;
     }
-
-    const loadSquareSdk = () => {
-      return new Promise<void>((resolve, reject) => {
-        if (window.Square) {
-          console.log('Square SDK already loaded.');
-          resolve();
-          return;
-        }
-
-        console.log('Loading Square SDK...');
-
+  
+    const initializeSquare = async () => {
+      if (window.Square && !card) {
+        await setupSquare();
+      } else if (!window.Square) {
         const script = document.createElement('script');
         script.src = process.env.NEXT_PUBLIC_WEB_SDK_DOMAIN!;
-        script.onload = () => {
-          console.log('Square SDK loaded successfully.');
-          resolve();
+        script.onload = async () => {
+          await setupSquare();
         };
         script.onerror = () => {
-          console.error('Error loading Square SDK.');
-          reject(new Error('Error loading Square SDK.'));
+          setError('There was an error loading the credit card form. Please try again.');
+          setFormNotReady(true)
+          setIsLoading(false);
         };
         document.body.appendChild(script);
-      });
+      }
     };
-
+  
     const setupSquare = async () => {
       if (!window.Square) {
-        console.error('Square SDK is not available after loading.');
-        setError('There was an error loading the credit card form. Please try again.');
-        setFormNotReady(true);
+        setError('Square.js is not available after script load');
         return;
       }
-
+  
       try {
-        console.log('Initializing Square payment...');
         const payments = window.Square.payments(applicationId, locationId);
         const cardPayment = await payments.card({
           style: {
             input: {
-              fontSize: '20px',
-            },
-          },
+              fontSize: '20px'
+            }
+          }
+
+    
         });
 
         if (cardContainerRef.current) {
-          console.log('Attaching card form...');
-          await cardPayment.attach(cardContainerRef.current);
-          setCard(cardPayment);
-          console.log('Card form attached successfully.');
+        await cardPayment.attach(cardContainerRef.current);
+        setCard(cardPayment);
         } else {
           throw new Error('Card container element not found');
         }
       } catch (err) {
-        console.error('Error initializing Square payment:', err);
-        setError('Failed to initialize card. Please try again.');
+        setError('Failed to initialize card');
       } finally {
         setIsLoading(false);
       }
     };
-
-    const initializeSquare = async () => {
-      setIsLoading(true); // Start loading state
-
-      try {
-        await loadSquareSdk();  // Load Square SDK if not already loaded
-        await setupSquare();    // Setup Square card form after SDK is ready
-      } catch (error) {
-        console.error('Error during Square initialization:', error);
-        setError('Failed to initialize Square. Please refresh the page or try again.');
-        setFormNotReady(true);
-      } finally {
-        setIsLoading(false);  // Stop loading state
-      }
-    };
-
+  
     if (applicationId) {
-      console.log('Application ID is available, starting Square initialization.');
       initializeSquare();
     }
-
+  
     return () => {
       if (card) {
-        console.log('Destroying card instance...');
         card.destroy();
       }
     };
   }, [applicationId, locationId, card]);
-
 
   useEffect(() => {
     setRewardsDiscount(0);
