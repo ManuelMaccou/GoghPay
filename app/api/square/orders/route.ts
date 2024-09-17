@@ -33,18 +33,17 @@ export async function GET(request: NextRequest) {
     const response = await client.ordersApi.retrieveOrder(transactionId);
 
     // If no order is found (e.g., cash transaction), return a 200 status with a message
-    if (!response.result || !response.result.order) {
+    if (!response.result || !response.result.order || !response.result.order.tenders) {
       return NextResponse.json({
         message: 'No order found, but transactionId is valid (e.g., cash transaction).',
         transactionId,
       }, { status: 200 });
+
+    } else {
+      const paymentId = response.result.order.tenders[0].id
+  
+      return NextResponse.json({paymentId}, { status: 200 });
     }
-
-    const ordersResponse = response.result.order
-    const sanitizedResponse = JSONBig.stringify(ordersResponse);
-    // Return the order details if found
-    return NextResponse.json(sanitizedResponse, { status: 200 });
-
   } catch (error: any) {
     console.error('Error fetching order:', error);
 
