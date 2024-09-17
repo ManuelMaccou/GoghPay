@@ -34,6 +34,7 @@ export default function ManualCreditCardPayment() {
   const [card, setCard] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formNotReady, setFormNotReady] = useState<boolean>(false);
 
   const [sessionStorageError, setSessionStorageError] = useState<boolean>(false);
 
@@ -77,7 +78,6 @@ export default function ManualCreditCardPayment() {
   } else {
     priceInCents = priceNum * 100;
   }
-  console.log('price in cents:', priceInCents);
 
   useEffect(() => {
     const storedData = sessionStorage.getItem('newSaleFormData');
@@ -97,12 +97,14 @@ export default function ManualCreditCardPayment() {
   }, [paymentProcessed]);
 
   useEffect(() => {
-
-    if (!applicationId || !locationId) {
+    setFormNotReady(false)
+  
+    if (!applicationId) {
       setIsLoading(false);
+      console.log('Application ID is missing');
       return;
     }
-
+  
     const initializeSquare = async () => {
       if (window.Square && !card) {
         await setupSquare();
@@ -113,19 +115,20 @@ export default function ManualCreditCardPayment() {
           await setupSquare();
         };
         script.onerror = () => {
-          setError('Failed to load Square.js');
+          setError('There was an error loading the credit card form. Please try again.');
+          setFormNotReady(true)
           setIsLoading(false);
         };
         document.body.appendChild(script);
       }
     };
-
+  
     const setupSquare = async () => {
       if (!window.Square) {
         setError('Square.js is not available after script load');
         return;
       }
-
+  
       try {
         const payments = window.Square.payments(applicationId, locationId);
         const cardPayment = await payments.card({
@@ -139,8 +142,8 @@ export default function ManualCreditCardPayment() {
         });
 
         if (cardContainerRef.current) {
-          await cardPayment.attach(cardContainerRef.current);
-          setCard(cardPayment);
+        await cardPayment.attach(cardContainerRef.current);
+        setCard(cardPayment);
         } else {
           throw new Error('Card container element not found');
         }
@@ -150,11 +153,11 @@ export default function ManualCreditCardPayment() {
         setIsLoading(false);
       }
     };
-
-    if (applicationId && locationId) {
+  
+    if (applicationId) {
       initializeSquare();
     }
-
+  
     return () => {
       if (card) {
         card.destroy();
@@ -582,14 +585,17 @@ export default function ManualCreditCardPayment() {
 
   if (sessionStorageError || !formData) {
     return (
-      <Callout.Root color='red' mx={'4'}>
-        <Callout.Icon>
-          <InfoCircledIcon />
-        </Callout.Icon>
-        <Callout.Text size={'6'}>
-          There was an issue loading sale information. Please go back and try again.
-        </Callout.Text>
-      </Callout.Root>
+      <Flex direction={'column'} height={'100vh'} justify={'center'}>
+        <Callout.Root color='red' mx={'4'}>
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text size={'6'}>
+            There was an issue loading sale information. Please go back and try again.
+          </Callout.Text>
+        </Callout.Root>
+      </Flex>
+      
     );
   }
   
@@ -685,7 +691,7 @@ export default function ManualCreditCardPayment() {
             {error && <p className="error">{error}</p>}
             <Flex mb={'5'} id="payment-status-container"></Flex>
             <Flex direction={'column'} gap={'8'} justify={'center'}>
-              <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed} style={{width: '100%'}}>
+              <Button size={'4'} id="card-button" type="submit" disabled={!formData || isLoading || paymentProcessed || formNotReady} style={{width: '100%'}}>
               {isLoading 
                 ? 'Processing...' 
                 : `Charge $${finalPrice}`

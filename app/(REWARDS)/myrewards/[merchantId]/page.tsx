@@ -6,7 +6,7 @@ import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
-import { Button, Callout, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Button, Callout, Card, Flex, Heading, Spinner, Text, Separator } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
@@ -475,7 +475,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
     }
   }, [usersCurrentRewardsTier, merchant?.rewards?.tiers]);
 
-  const sortedMilestoneTiers = merchant?.rewards?.tiers ? [...merchant.rewards.tiers].sort((a, b) => b.milestone - a.milestone) : [];
+  const sortedMilestoneTiers = merchant?.rewards?.tiers ? [...merchant.rewards.tiers].sort((a, b) => a.milestone - b.milestone) : [];
 
   return (
     <>
@@ -512,28 +512,23 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
               direction='column'
               position='relative'
               minHeight='100vh'
-              width='100%'
-              style={{ backgroundColor: primaryColor }}
+              //width='100vw'
+              style={{
+                background: 'linear-gradient(to bottom, #ff962d 0%,#ff7b0d 12%)'
+              }}
             >
-              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
-                <Avatar.Root>
-                  <Avatar.Image 
-                  className="MerchantLogo"
-                  src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
-                  alt="Merchant Logo"
-                  style={{objectFit: "contain", maxWidth: '200px'}}
-                  />
-                </Avatar.Root>
-                <BalanceProvider walletForPurchase={walletForPurchase}>
-                  <Header
-                    color={secondaryColor}
-                    merchant={currentUser?.merchant}
-                    embeddedWallet={embeddedWallet}
-                    authenticated={authenticated}
-                    walletForPurchase={walletForPurchase}
-                    currentUser={currentUser}
-                  />
-                </BalanceProvider>
+              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'} 
+                //width={'100vw'}
+                >
+                <Heading size={'8'} style={{color: "white"}}>Rewards</Heading>
+                <Header
+                  color={secondaryColor}
+                  merchant={currentUser?.merchant}
+                  embeddedWallet={embeddedWallet}
+                  authenticated={authenticated}
+                  walletForPurchase={walletForPurchase}
+                  currentUser={currentUser}
+                />
               </Flex>
               <Flex
                 flexGrow={'1'}
@@ -541,6 +536,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                 direction={'column'}
                 gap={'5'}
                 align={'center'}
+                justify={'between'}
                 height={'100%'}
                 style={{
                   backgroundColor: 'white',
@@ -548,64 +544,81 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   boxShadow: 'var(--shadow-6)'
                 }}
               >
-                <Flex direction={'column'} align={'center'} gap={'4'} width={'100%'}>
-                  {usersCurrentRewardsTier ? (
-                    <Heading>{usersCurrentRewardsTier.name}</Heading>
-                  ) : (
-                    <Heading size={'8'}>Welcome</Heading>
-                  )}
-
-                  {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[0]?._id ? (
-                    <Flex direction={'row'} width={'100%'} justify={'between'} align={'center'}>
-                    <Text wrap={'wrap'} size={'5'} weight={'bold'} style={{ maxWidth: '200px' }}>
-                      Remaining until next upgrade:
-                    </Text>
-                    <Text size={'8'}>${amountToNextRewardsTier}</Text>
-                  </Flex>
+                <Flex direction={'column'}>
+                  <Card style={{marginRight: '20px', marginLeft: '20px'}}>
+                    <Flex direction={'column'} align={'center'} gap={'4'} px={'2'}>
+                      <Heading>{merchant?.name}</Heading>
+                     
+                        {usersCurrentRewardsTier ? (
+                          <Flex direction={'row'} justify={'between'} width={'100%'}>
+                            <Text weight={'bold'} size={'6'}>{usersCurrentRewardsTier.name}</Text>
+                            <Text weight={'bold'} size={'6'}>{usersCurrentRewardsTier.discount}% off</Text>
+                          </Flex>
+                        ) : (
+                          <Flex direction={'row'} justify={'center'} width={'100%'}>
+                            <Heading align={'center'} size={'8'}>Welcome</Heading>
+                          </Flex>
+                        )}
+                      
+                      <Separator size="3" />
                     
-                  ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[0]?._id && (
-                    <Flex direction={'column'} width={'100vw'} align={'center'} justify={'center'}>
-                      <Callout.Root color="green" style={{ width: '100vw', padding: '7px', display: 'flex', justifyContent: 'center' }}>
-                        <Callout.Text size={'4'} weight={'bold'} align={'center'}>
-                          You&apos;re earning the max discount!
-                        </Callout.Text>
-                      </Callout.Root>
+
+                        {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id ? (
+                          <Flex direction={'row'} 
+                          width={'100%'} 
+                          justify={'between'} align={'center'}>
+                            <Text wrap={'wrap'} size={'5'}>
+                              Remaining until<br></br> next upgrade:
+                            </Text>
+                            <Text size={'5'}>${amountToNextRewardsTier}</Text>
+                          </Flex>
+                        
+                        ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id && (  
+                          <Flex direction={'column'} 
+                            width={'100vw'} 
+                            align={'center'} justify={'center'}>
+                            <Callout.Root color="green" 
+                            style={{ 
+                              width: '100vw', 
+                            padding: '7px', display: 'flex', justifyContent: 'center' }}>
+                              <Callout.Text size={'4'} weight={'bold'} align={'center'}>
+                                You&apos;re earning the max discount!
+                              </Callout.Text>
+                            </Callout.Root>
+                          </Flex>
+                          
+                        )}
                     </Flex>
-                    
-                  )}
-                </Flex>
+                  </Card>
+                  <Flex direction={'row'} py={'5'} px={'3'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
+                    {sortedMilestoneTiers.map((tier) => (
+                      <Card key={tier._id}
+                        ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
+                        style={{
+                          flexShrink: 0,
+                          backgroundColor: tier._id === usersCurrentRewardsTier?._id ? "blue" : 'transparent'
+                        }}
+                      >
+                        <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'}>
+                          <Text size={'5'} weight="bold">
+                            {tier.name}
+                          </Text>
+                          <Text size={'5'}>
+                            {tier.discount}% off
+                          </Text>
+                        </Flex>
+                      </Card>
+                    ))}
+                  </Flex>
 
-                <Flex direction={'column'} align={'end'} width={'100vw'} maxHeight={'50vh'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
-                  {sortedMilestoneTiers.map((tier) => (
-                    <Card key={tier._id}
-                      ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
-                      style={{
-                        flexShrink: 0,
-                        width: tier._id === usersCurrentRewardsTier?._id ? '85%' : '70%',
-                        backgroundColor: tier._id === usersCurrentRewardsTier?._id ? "blue" : 'transparent'
-                      }}
-                    >
-                      <Flex direction={'row'} gap={'3'} width={'100%'} justify={'between'} align={'center'} height={'80px'} pr={'4'}>
-                        <Text size={'5'} weight="bold">
-                          {tier.name}
-                        </Text>
-                        <Text size={'5'}>
-                          {tier.discount}% off
-                        </Text>
-                      </Flex>
-                    </Card>
-                  ))}
                 </Flex>
+                
                 <Flex>
                   {!errorCheckingSquareDirectory ? (
                     isCheckingSquareDirectory === false ? (
-                      usersCurrentRewardsTier ? (
-                        <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in and earning {usersCurrentRewardsTier.discount}% off!</Text>
-                      ) : (
-                        <Text align={'center'} weight={'bold'} size={'7'}>You&apos;re checked in!</Text>
-                      )
+                      <Text align={'center'} weight={'bold'} size={'5'}>You&apos;re checked in!</Text>
                     ) :  (
-                      <Text align={'center'} weight={'bold'} size={'7'}>Checking in...</Text>
+                      <Text align={'center'} weight={'bold'} size={'5'}>Checking in...</Text>
                     )
                   ) : (
                     <Callout.Root color='red'>

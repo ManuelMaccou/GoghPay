@@ -75,7 +75,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     [PaymentType.None]: '/paymentMethodLogos/venmo.png',
     [PaymentType.Venmo]: '/paymentMethodLogos/venmo.png',
     [PaymentType.Zelle]: '/paymentMethodLogos/zelle.png',
-    [PaymentType.Square]: '/paymentMethodLogos/square.png',
+    [PaymentType.Square]: '/paymentMethodLogos/square2.png',
     [PaymentType.ManualEntry]: '/paymentMethodLogos/manualentry.png',
     [PaymentType.Cash]: '/paymentMethodLogos/cash.png',
   };
@@ -250,6 +250,8 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       setIsLoading(false);
       return;
     }
+
+
 
     const taxRate = isTaxChecked && defaultTax ? defaultTax.rate : 0;
     setlocalFormData(prevState => ({ ...prevState, tax: taxRate, sellerMerchant }));
