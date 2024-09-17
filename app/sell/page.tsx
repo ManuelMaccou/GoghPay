@@ -110,7 +110,8 @@ function SellContent() {
     statusToSave: string
   ) => {
     try {
-      console.log('current user:', user)
+      console.log('squarepaymentId at updateTransactionDetails:', squarePaymentId)
+      
       const accessToken = await getAccessToken();
       const response = await fetch('/api/transaction/update', {
         method: 'POST',
@@ -210,6 +211,8 @@ function SellContent() {
             merchantId
           );
 
+          console.log('fetchedSquarePaymentId:', fetchedSquarePaymentId)
+
           if (fetchedSquarePaymentId) {
             squarePaymentId = fetchedSquarePaymentId;
           }
@@ -278,7 +281,10 @@ function SellContent() {
       const data = await response.json();
       
       if (response.ok) {
+        console.log('card entry response:', data)
         if (data.tenders?.length > 0 && data.tenders[0].id) {
+          console.log('card entry tenders:', data.tenders[0].id)
+
           // If tenders are available, update transaction details
           return data.tenders[0].id;
         } else if (data.message) {
