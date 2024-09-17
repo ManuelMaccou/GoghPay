@@ -107,50 +107,41 @@ export default function ManualCreditCardPayment() {
       return;
     }
 
-    const initializeSquare = async () => {
-      try {
-        console.log('Attempting to initialize Square...');
-
-        if (window.Square && !card) {
-          console.log('Square is already available, setting up card.');
-          await setupSquare();
-        } else if (!window.Square) {
-          console.log('Square not available, loading SDK from script...');
-
-          const script = document.createElement('script');
-          script.src = process.env.NEXT_PUBLIC_WEB_SDK_DOMAIN!;
-          script.onload = async () => {
-            console.log('Square SDK loaded, setting up card.');
-            await setupSquare();
-          };
-          script.onerror = () => {
-            console.error('Error loading the Square SDK script.');
-            setError('There was an error loading the credit card form. Please try again. [Script Load Error]');
-            setFormNotReady(true);
-            setIsLoading(false);
-          };
-          document.body.appendChild(script);
+    const loadSquareSdk = () => {
+      return new Promise<void>((resolve, reject) => {
+        if (window.Square) {
+          console.log('Square SDK already loaded.');
+          resolve();
+          return;
         }
-      } catch (err) {
-        console.error('Unexpected error initializing Square:', err);
-        setError('Unexpected error during Square initialization.');
-        setIsLoading(false);
-      }
+
+        console.log('Loading Square SDK...');
+
+        const script = document.createElement('script');
+        script.src = process.env.NEXT_PUBLIC_WEB_SDK_DOMAIN!;
+        script.onload = () => {
+          console.log('Square SDK loaded successfully.');
+          resolve();
+        };
+        script.onerror = () => {
+          console.error('Error loading Square SDK.');
+          reject(new Error('Error loading Square SDK.'));
+        };
+        document.body.appendChild(script);
+      });
     };
 
     const setupSquare = async () => {
       if (!window.Square) {
-        console.error('Square object not available after SDK load.');
-        setError('There was an error loading the credit card form. Please try again. [Square SDK Missing]');
+        console.error('Square SDK is not available after loading.');
+        setError('There was an error loading the credit card form. Please try again.');
+        setFormNotReady(true);
         return;
       }
 
       try {
-        console.log('Setting up Square payments with Application ID:', applicationId, 'and Location ID:', locationId);
-
+        console.log('Initializing Square payment...');
         const payments = window.Square.payments(applicationId, locationId);
-        console.log('Square payments instance created:', payments);
-
         const cardPayment = await payments.card({
           style: {
             input: {
@@ -160,27 +151,39 @@ export default function ManualCreditCardPayment() {
         });
 
         if (cardContainerRef.current) {
-          console.log('Attaching card form to DOM element:', cardContainerRef.current);
+          console.log('Attaching card form...');
           await cardPayment.attach(cardContainerRef.current);
           setCard(cardPayment);
-          console.log('Card successfully attached to the DOM.');
+          console.log('Card form attached successfully.');
         } else {
-          console.error('Card container element not found.');
           throw new Error('Card container element not found');
         }
       } catch (err) {
-        console.error('Error during Square setup:', err);
-        setError('Failed to initialize card. [Setup Error]');
+        console.error('Error initializing Square payment:', err);
+        setError('Failed to initialize card. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
+    const initializeSquare = async () => {
+      setIsLoading(true); // Start loading state
+
+      try {
+        await loadSquareSdk();  // Load Square SDK if not already loaded
+        await setupSquare();    // Setup Square card form after SDK is ready
+      } catch (error) {
+        console.error('Error during Square initialization:', error);
+        setError('Failed to initialize Square. Please refresh the page or try again.');
+        setFormNotReady(true);
+      } finally {
+        setIsLoading(false);  // Stop loading state
+      }
+    };
+
     if (applicationId) {
-      console.log('Application ID is set, initializing Square.');
+      console.log('Application ID is available, starting Square initialization.');
       initializeSquare();
-    } else {
-      console.log('Application ID is not available, skipping Square initialization.');
     }
 
     return () => {
@@ -190,6 +193,7 @@ export default function ManualCreditCardPayment() {
       }
     };
   }, [applicationId, locationId, card]);
+
 
   useEffect(() => {
     setRewardsDiscount(0);
