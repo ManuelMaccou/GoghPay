@@ -243,6 +243,8 @@ function SellContent() {
     const statusToSave = searchParams.get('statusToSave') || 'PENDING';
     const clientTransactionId = searchParams.get('clientTransactionId') || '';
     const serverTransactionId = searchParams.get('serverTransactionId');
+    console.log('servertransactionId:', serverTransactionId);
+    
     const messageParam = searchParams.get('message') || '';
     const merchantId = searchParams.get('merchantId');
     const transactionIdToUpdate = searchParams.get('goghTransactionId');
