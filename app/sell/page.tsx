@@ -111,7 +111,7 @@ function SellContent() {
   ) => {
     try {
       console.log('squarepaymentId at updateTransactionDetails:', squarePaymentId)
-      
+
       const accessToken = await getAccessToken();
       const response = await fetch('/api/transaction/update', {
         method: 'POST',
@@ -281,21 +281,25 @@ function SellContent() {
       const data = await response.json();
       
       if (response.ok) {
-        console.log('card entry response:', data)
-        if (data.tenders?.length > 0 && data.tenders[0].id) {
-          console.log('card entry tenders:', data.tenders[0].id)
-
-          // If tenders are available, update transaction details
-          return data.tenders[0].id;
+       
+        if (data.paymentId) {
+          console.log('paymentId:', data.paymentId)
+         
+          return data.paymentId;
         } else if (data.message) {
           // Handle valid cash transaction (no order)
+          console.log('Message:', data.message);
           return null;
         } else {
           setError('Failed to fetch payment details from Square.');
           return null;
         }
       } else {
-        setError('Failed to fetch payment details from Square.');
+        if (data.message) {
+          setError(data.message);
+        } else {
+          setError('Failed to fetch payment details from Square.');
+        }
         return null;
       }
     } catch (err) {
