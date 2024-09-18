@@ -355,8 +355,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                         placeholder={merchant.rewards?.welcome_reward ? merchant.rewards?.welcome_reward.toString() : 'Enter amount'}
                         style={{width: '200px'}}
                         type="number"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
+                        inputMode="decimal"
                         value={welcomeRewardAmount}
                         onChange={handleWelcomeInputChange}
                         required
@@ -483,8 +482,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       mb={'5'}
                       mt={'1'}
                       type="number"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      inputMode="decimal"
                       size={'3'}
                       name="milestone"
                       value={formData.milestone}
@@ -503,8 +501,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       mb={'5'}
                       mt={'1'}
                       type="number"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      inputMode="decimal"
                       size={'3'}
                       name="discount"
                       value={formData.discount}

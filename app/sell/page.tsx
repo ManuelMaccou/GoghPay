@@ -1277,7 +1277,7 @@ function SellContent() {
                       <Button style={{ display: 'none' }} />
                     </AlertDialog.Trigger>
                     <AlertDialog.Content maxWidth="450px">
-                      <AlertDialog.Title size={'8'} align={'center'} mb={'5'}>Tap to pay</AlertDialog.Title>
+                      <AlertDialog.Title size={'8'} align={'center'} mb={'5'}>Credit card</AlertDialog.Title>
                       <VisuallyHidden>
                         <AlertDialog.Description size="2" mb="4">
                           Square payment
@@ -1340,7 +1340,7 @@ function SellContent() {
                               handleSquarePosPayment(newSaleFormData);
                               setShowSquareDialog(false);
                             }}>
-                            Tap to pay
+                            Charge
                           </Button>
                         </AlertDialog.Action>
                         <AlertDialog.Cancel>
