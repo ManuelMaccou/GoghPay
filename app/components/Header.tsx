@@ -96,26 +96,6 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                             </Text>
                           </Box>
                         </Flex>
-                        <Dialog.Root>
-                            <Dialog.Trigger>
-                              <Button variant="ghost">Show address</Button>
-                            </Dialog.Trigger>
-                            <Dialog.Content size={'3'} maxWidth={'300px'}>
-                              <VisuallyHidden>
-                                <Dialog.Title>
-                                  Show address
-                                </Dialog.Title>
-                              </VisuallyHidden>
-                              <VisuallyHidden>
-                                <Dialog.Description>
-                                  Show address
-                                </Dialog.Description>
-                              </VisuallyHidden>
-                              <Text as="p" trim="both" size="1">
-                                {currentUser?.smartAccountAddress}
-                              </Text>
-                            </Dialog.Content>
-                          </Dialog.Root>
                       </Flex>
                     </Card>
                   ) : (
@@ -196,11 +176,6 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                           </Flex>
                           <Separator size={'4'} />
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                            <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                            <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
-                          </Flex>
-                          <Separator size={'4'} />
-                          <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                             <FontAwesomeIcon style={{padding: '20px'}} icon={faGear} />
                             <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/integrations`)}>Integrations</Button>
                           </Flex>
@@ -243,11 +218,6 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                       <FontAwesomeIcon style={{padding: '20px'}} icon={faArrowRightFromBracket} />
                       <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/purchases`)}>Purchases</Button>
                     </Flex>
-                    {/*  <Separator size={'4'} />
-                    <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
-                      <FontAwesomeIcon style={{padding: '20px'}} icon={faMoneyBillTransfer} />
-                      <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => router.push(`/account/transfer`)}>Transfer funds</Button>
-                    </Flex> */}
                     <Separator size={'4'} />
                     <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                       <FontAwesomeIcon style={{padding: '20px'}} icon={faPiggyBank} />

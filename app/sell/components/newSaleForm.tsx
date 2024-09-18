@@ -4,10 +4,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { generateQrCode } from "./generateQrCodeUrl";
 import Spinner from '../../components/Spinner';
 import { usePrivy } from '@privy-io/react-auth';
-import { Box, Button, Card, Checkbox, Container, Dialog, Flex, Grid, IconButton, Inset, Link, Section, Select, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
+import { Box, Button, Card, Checkbox, Dialog, Flex, Grid, IconButton, Link, Select, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
 import styles from '../styles.module.css'
-import { Merchant, Tax, RewardsCustomer, PaymentMethod, PaymentType } from '@/app/types/types';
-import { Cross1Icon, Cross2Icon, PersonIcon, UpdateIcon } from '@radix-ui/react-icons';
+import { Merchant, Tax, RewardsCustomer, PaymentType } from '@/app/types/types';
+import { Cross1Icon, PersonIcon, UpdateIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 
 interface NewSaleFormProps {
@@ -426,8 +426,8 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                 <Link href='/account/taxes'>Edit</Link>
               </Flex>
               
-                <Flex width={'100%'} justify={'between'} mb={'6'}>
-                  <Text weight={'bold'} as="label" size="4">
+                <Flex justify={'between'} mb={'6'}>
+                  <Text weight={'bold'} as="label" size="4" style={{maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                   {defaultTax.name}
                   </Text>
                   <Flex>
@@ -497,6 +497,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                           style={{ cursor: 'pointer', padding: '1.5rem', alignContent: 'center', height: '150px', position: 'relative' }}
                         >
                           <Image
+                            priority={true}
                             src={paymentTypeLogos[paymentMethod]}
                             alt={paymentMethod}
                             fill
