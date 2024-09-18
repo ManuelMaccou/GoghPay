@@ -9,12 +9,10 @@ import * as Avatar from '@radix-ui/react-avatar';
 import { Suspense, useEffect, useState } from "react";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import crypto from 'crypto';
-import { setCookie } from 'nookies';
 import { useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import NotificationMessage from "@/app/components/Notification";
 import UploadImage from "@/app/components/UploadImage";
-import { Cross2Icon } from "@radix-ui/react-icons";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
