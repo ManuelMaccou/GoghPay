@@ -512,17 +512,14 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
               direction='column'
               position='relative'
               minHeight='100vh'
-              //width='100vw'
               style={{
                 background: 'linear-gradient(to bottom, #ff962d 0%,#ff7b0d 12%)'
               }}
             >
-              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'} 
-                //width={'100vw'}
-                >
+              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
                 <Heading size={'8'} style={{color: "white"}}>Rewards</Heading>
                 <Header
-                  color={secondaryColor}
+                  color={'black'}
                   merchant={currentUser?.merchant}
                   embeddedWallet={embeddedWallet}
                   authenticated={authenticated}
@@ -532,7 +529,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
               </Flex>
               <Flex
                 flexGrow={'1'}
-                p={'7'}
+                py={'7'}
                 direction={'column'}
                 gap={'5'}
                 align={'center'}
@@ -544,7 +541,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                   boxShadow: 'var(--shadow-6)'
                 }}
               >
-                <Flex direction={'column'}>
+                <Flex direction={'column'} width={'100%'}>
                   <Card style={{marginRight: '20px', marginLeft: '20px'}}>
                     <Flex direction={'column'} align={'center'} gap={'4'} px={'2'}>
                       <Heading>{merchant?.name}</Heading>
@@ -599,7 +596,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
                           backgroundColor: tier._id === usersCurrentRewardsTier?._id ? "blue" : 'transparent'
                         }}
                       >
-                        <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'}>
+                        <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'} width={'auto'}>
                           <Text size={'5'} weight="bold">
                             {tier.name}
                           </Text>

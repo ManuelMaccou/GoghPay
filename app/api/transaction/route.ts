@@ -17,8 +17,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized user' }, { status: 403 });
     }
 
-    console.log('status in transaction:', status);
+    let priceAfterDiscount = productPrice
 
+    const totalDiscountAmount = discountAmount + welcomeDiscount
+    console.log('totalDiscountAmount in trans api:', totalDiscountAmount)
+
+    if (discountType === 'percent') {
+      if (totalDiscountAmount > 100) {
+        priceAfterDiscount = 0
+      } else {
+        priceAfterDiscount = productPrice - ((totalDiscountAmount/100) * productPrice)
+        console.log('priceAfterDiscount:', priceAfterDiscount)
+      }
+
+    } else if (discountType === 'dollar') {
+      priceAfterDiscount = productPrice - totalDiscountAmount
+      if (priceAfterDiscount < 0) {
+        priceAfterDiscount = 0
+      }
+    }
+
+    const calculatedSalesTax = Math.round(priceAfterDiscount * (salesTax / 100) * 100) / 100;
 
     const transaction = new Transaction({
       merchant: merchantId,
@@ -35,7 +54,7 @@ export async function POST(req: NextRequest) {
       payment: {
         paymentType: paymentType,
         tipAmount: tipAmount,
-        salesTax: salesTax,
+        salesTax: calculatedSalesTax,
         transactionHash: transactionHash,
         status: status,
       }
