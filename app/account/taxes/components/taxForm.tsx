@@ -22,7 +22,7 @@ export function NewTaxForm({ onMessageUpdate, onAddTax, onCancel }: NewTaxFormPr
 
   const validateAndFormatRate = (rate: string): string => { 
     // Validate and format the rate to allow a number with up to 1 decimal place
-    const validRate = rate.match(/^\d+(\.\d{0,1})?$/);
+    const validRate = rate.match(/^\d+(\.\d{0,2})?$/);
     return validRate ? validRate[0] : '';
   };
 
@@ -70,8 +70,7 @@ export function NewTaxForm({ onMessageUpdate, onAddTax, onCancel }: NewTaxFormPr
             mb={'5'}
             mt={'1'}
             type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+            inputMode="decimal"
             size={'2'}
             name="rate"
             value={formData.rate}
