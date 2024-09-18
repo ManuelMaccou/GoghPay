@@ -426,8 +426,8 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                 <Link href='/account/taxes'>Edit</Link>
               </Flex>
               
-                <Flex width={'100%'} justify={'between'} mb={'6'}>
-                  <Text weight={'bold'} as="label" size="4">
+                <Flex justify={'between'} mb={'6'}>
+                  <Text weight={'bold'} as="label" size="4" style={{maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                   {defaultTax.name}
                   </Text>
                   <Flex>

@@ -519,7 +519,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
               <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
                 <Heading size={'8'} style={{color: "white"}}>Rewards</Heading>
                 <Header
-                  color={'black'}
+                  color={'white'}
                   merchant={currentUser?.merchant}
                   embeddedWallet={embeddedWallet}
                   authenticated={authenticated}
