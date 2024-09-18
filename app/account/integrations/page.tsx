@@ -546,19 +546,18 @@ function IntegrationsContent() {
                             </Flex>
                           ) : ( 
                             venmoQrCode && (
-                              <Flex direction={'column'} gap={'5'}>
-                                <Avatar.Root>
+                              <Flex direction={'column'} gap={'5'} width={'100%'}>
+                                <Avatar.Root style={{alignSelf: 'center'}}>
                                   <Avatar.Image
                                     src={venmoQrCode}
                                     alt="Venmo QR Code"
                                     style={{objectFit: "contain", maxWidth: '150px'}}
                                   />
                                 </Avatar.Root>
-                                <Button variant="ghost" color="red" size={'4'}
+                                <Button color="red"
                                     onClick={() => setVenmoQrCode(null)}
                                   >
-                                  <Cross2Icon />
-                                  Edit
+                                  Change
                                 </Button>
                               </Flex>
                             )
@@ -590,19 +589,18 @@ function IntegrationsContent() {
                             </Flex>
                           ) : ( 
                             zelleQrCode && (
-                              <Flex direction={'column'} gap={'5'}>
-                                <Avatar.Root>
+                              <Flex direction={'column'} gap={'5'} width={'100%'}>
+                                <Avatar.Root style={{alignSelf: 'center'}}>
                                   <Avatar.Image
                                     src={zelleQrCode}
                                     alt="Zelle QR Code"
                                     style={{objectFit: "contain", maxWidth: '150px'}}
                                   />
                                 </Avatar.Root>
-                                <Button variant="ghost" color="red" size={'4'}
+                                <Button color="red"
                                     onClick={() => setZelleQrCode(null)}
                                   >
-                                  <Cross2Icon />
-                                  Edit
+                                  Change
                                 </Button>
                               </Flex>
                             )
