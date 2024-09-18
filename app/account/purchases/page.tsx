@@ -195,10 +195,54 @@ export default function Sales({ params }: { params: { userId: string } }) {
         }
 
         const { totalTransactions } = await response.json();
-        console.log('totalTransactions:', totalTransactions);
+
+        const transactionsWithFinalPrice = totalTransactions.map((transaction: Transaction) => {
+          const { product, payment, discount } = transaction;
+
+          let welcomeDiscountAmount = 0;
+          let rewardsDiscountAmount = 0
+          let priceAfterDiscount = product.price
+
+          if (discount && discount.amount) {
+            welcomeDiscountAmount = discount.welcome
+          }
+
+          if (discount && discount.amount) {
+            rewardsDiscountAmount = discount.amount
+          }
+
+          const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
+          console.log('totalDiscountAmount:', totalDiscountAmount)
+
+          if (discount && discount.type === 'percent') {
+            if (totalDiscountAmount > 100) {
+              priceAfterDiscount = 0
+            } else {
+              priceAfterDiscount = product.price - ((totalDiscountAmount/100) * product.price)
+              console.log('priceAfterDiscount:', priceAfterDiscount)
+            }
+
+          } else if (discount && discount.type === 'dollar') {
+            priceAfterDiscount = product.price - totalDiscountAmount
+            if (priceAfterDiscount < 0) {
+              priceAfterDiscount = 0
+            }
+          }
+  
+          // Formula: (product price - discount) + tip + tax
+          const finalPrice = priceAfterDiscount + (payment.tipAmount || 0) + payment.salesTax;
+          console.log('finalPrice:', finalPrice)
+          
+          return {
+            ...transaction,
+            finalPrice: finalPrice.toFixed(2), // Save the calculated final price
+          };
+        });
+
+
 
         // Sort totalTransactions by date in descending order
-        const sortedTotalTransactions = totalTransactions.slice().sort((a: Transaction, b: Transaction) => {
+        const sortedTotalTransactions = transactionsWithFinalPrice.slice().sort((a: Transaction, b: Transaction) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
         setTotalTransactions(sortedTotalTransactions);
@@ -283,7 +327,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
                               const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
                               return (
                                 <Table.Row key={transaction._id}>
-                                  <Table.RowHeaderCell>${((transaction.product.price)+(transaction.payment.tipAmount || 0)+(transaction.payment.salesTax)).toFixed(2)}</Table.RowHeaderCell>
+                                  <Table.RowHeaderCell>${transaction.finalPrice}</Table.RowHeaderCell>
                                   <Table.Cell>
                                     <Text wrap={'nowrap'}>
                                       {transaction.merchant.name}: {transaction.product.name}
