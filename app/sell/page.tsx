@@ -820,7 +820,8 @@ function SellContent() {
     setSuccessMessage1(null);
     setSuccessMessage2(null);
     setErrorMessage(null);
-    setDiscountUpgradeMessage(null)
+    setSquarePosErrorMessage(null);
+    setDiscountUpgradeMessage(null);
   };
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
