@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Button, Callout, Dialog, Flex, Heading, Link, RadioGroup, Spinner, Strong, Table, Text, VisuallyHidden } from "@radix-ui/themes";
+import { Badge, Box, Button, Callout, Dialog, Flex, Heading, Link, RadioGroup, Select, Spinner, Strong, Table, Text, VisuallyHidden } from "@radix-ui/themes";
 
 import axios from "axios";
 import { useRouter } from 'next/navigation';
@@ -112,6 +112,14 @@ export default function Taxes({ params }: { params: { userId: string } }) {
 
     const accessToken = await getAccessToken();
 
+    const updatedTaxes = [
+      ...(taxes?.map((tax: Tax) => ({
+        ...tax,
+        default: false, // Set all existing taxes to non-default
+      })) || []), // Fallback to an empty array if taxes is null or undefined
+      { ...newTax, default: true }, // Add the new tax and set it as the default
+    ];
+
     try {
       const response = await fetch(`/api/merchant/update`, {
         method: 'PATCH',
@@ -121,7 +129,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         },
         body: JSON.stringify({
           privyId: user?.id,
-          taxes: [...(merchant.taxes || []), newTax],
+          taxes: updatedTaxes,
         }),
       });
 
@@ -129,6 +137,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
         const updatedMerchant = await response.json();
         setMerchant(updatedMerchant.merchant);
         setTaxes(updatedMerchant.merchant.taxes);
+        setSelectedTax(updatedMerchant.merchant.taxes.find((tax: Tax) => tax.default) || null);
         setIsDialogOpen(false);
       } else {
         console.error("Failed to fetch merchant", response.statusText)
@@ -303,6 +312,10 @@ export default function Taxes({ params }: { params: { userId: string } }) {
     }
   }, [merchant]);
 
+  useEffect(() => {
+    console.log('taxes:', taxes)
+  }, [taxes])
+
   return (
     <Flex
       direction='column'
@@ -329,7 +342,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
       </Flex>
       <Flex
         flexGrow={'1'}
-        py={'7'}
+        pb={'7'}
         px={'4'}
         direction={'column'}
         justify={'between'}
@@ -349,52 +362,66 @@ export default function Taxes({ params }: { params: { userId: string } }) {
                 width={'100%'}
                 gap={"4"}
                 p={"4"}
-                style={{
-                  boxShadow: "var(--shadow-2)",
-                  borderRadius: "10px",
-                }}
               >
-                <Text weight={'bold'} size={'5'} align={'left'} >
-                  Select a default tax or create a new one. 
-                </Text>
-                {taxes && (
-                  <RadioGroup.Root
-                    size={'3'}
-                    value={selectedTax?._id || ""}
-                    onValueChange={handleTaxSelection}
-                    name="taxes"
-                  >
-                    {taxes.map((tax) => (
-                      <RadioGroup.Item key={tax._id} value={tax._id} disabled={!merchant} style={{marginBottom: '15px'}}>
-                        <Flex direction={'row'} gap={'4'} ml={'3'}>
-                          <Text size={'5'} as="label">{tax.name}</Text>
-                          <Text size={'5'}>{tax.rate}%</Text>
-                        </Flex>
-                      </RadioGroup.Item>
-                    ))}
-                  </RadioGroup.Root>
-                )}
+
+                <Flex direction={'row'} gap={'6'} justify={'between'} align={'end'}>
+                  {taxes && taxes.length > 0 && (
+                    <>
+                    <Flex direction={'column'} flexGrow={'1'}>
+                      <Text weight={'bold'}>Default Tax</Text>
+                      <Select.Root 
+                        value={selectedTax?._id || ''}
+                        onValueChange={handleTaxSelection}
+                      >
+                        <Select.Trigger style={{overflow: 'hidden', maxWidth: '200px'}} />
+                        <Select.Content style={{width: '95%'}}>
+                          {taxes.map((tax) => (
+                            <>
+                              <Select.Item key={tax._id} value={tax._id} disabled={!merchant} style={{marginTop: '20px', marginBottom: '20px'}}>
+                                <Flex direction={'row'} gap={'4'}>
+                                  <Text size={'4'} as="label">{tax.name}</Text>
+                                  <Text size={'4'}>{tax.rate}%</Text>
+                                </Flex>
+                              </Select.Item>
+                              <Select.Separator />
+                            </>
+                          ))}
+                        </Select.Content>
+                      </Select.Root>
+
+                    </Flex>
+                      
+                    </>
+                  )}
+
+                  <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}> 
+                    <Dialog.Trigger>
+                      <Button size={'3'} variant="ghost" onClick={() => setIsDialogOpen(true)}>+ New tax</Button>
+                    </Dialog.Trigger>
+                    <Dialog.Content
+                      style={{marginTop: '-300px'}}
+                    >
+                        <Dialog.Title>Create New Tax</Dialog.Title>
+                        <VisuallyHidden>
+                          <Dialog.Description>
+                            Create new sales tax
+                          </Dialog.Description>
+                        </VisuallyHidden>
+                        <NewTaxForm
+                          onMessageUpdate={() => {}} 
+                          onAddTax={handleAddTax}
+                          onCancel={() => setIsDialogOpen(false)}
+                        />
+                      </Dialog.Content>
+                  </Dialog.Root>
+                  
+                    
+              
+                </Flex>
 
                 {confirmMessage && <Text color="green">{confirmMessage}</Text>}
             
-                <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}> 
-                  <Dialog.Trigger>
-                  <Button size={'4'} variant="ghost" onClick={() => setIsDialogOpen(true)}>+ Create New Tax</Button>
-                  </Dialog.Trigger>
-                    <Dialog.Content>
-                      <Dialog.Title>Create New Tax</Dialog.Title>
-                      <VisuallyHidden>
-                        <Dialog.Description>
-                          Create new sales tax
-                        </Dialog.Description>
-                      </VisuallyHidden>
-                      <NewTaxForm
-                        onMessageUpdate={() => {}} 
-                        onAddTax={handleAddTax}
-                        onCancel={() => setIsDialogOpen(false)}
-                      />
-                    </Dialog.Content>
-                </Dialog.Root>
+               
 
               </Flex>
 
