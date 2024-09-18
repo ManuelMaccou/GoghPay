@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
   const { balance, isBalanceLoading } = useBalance();
   const router = useRouter();
 
-  const [menuState, setMenuState] = useState<'purchases' | 'rewards'>('purchases');
+  const [menuState, setMenuState] = useState<'sales' | 'rewards'>('sales');
 
   const { logout } = useLogout ({
     onSuccess: async () => {
@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
     }
   })
 
-  const handleSetMenuState = (value: 'purchases' | 'rewards') => {
+  const handleSetMenuState = (value: 'sales' | 'rewards') => {
     setMenuState(value);
   };
 
@@ -153,11 +153,11 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                         radius="full"
                         onValueChange={handleSetMenuState}
                       >
-                        <SegmentedControl.Item value="purchases">Purchases</SegmentedControl.Item>
+                        <SegmentedControl.Item value="sales">Sales</SegmentedControl.Item>
                         <SegmentedControl.Item value="rewards">Rewards</SegmentedControl.Item>
                       </SegmentedControl.Root>
                     </Flex>
-                    {menuState === 'purchases' ? (
+                    {menuState === 'sales' ? (
                       <>
                         <Flex direction={'column'} align={'start'}>
                           <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
