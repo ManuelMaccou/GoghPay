@@ -103,6 +103,7 @@ export interface Transaction {
     offineTransactionId?: string;
     squarePaymentId?: string;
   };
+  finalPrice?: string;
   createdAt: Date;
 }
 
