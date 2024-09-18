@@ -70,6 +70,8 @@ export function NewTaxForm({ onMessageUpdate, onAddTax, onCancel }: NewTaxFormPr
             mb={'5'}
             mt={'1'}
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             size={'2'}
             name="rate"
             value={formData.rate}
