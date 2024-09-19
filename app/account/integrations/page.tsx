@@ -392,10 +392,10 @@ function IntegrationsContent() {
                           <Button style={{ display: 'none' }} />
                         </AlertDialog.Trigger>
                         <AlertDialog.Content maxWidth="450px">
-                          <AlertDialog.Title>Select a location for inventory</AlertDialog.Title>
+                          <AlertDialog.Title>Select a location</AlertDialog.Title>
                           <VisuallyHidden>
                             <AlertDialog.Description size="2" mb="4">
-                              Select a location for inventory.
+                              Select a location
                             </AlertDialog.Description>
                           </VisuallyHidden>
                           {!isFetchingLocations ? (
