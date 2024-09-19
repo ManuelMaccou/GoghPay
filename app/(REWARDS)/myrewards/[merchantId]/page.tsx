@@ -511,7 +511,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
             <Flex 
               direction='column'
               position='relative'
-              minHeight='100vh'
+              height='100vh'
               style={{
                 background: 'linear-gradient(to bottom, #ff962d 0%,#ff7b0d 12%)'
               }}
