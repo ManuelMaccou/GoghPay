@@ -374,7 +374,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
                         onValueChange={handleTaxSelection}
                       >
                         <Select.Trigger style={{overflow: 'hidden', maxWidth: '200px'}} />
-                        <Select.Content style={{width: '95%'}}>
+                        <Select.Content position="popper" style={{width: '90vw'}}>
                           {taxes.map((tax) => (
                             <>
                               <Select.Item key={tax._id} value={tax._id} disabled={!merchant} style={{marginTop: '20px', marginBottom: '20px'}}>
