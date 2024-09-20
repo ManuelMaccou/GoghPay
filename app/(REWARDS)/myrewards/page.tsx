@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useUser } from "@/app/contexts/UserContext";
 import { User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
-import { Avatar, Box, Button, Card, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
+import { Avatar, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -94,7 +95,7 @@ export default function ManageRewards() {
             case 403:
               throw new Error("Forbidden. You don't have access to this resource.");
             case 404:
-              throw new Error("User rewards not found.");
+              throw new Error("Rewards not found.");
             default:
               throw new Error(`Unexpected error: ${response.statusText}`);
           }
@@ -155,7 +156,17 @@ export default function ManageRewards() {
           boxShadow: 'var(--shadow-6)'
         }}
       >
+        {error && (
+          <Callout.Root color="red">
+            <Callout.Icon>
+              <InfoCircledIcon />
+            </Callout.Icon>
+            <Callout.Text>{error}</Callout.Text>
+          </Callout.Root>
+        )}
+
         {ready && authenticated ? (
+          
           !isFetchingCurrentUsersRewards ? (
             currentUserRewards.length > 0 ? (
               currentUserRewards.map((reward) => (
@@ -172,13 +183,14 @@ export default function ManageRewards() {
                   style={{
                     padding: '16px',
                     borderRadius: '8px',
-                    backgroundColor: reward.merchantInfo.branding.primary_color,
+                    backgroundColor: reward.merchantInfo?.branding?.primary_color || "#000000",
                   }}
                 >
-                  <Image
+                  {reward.merchantInfo?.branding?.logo ? (
+                    <Image
                     priority
-                    src={reward.merchantInfo.branding.logo}
-                    alt={reward.merchantInfo.name || 'Merchant logo'}
+                    src={reward.merchantInfo?.branding?.logo}
+                    alt={reward.merchantInfo?.name || 'Merchant logo'}
                     fill
                     sizes="(max-width: 200px) 50vw,"
                     style={{
@@ -186,6 +198,11 @@ export default function ManageRewards() {
                       padding: '10px 50px',
                     }}
                   />
+
+                  ): (
+                    <Text>{reward.merchantInfo?.name ? reward.merchantInfo?.name : ''}</Text>
+                  )}
+                  
                 </Flex>
                 </Link>
               ))
@@ -224,8 +241,9 @@ export default function ManageRewards() {
             </>
           )
 
+          
         ) : ready && !authenticated && (
-          <Button variant="ghost" style={{ width: '250px' }} size={'4'}  onClick={() => router.push("/")}>
+          <Button variant="ghost" style={{ width: '250px', color: "white" }} size={'4'}  onClick={() => router.push("/")}>
             Please log in to view this page
           </Button>
         )}
