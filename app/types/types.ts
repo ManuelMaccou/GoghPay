@@ -70,6 +70,7 @@ export interface Merchant {
   paymentMethods: PaymentMethod;
   rewards?: Rewards;
   branding?: Branding;
+  code?: string;
 }
 
 export interface Square {
