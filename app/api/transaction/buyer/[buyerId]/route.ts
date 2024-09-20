@@ -11,7 +11,10 @@ export async function GET(req: NextRequest, context: { params: Params }) {
   const buyerId = context.params.buyerId;
   await connectToDatabase();
 
-  const totalTransactions = await Transaction.find({ buyer: buyerId }).
+  const totalTransactions = await Transaction.find({ 
+    buyer: buyerId,
+    'payment.status': { $in: ['COMPLETE', 'COMPLETE_OFFLINE'] }
+  }).
   populate('merchant').
   exec();
 
