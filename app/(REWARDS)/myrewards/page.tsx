@@ -155,7 +155,7 @@ export default function ManageRewards() {
           boxShadow: 'var(--shadow-6)'
         }}
       >
-        {ready && ! authenticated ? (
+        {ready && authenticated ? (
           !isFetchingCurrentUsersRewards ? (
             currentUserRewards.length > 0 ? (
               currentUserRewards.map((reward) => (
