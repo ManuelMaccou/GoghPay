@@ -1,4 +1,4 @@
-// Fetch rewards specific to a merchant
+// Fetch rewards specific to a merchant/customer relationhip
 
 import mongoose from 'mongoose';
 import { NextRequest, NextResponse } from 'next/server';
