@@ -626,7 +626,7 @@ function IntegrationsContent() {
       </Flex>
     </Flex>
   )
-}
+};
 
 export default function Integrations() {
   return (
