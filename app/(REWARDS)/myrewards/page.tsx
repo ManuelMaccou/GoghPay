@@ -1,10 +1,11 @@
 'use client'
 
 import { Header } from "@/app/components/Header";
+import { useRouter } from 'next/navigation';
 import { useUser } from "@/app/contexts/UserContext";
 import { User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
-import { Avatar, Box, Card, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
+import { Avatar, Box, Button, Card, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
@@ -35,6 +36,7 @@ export default function ManageRewards() {
   const [error, setError] = useState<string | null>(null);
 
   const { appUser } = useUser();
+  const router = useRouter();
 
 
   const { ready, authenticated, user } = usePrivy();
@@ -116,9 +118,6 @@ export default function ManageRewards() {
   }, [ready, authenticated, appUser]);
   
 
-
-
-
   return (
     <Flex
       direction='column'
@@ -129,7 +128,6 @@ export default function ManageRewards() {
         background: 'black'
       }}
     >
-
       <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
         <Heading size={'8'} style={{color: "white"}}>My Rewards</Heading>
           <Header
@@ -157,92 +155,82 @@ export default function ManageRewards() {
           boxShadow: 'var(--shadow-6)'
         }}
       >
-        
-        {!isFetchingCurrentUsersRewards ? (
-          currentUserRewards.length > 0 ? (
-            currentUserRewards.map((reward) => (
-              <Link key={reward._id} href={`/myrewards/${reward.merchantId}`}>
-              <Flex 
-                key={reward._id}
-                position={'relative'}
-                direction={'column'}
-                width={'80vw'}
-                minHeight={'120px'}
-                align={'center'}
-                justify={'center'}
-                p={'9'}
-                style={{
-                  padding: '16px',
-                  borderRadius: '8px',
-                  backgroundColor: reward.merchantInfo.branding.primary_color,
-                }}
-              >
-                <Image
-                  priority
-                  src={reward.merchantInfo.branding.logo}
-                  alt={reward.merchantInfo.name || 'Merchant logo'}
-                  fill
-                  sizes="(max-width: 200px) 50vw,"
+        {ready && ! authenticated ? (
+          !isFetchingCurrentUsersRewards ? (
+            currentUserRewards.length > 0 ? (
+              currentUserRewards.map((reward) => (
+                <Link key={reward._id} href={`/myrewards/${reward.merchantId}`}>
+                <Flex 
+                  key={reward._id}
+                  position={'relative'}
+                  direction={'column'}
+                  width={'80vw'}
+                  minHeight={'120px'}
+                  align={'center'}
+                  justify={'center'}
+                  p={'9'}
                   style={{
-                    objectFit: 'contain',
-                    padding: '10px 50px',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    backgroundColor: reward.merchantInfo.branding.primary_color,
                   }}
-                />
+                >
+                  <Image
+                    priority
+                    src={reward.merchantInfo.branding.logo}
+                    alt={reward.merchantInfo.name || 'Merchant logo'}
+                    fill
+                    sizes="(max-width: 200px) 50vw,"
+                    style={{
+                      objectFit: 'contain',
+                      padding: '10px 50px',
+                    }}
+                  />
+                </Flex>
+                </Link>
+              ))
+            ) : (
+              <>
+              <Flex direction={'column'}>
+              <Text size={'4'} align={'center'} style={{color: 'white'}}>No rewards yet.</Text>
+                <Flex 
+                  position={'relative'}
+                  direction={'column'}
+                  width={'80vw'}
+                  minHeight={'120px'}
+                  align={'center'}
+                  justify={'center'}
+                  p={'9'}
+                >
+                  <Image
+                    priority
+                    src={'/norewards.png'}
+                    alt={'No rewards'}
+                    fill
+                    sizes="(max-width: 200px) 50vw,"
+                    style={{
+                      objectFit: 'contain',
+                      padding: '10px 50px',
+                    }}
+                  />
+                </Flex>
               </Flex>
-              </Link>
-            ))
+              </>
+            )
           ) : (
             <>
-            <Flex direction={'column'}>
-            <Text size={'4'} align={'center'} style={{color: 'white'}}>No rewards yet.</Text>
-              <Flex 
-                position={'relative'}
-                direction={'column'}
-                width={'80vw'}
-                minHeight={'120px'}
-                align={'center'}
-                justify={'center'}
-                p={'9'}
-              >
-                <Image
-                  priority
-                  src={'/norewards.png'}
-                  alt={'No rewards'}
-                  fill
-                  sizes="(max-width: 200px) 50vw,"
-                  style={{
-                    objectFit: 'contain',
-                    padding: '10px 50px',
-                  }}
-                />
-              </Flex>
-
-            </Flex>
-              
+              <Text size={'4'} style={{color: 'white'}}>Fetching rewards</Text>
+              <Spinner style={{color: 'white'}} />
             </>
-            
-            
           )
-          
 
-        ) : (
-          <>
-            <Text size={'4'} style={{color: 'white'}}>Fetching rewards</Text>
-            <Spinner style={{color: 'white'}} />
-          </>
-          
+        ) : ready && !authenticated && (
+          <Button variant="ghost" style={{ width: '250px' }} size={'4'}  onClick={() => router.push("/")}>
+            Please log in to view this page
+          </Button>
         )}
         
-
-
-
-
       </Flex>
     </Flex>
-
   );
-  
-
-  
-
 }
