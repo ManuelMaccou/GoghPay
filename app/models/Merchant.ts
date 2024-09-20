@@ -71,9 +71,12 @@ const merchantSchema = new mongoose.Schema({
   square: { type: SquareSchema },
   paymentMethods: { type: PaymentMethodSchema },
   rewards: { type: RewardsSchema },
-  branding: { type: BrandingSchema }
+  branding: { type: BrandingSchema },
+  code: { type: String },
 
 }, { timestamps: true });
+
+merchantSchema.index({ code: 1 });
 
 const Merchant = mongoose.models.Merchant || mongoose.model('Merchant', merchantSchema);
 

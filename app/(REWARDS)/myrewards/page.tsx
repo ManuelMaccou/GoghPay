@@ -8,7 +8,6 @@ import { Avatar, Box, Card, Flex, Heading, Link, Spinner, Text } from "@radix-ui
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
@@ -37,14 +36,17 @@ export default function ManageRewards() {
 
   const { appUser } = useUser();
 
+
   const { ready, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+
 
   useEffect(() => {
     if (appUser) {
       const walletAddress = appUser.smartAccountAddress || appUser.walletAddress || null;
       setWalletForPurchase(walletAddress);
+      setCurrentUser(appUser);
     }
   }, [appUser]);
 

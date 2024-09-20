@@ -7,18 +7,19 @@ import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
 import { Button, Callout, Card, Flex, Heading, Spinner, Text, Separator } from "@radix-ui/themes";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { useSearchParams } from "next/navigation";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function MyMerchantRewards({ params }: { params: { merchantId: string } }) {  
+function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }) {  
   const { ready, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
@@ -44,7 +45,17 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
   const [primaryColor, setPrimaryColor] = useState<string>("#FFFFFF");
   const [secondaryColor, setSecondaryColor] = useState<string>("#000000");
 
+  const [code, setCode] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+
   const merchantId = params.merchantId
+
+  useEffect(() => {
+    const codeParam = searchParams.get('code');
+
+    setCode(codeParam);
+  }, [searchParams]);
 
 
   const handleLogin = () => {
@@ -369,7 +380,18 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       const accessToken = await getAccessToken();
 
       try {
-        const response = await fetch(`/api/rewards/userRewards/${merchantId}?customerId=${currentUser._id}&privyId=${currentUser.privyId}`, {
+        const queryParamsObj: Record<string, string> = {
+          customerId: currentUser._id,
+          privyId: currentUser.privyId || '',
+        };
+    
+        if (code) {
+          queryParamsObj.code = code;
+        }
+
+        const queryParams = new URLSearchParams(queryParamsObj).toString();
+
+        const response = await fetch(`/api/rewards/userRewards/${merchantId}?${queryParams}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -396,6 +418,12 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
         }
         setError('Error fetching user');
       } finally {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('code'); // Remove the "code" parameter
+
+        // Use replaceState to update the URL without reloading the page
+        window.history.replaceState(null, '', currentUrl.toString());
+
         setIsFetchingCurrentUserRewards(false);
       }
     };
@@ -403,7 +431,7 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
     if (ready && authenticated && currentUser) {
       fetchCurrentUserMerchantRewards();
     }
-  }, [authenticated, ready, currentUser, merchantId, merchant]);
+  }, [authenticated, ready, currentUser, merchantId, merchant, code]);
 
   useEffect (() => {
     const checkMilestone = () => {
@@ -645,4 +673,13 @@ export default function MyMerchantRewards({ params }: { params: { merchantId: st
       )}
     </>
   )
+};
+
+
+export default function MyMerchantRewards({ params }: { params: { merchantId: string } }) {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <MyMerchantRewardsContent params={params} />
+    </Suspense>
+  );
 }
