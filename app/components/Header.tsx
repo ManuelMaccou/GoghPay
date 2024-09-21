@@ -251,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                     <Flex direction={'row'} align={'center'} justify={'start'} width={'60vw'}>
                       <FontAwesomeIcon style={{padding: '20px'}} icon={faPiggyBank} />
                       <Dialog.Close>
-                        <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => navigateTo(`/myRewards`)}>My rewards</Button>
+                        <Button variant='ghost' size={'4'} style={{color: 'black', width: '100%', justifyContent: 'start'}} onClick={() => navigateTo(`/myrewards`)}>My rewards</Button>
                       </Dialog.Close>
                     </Flex>
                     <Separator size={'4'} />
