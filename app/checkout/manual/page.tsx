@@ -145,7 +145,7 @@ export default function ManualCreditCardPayment() {
         await cardPayment.attach(cardContainerRef.current);
         setCard(cardPayment);
         } else {
-          throw new Error('Card container element not found');
+          throw new Error("Card container element not found");
         }
       } catch (err) {
         setError('Failed to initialize card');
