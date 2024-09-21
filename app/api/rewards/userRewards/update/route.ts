@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     let discountUpgradeMessage = null;
 
     if (highestTier && highestTier.discount > (userRewardObject.currentDiscount?.amount || 0)) {
-      fieldsToUpdate['currentDiscount.amount'] = highestTier.discount;
+      fieldsToUpdate['currentDiscount.amount'] = highestTier?.discount;
       discountUpgradeMessage = `Nice! Your customer has been upgraded to the next rewards tier.`;
     }
 

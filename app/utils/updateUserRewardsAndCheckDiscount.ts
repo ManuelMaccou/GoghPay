@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (highestTier && highestTier.discount > (userRewardObject.currentDiscount?.amount || 0)) {
-      fieldsToUpdate['currentDiscount.amount'] = highestTier.discount;
+      fieldsToUpdate['currentDiscount.amount'] = highestTier?.discount;
     }
 
     const updatedUserReward = await UserReward.findOneAndUpdate(
