@@ -186,8 +186,8 @@ export default function ManualCreditCardPayment() {
       welcomeDiscountAmount = formData.sellerMerchant?.rewards?.welcome_reward
     }
 
-    if (formData.customer && formData.customer.currentDiscount.amount) {
-      rewardsDiscountAmount = formData.customer.currentDiscount.amount
+    if (formData.customer && formData.customer.currentDiscount?.amount) {
+      rewardsDiscountAmount = formData.customer.currentDiscount?.amount
     }
 
     const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
@@ -649,9 +649,9 @@ export default function ManualCreditCardPayment() {
               <Flex direction={'row'} width={'300px'} justify={'between'}>
                 <Text size={'5'} align={'left'}>Rewards discount:</Text>
                 {formData.customer?.currentDiscount.type === 'percent' ? (
-                  <Text size={'5'} align={'left'}><Strong>{formData.customer.currentDiscount.amount}%</Strong></Text>
+                  <Text size={'5'} align={'left'}><Strong>{formData.customer.currentDiscount?.amount}%</Strong></Text>
                 ) : formData.customer?.currentDiscount.type === 'dollar' && (
-                  <Text size={'5'} align={'left'}><Strong>${formData.customer.currentDiscount.amount}</Strong></Text>
+                  <Text size={'5'} align={'left'}><Strong>${formData.customer.currentDiscount?.amount}</Strong></Text>
                 )}
               </Flex>
             )}

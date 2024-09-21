@@ -777,14 +777,14 @@ function SellContent() {
       welcomeDiscountAmount = newSaleFormData.sellerMerchant?.rewards?.welcome_reward
     }
 
-    if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.amount) {
-      rewardsDiscountAmount = newSaleFormData.customer.currentDiscount.amount
+    if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount?.amount) {
+      rewardsDiscountAmount = newSaleFormData.customer.currentDiscount?.amount
     }
     
 
     const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
 
-    if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'percent') {
+    if (newSaleFormData.customer && newSaleFormData.customer?.currentDiscount?.type === 'percent') {
       if (totalDiscountAmount > 100) {
         priceAfterDiscount = 0
 
@@ -792,7 +792,7 @@ function SellContent() {
         priceAfterDiscount = priceNum - ((totalDiscountAmount/100) * priceNum)
       }
 
-    } else if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount.type === 'dollar') {
+    } else if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount?.type === 'dollar') {
       priceAfterDiscount = priceNum - totalDiscountAmount
       if (priceAfterDiscount < 0) {
         priceAfterDiscount = 0
@@ -1021,9 +1021,9 @@ function SellContent() {
                                 <Flex direction={'row'} width={'300px'} justify={'between'}>
                                   <Text size={'5'} align={'left'}>Rewards discount:</Text>
                                   {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                    <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                                    <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
                                   ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                    <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                                    <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong></Text>
                                   )}
                                 </Flex>
                               )}
@@ -1121,9 +1121,9 @@ function SellContent() {
                               <Flex direction={'row'} width={'300px'} justify={'between'}>
                                 <Text size={'5'} align={'left'}>Rewards discount:</Text>
                                 {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                                  <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
                                 ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                                  <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong></Text>
                                 )}
                               </Flex>
                             )}
@@ -1219,9 +1219,9 @@ function SellContent() {
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Rewards discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
                               ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                                <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong></Text>
                               )}
                             </Flex>
                           )}
@@ -1297,9 +1297,9 @@ function SellContent() {
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Rewards discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer.currentDiscount.amount}%</Strong></Text>
+                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData?.customer?.currentDiscount?.amount}%</Strong></Text>
                               ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer.currentDiscount.amount}</Strong></Text>
+                                <Text size={'5'} align={'left'}><Strong>${newSaleFormData?.customer?.currentDiscount?.amount}</Strong></Text>
                               )}
                             </Flex>
                           )}

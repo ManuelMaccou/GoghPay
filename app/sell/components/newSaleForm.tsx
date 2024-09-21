@@ -80,7 +80,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     [PaymentType.Cash]: '/paymentMethodLogos/cash.png',
   };
 
-  useEffect(() => {
+  {/*  useEffect(() => {
     async function fetchAllMerchants() {
       setIsLoading(true);
       try {
@@ -92,6 +92,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
         }
         const data: Merchant[] = await response.json();
         setMerchantsList(data);
+        console.log('merchant list:', merchantsList)
       } catch (error: unknown) {
         if (error instanceof Error) {
           setErrorMessage(error.message);
@@ -108,7 +109,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     } else {
       setSellerMerchant(merchantFromParent);
     }
-  }, [merchantFromParent, sellerMerchant])
+  }, [merchantFromParent, sellerMerchant]) */}
+
+
 
   useEffect(() => {
     if (priceInputRef.current) {
@@ -117,7 +120,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   }, [priceInputRef]);
 
   useEffect(() => {
-    const selectedTax = sellerMerchant?.taxes.find(tax => tax.default) || sellerMerchant?.taxes[0];
+    const selectedTax = sellerMerchant?.taxes?.find(tax => tax.default) || sellerMerchant?.taxes?.[0];
     setDefaultTax(selectedTax || null);
   }, [sellerMerchant])
 
@@ -153,6 +156,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
 
   useEffect(() => {
     setIsCheckingFormStatus(true);
+    
     const storedData = sessionStorage.getItem('newSaleFormData');
     
     if (storedData) {
@@ -304,7 +308,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
               {currentCustomer ? (
                 <Button variant='surface' size={'4'} style={{width: "100%"}}>
                   <PersonIcon height={'25px'} width={'25px'} /> 
-                  {user?.google?.name? user.google.name : currentCustomer.userInfo.email}
+                  {user?.google?.name ? user.google.name : currentCustomer?.userInfo.email}
                 </Button>
               ) : (
                 <Button variant='surface' size={'4'}>
@@ -482,7 +486,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                   </Flex>
                   <Dialog.Title mb={'5'}>Select payment method</Dialog.Title>
                   <VisuallyHidden><Dialog.Description>Select payment method</Dialog.Description></VisuallyHidden>
-                  {paymentMethods.length > 0 ? (
+                  {paymentMethods?.length > 0 ? (
                     <Grid
                       columns={{ initial: '2', xs: '2' }} // Responsive grid columns
                       gap="4"
