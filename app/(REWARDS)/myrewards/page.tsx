@@ -56,6 +56,7 @@ export default function ManageRewards() {
   useEffect(() => {
     const fetchCurrentUsersRewards = async () => {
       if (!ready || !authenticated || !appUser) return;
+      console.log('app user:', appUser);
   
       const accessToken = await getAccessToken();
       setIsFetchingCurrentUsersRewards(true);
@@ -72,23 +73,14 @@ export default function ManageRewards() {
           }
         );
   
-        // Handle non-JSON responses or failed `response.json()` calls
-        let responseData: Reward[];
-        try {
-          responseData = await response.json();
-        } catch (jsonError) {
-          console.error("Failed to parse JSON response", jsonError);
-          throw new Error("Invalid JSON received from the server");
-        }
-  
         if (response.ok) {
-          // Successful response with valid rewards data
-          setCurrentUserRewards(responseData);
-        } else if (response.status === 204) {
-          // No content scenario: treat it as an empty rewards list
-          setCurrentUserRewards([]);
+          if (response.status === 204) {
+            setCurrentUserRewards([]);
+          } else {
+            const userRewardsData = await response.json();
+            setCurrentUserRewards(userRewardsData);
+          }
         } else {
-          // Handle specific error statuses, for example, 401 Unauthorized or 403 Forbidden
           switch (response.status) {
             case 401:
               throw new Error("Unauthorized. Please check your credentials.");
@@ -101,7 +93,6 @@ export default function ManageRewards() {
           }
         }
       } catch (error: unknown) {
-        // Use isError helper to check if it's an instance of Error and has a message
         if (isError(error)) {
           console.error("Failed to fetch user rewards:", error.message);
           setError(`Failed to fetch rewards: ${error.message}`);
@@ -110,7 +101,6 @@ export default function ManageRewards() {
           setError("An unknown error occurred while fetching rewards.");
         }
       } finally {
-        // Ensure the loading state is reset no matter the outcome
         setIsFetchingCurrentUsersRewards(false);
       }
     };
@@ -118,7 +108,6 @@ export default function ManageRewards() {
     fetchCurrentUsersRewards();
   }, [ready, authenticated, appUser]);
   
-
   return (
     <Flex
       direction='column'
@@ -243,8 +232,8 @@ export default function ManageRewards() {
 
           
         ) : ready && !authenticated && (
-          <Button variant="ghost" style={{ width: '250px', color: "white" }} size={'4'}  onClick={() => router.push("/")}>
-            Please log in to view this page
+          <Button variant="solid" style={{ width: '250px', color: "black", backgroundColor: 'white' }} size={'4'}  onClick={() => router.push("/")}>
+            Please log in
           </Button>
         )}
         

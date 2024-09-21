@@ -54,7 +54,6 @@ function TransferContent() {
   const [transferStarted, setTransferStarted] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [redirectURL, setRedirectURL] = useState('');
-  const [newUserExperience, setNewUserExperience] = useState(false);
   const [onrampLoading, setOnrampLoading] = useState<boolean>(false);
   const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
@@ -71,14 +70,6 @@ function TransferContent() {
   const stepParam = searchParams.get('step');
 
   const { fetchBalance } = useBalance();
-
-  const handleNewUserDialog = () => {
-    // Open the new tab
-    createOnrampSession();
-
-    // Remove the URL parameter
-    router.replace('/account/transfer');
-  };
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
@@ -488,12 +479,6 @@ function TransferContent() {
   }, []);
 
   useEffect(() => {
-    if (stepParam && stepParam === 'new-user' && embeddedWallet) {
-      setNewUserExperience(true);
-    }
-  }, [stepParam, embeddedWallet]);
-
-  useEffect(() => {
     const fetchMerchant = async (id: string) => {
       try {
         const privyId = id
@@ -851,31 +836,6 @@ function TransferContent() {
         {ready && (
           authenticated ? (
             <>
-              <Dialog.Root open={newUserExperience} onOpenChange={setNewUserExperience}>
-                <Dialog.Trigger>
-                  <Button style={{ display: 'none' }} />
-                </Dialog.Trigger>
-
-                <Dialog.Content maxWidth="450px">
-                  <Dialog.Title>Welcome to the Gogh community!</Dialog.Title>
-                  <Dialog.Description size="2" mb="4">
-                    By making purchases in crypto, you&apos;re helping small businesses succeed by allowing them to keep more of their revenue instead of paying bank fees. Buy crypto below.
-                  </Dialog.Description>
-
-                  <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
-                    <Dialog.Close>
-                      <Button variant="ghost"  onClick={() => router.replace('/account/transfer')}>
-                        Close
-                      </Button>
-                    </Dialog.Close>
-                    <Dialog.Close>
-                      <Button onClick={handleNewUserDialog} style={{backgroundColor: '#0051FD', width: '200px'}}>
-                        Buy crypto
-                      </Button>
-                    </Dialog.Close>
-                  </Flex>
-                </Dialog.Content>
-              </Dialog.Root>
 
               <Text>
                 We integrate with Coinbase to offer quick, safe transfers from your bank.
