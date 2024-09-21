@@ -150,6 +150,7 @@ function SellContent() {
   }, [user])
 
   const updateRewards = useCallback(async (newSaleFormData: SaleFormData) => {
+    console.log('updating rewards with data:', newSaleFormData);
     const accessToken = await getAccessToken();
 
     try {
