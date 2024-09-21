@@ -356,14 +356,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
                       <BellIcon />
                     </Callout.Icon>
                     <Callout.Text>
-                        You haven&apos;t made any purchases yet. If you think this is a mistake,{" "}
-                        <Link 
-                          href='mailto:payments@ongogh.com?subject=Purchases%20inquiry&body=Hello%2C%0A%0AI%20don%27t%20see%20expected%20purchases%20listed%20in%20my%20account.%20Here%20are%20my%20details%3A%0A%0AEmail%20address%3A%20%5B%20ENTER%20EMAIL%20%5D%0A%0APurchase%20method%3A%20%5B%20ENTER%20%22CREDIT%20CARD%22%2C%20%22APPLE%20PAY%22%2C%20%22GOOGLE%20PAY%22%2C%20%22CRYPTO%22%20%5D%20%0A%0ACrypto%20wallet%20address%3A%20%5B%20ENTER%20WALLET%20ADDRESS%20IF%20APPLICABLE%20%5D%0A%0A%5B%20ENTER%20ANY%20OTHER%20DETAILS%20%5D' 
-                          target='_blank' 
-                          rel='noopener noreferrer'
-                        >
-                          please contact us.
-                        </Link>
+                        You haven&apos;t made any purchases yet.
                       </Callout.Text>
                   </Callout.Root>
                 </>
