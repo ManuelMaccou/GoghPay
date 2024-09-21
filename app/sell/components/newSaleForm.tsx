@@ -85,14 +85,17 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       setIsLoading(true);
       try {
         const response = await fetch('/api/merchant/all', {
-          next: {revalidate: 1}
+          next: { revalidate: 1 }
         });
         if (!response.ok) {
           throw new Error(`Error fetching merchants: ${response.statusText}`);
         }
         const data: Merchant[] = await response.json();
-        setMerchantsList(data);
-        console.log('merchant list:', merchantsList)
+        if (Array.isArray(data)) {
+          setMerchantsList(data);
+        } else {
+          throw new Error("Invalid merchant data format");
+        }
       } catch (error: unknown) {
         if (error instanceof Error) {
           setErrorMessage(error.message);
@@ -109,7 +112,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     } else {
       setSellerMerchant(merchantFromParent);
     }
-  }, [merchantFromParent, sellerMerchant]) */}
+  }, [merchantFromParent, sellerMerchant]); */}
 
 
 
@@ -158,7 +161,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     setIsCheckingFormStatus(true);
     
     const storedData = sessionStorage.getItem('newSaleFormData');
-    
+    try {
     if (storedData) {
       const parsedData: SaleFormData = JSON.parse(storedData);
       if (parsedData.hasOwnProperty('tax') && parsedData.tax > 0) {
@@ -197,6 +200,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       }
       setIsTaxChecked(formData.tax > 0);
     }
+  } catch (error) {
+    setErrorMessage("Invalid saved form data.");
+  }
     setIsCheckingFormStatus(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, checkoutStatus, merchantFromParent]);
