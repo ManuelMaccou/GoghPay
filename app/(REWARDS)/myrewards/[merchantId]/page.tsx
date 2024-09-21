@@ -103,8 +103,8 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           } else {
               console.error('Unknown error:', error);
           }
+          return;
         }
-        return;
       }
     },
     onError: (error) => {
@@ -400,16 +400,16 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         });
 
         if (response.ok) {
-          const userRewardsData = await response.json();
-          setCurrentUserMerchantRewards(userRewardsData);
-        } else {
-          if (response.status === 404) {
+          if (response.status === 204) {
+            console.log('creating new reward')
             await createNewRewards();
           } else {
-            console.error('Failed to fetch rewards:', response.statusText);
+            const userRewardsData = await response.json();
+            setCurrentUserMerchantRewards(userRewardsData);
           }
+        } else {
+          console.error('Failed to fetch rewards:', response.statusText);
         }
-
       } catch (error: unknown) {
         if (isError(error)) {
           console.error('Error fetching merchant rewards:', error.message);

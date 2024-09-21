@@ -52,7 +52,7 @@ export async function GET(
 
     if (!userReward) {
       // No existing relationship found
-      return NextResponse.json({ message: 'No existing reward relationship found' }, { status: 404 });
+      return new NextResponse(null, { status: 204 });
     }
 
     // If the code exists and matches the merchant's code, update lastVisit
