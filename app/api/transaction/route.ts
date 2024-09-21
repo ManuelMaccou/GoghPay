@@ -6,7 +6,13 @@ export async function POST(req: NextRequest) {
   await connectToDatabase();
 
   try {
-    const { buyerId, buyerPrivyId, merchantId, productName, discountType, discountAmount, welcomeDiscount, productPrice, paymentType, tipAmount, salesTax, status, transactionHash } = await req.json();
+    let { buyerId, buyerPrivyId, merchantId, productName, discountType, discountAmount, welcomeDiscount, productPrice, paymentType, tipAmount, salesTax, status, transactionHash } = await req.json();
+    
+    discountAmount = discountAmount ?? 0;
+    welcomeDiscount = welcomeDiscount ?? 0;
+    tipAmount = tipAmount ?? 0;
+    salesTax = salesTax ?? 0;
+    
     const privyId = req.headers.get('x-user-id');
 
     if (!privyId) {
