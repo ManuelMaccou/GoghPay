@@ -57,11 +57,13 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     paymentMethod: formData?.paymentMethod || PaymentType.None,
   });
 
+  
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<String>("");
   const priceInputRef = useRef<HTMLInputElement>(null);
   const [ merchantsList, setMerchantsList] = useState<Merchant[]>([]);
-  const [ sellerMerchant, setSellerMerchant ] = useState<Merchant | null>(null);
+  //const [ sellerMerchant, setSellerMerchant ] = useState<Merchant | null>(null);
   const [ defaultTax, setDefaultTax ] = useState<Tax | null>(null);
   const [ isTaxChecked, setIsTaxChecked ] = useState(true);
   const [ currentCustomer, setCurrentCustomer ] = useState<RewardsCustomer | null>(null);
@@ -115,6 +117,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   }, [merchantFromParent, sellerMerchant]); */}
 
 
+  useEffect(() => {
+    console.log('seller merchant on new sale form:', localFormData.sellerMerchant)
+  }, [localFormData ])
 
   useEffect(() => {
     if (priceInputRef.current) {
@@ -123,9 +128,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   }, [priceInputRef]);
 
   useEffect(() => {
-    const selectedTax = sellerMerchant?.taxes?.find(tax => tax.default) || sellerMerchant?.taxes?.[0];
+    const selectedTax = localFormData.sellerMerchant?.taxes?.find(tax => tax.default) || localFormData.sellerMerchant?.taxes?.[0];
     setDefaultTax(selectedTax || null);
-  }, [sellerMerchant])
+  }, [localFormData.sellerMerchant])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -143,12 +148,6 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       const length = localFormData.price.length;
       priceInputRef.current.setSelectionRange(0, length);
     }
-  };
-
-  const handleSelectChange = (value: string) => {
-    const selectedMerchant = merchantsList.find(merchant => merchant._id === value) || null;
-    setSellerMerchant(selectedMerchant);
-    setlocalFormData(prevState => ({ ...prevState, merchant: value, sellerMerchant: selectedMerchant  }));
   };
 
   const handleSelectCustomer = (customer: RewardsCustomer | null) => {
@@ -255,16 +254,14 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       return;
     }
 
-    if (!sellerMerchant) {
+    if (!localFormData.sellerMerchant) {
       setErrorMessage("There was problem loading seller details. Please refresh the page and try again.");
       setIsLoading(false);
       return;
     }
 
-
-
     const taxRate = isTaxChecked && defaultTax ? defaultTax.rate : 0;
-    setlocalFormData(prevState => ({ ...prevState, tax: taxRate, sellerMerchant }));
+    setlocalFormData(prevState => ({ ...prevState, tax: taxRate }));
 
     // All validations passed; open the payments dialog
     setIsPaymentsDialogOpen(true);
@@ -292,23 +289,6 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       {!isCheckingFormStatus && (
         <form onSubmit={handleSubmit} className={styles.formGroup}>
           <Flex direction={'column'} justify={'center'} height={'100%'}>
-            {merchantFromParent.admin && (
-              <>
-                <label htmlFor="merchant" className={styles.formLabel}>Select Merchant</label>
-                <Select.Root onValueChange={handleSelectChange}>
-                  <Select.Trigger variant="surface" placeholder="Select a merchant" mb={'5'} mt={'1'} />
-                  <Select.Content>
-                    <Select.Group>
-                        {merchantsList.map(merchant => (
-                          <Select.Item key={merchant._id} value={merchant._id}>
-                            {merchant.name}
-                          </Select.Item>
-                        ))}
-                    </Select.Group>
-                  </Select.Content>
-                </Select.Root>
-              </>
-            )}
             <Dialog.Root open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
               <Dialog.Trigger style={{marginBottom: '20px'}}>
               {currentCustomer ? (
