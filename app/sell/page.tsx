@@ -231,6 +231,7 @@ function SellContent() {
           transactionIdToUpdate,
           statusToSave
         );
+        console.log('check update rewards. newSaleFormData:', newSaleFormData, 'rewards customer:', rewardsCustomer);
         if (newSaleFormData && rewardsCustomer && rewardsCustomer !== '') {
           await updateRewards(newSaleFormData)
         } 

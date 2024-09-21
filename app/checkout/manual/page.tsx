@@ -433,6 +433,7 @@ export default function ManualCreditCardPayment() {
           console.error('Error updating transaction details:', updateError);
         }
 
+        console.log('check update rewards. Form Data:', formData);
         if (formData && formData.customer) {
           try {
             const updatedRewards = await updateRewards(formData);
