@@ -200,7 +200,7 @@ export default function ManageRewards() {
                   />
 
                   ): (
-                    <Text>{reward.merchantInfo?.name ? reward.merchantInfo?.name : ''}</Text>
+                    <Text style={{color: 'white'}}>{reward.merchantInfo?.name ? reward.merchantInfo?.name : ''}</Text>
                   )}
                   
                 </Flex>

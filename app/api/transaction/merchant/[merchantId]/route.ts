@@ -16,9 +16,14 @@ export async function GET(req: NextRequest, context: { params: Params }) {
   const pstTimeZone = 'America/Los_Angeles';
   const startOfTodayPST = fromZonedTime(addMinutes(startOfDay(now), 1), pstTimeZone);
 
-  const totalTransactions = await Transaction.find({ merchant: merchantId });
+  const totalTransactions = await Transaction.find({ 
+    merchant: merchantId,
+    'payment.status': { $in: ['COMPLETE', 'COMPLETE_OFFLINE'] }
+  });
+
   const todaysTransactions = await Transaction.find({
     merchant: merchantId,
+    'payment.status': { $in: ['COMPLETE', 'COMPLETE_OFFLINE'] },
     createdAt: { $gte: startOfTodayPST },
   });
 
