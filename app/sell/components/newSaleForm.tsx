@@ -80,18 +80,22 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     [PaymentType.Cash]: '/paymentMethodLogos/cash.png',
   };
 
-  useEffect(() => {
+  {/*  useEffect(() => {
     async function fetchAllMerchants() {
       setIsLoading(true);
       try {
         const response = await fetch('/api/merchant/all', {
-          next: {revalidate: 1}
+          next: { revalidate: 1 }
         });
         if (!response.ok) {
           throw new Error(`Error fetching merchants: ${response.statusText}`);
         }
         const data: Merchant[] = await response.json();
-        setMerchantsList(data);
+        if (Array.isArray(data)) {
+          setMerchantsList(data);
+        } else {
+          throw new Error("Invalid merchant data format");
+        }
       } catch (error: unknown) {
         if (error instanceof Error) {
           setErrorMessage(error.message);
@@ -108,7 +112,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
     } else {
       setSellerMerchant(merchantFromParent);
     }
-  }, [merchantFromParent, sellerMerchant])
+  }, [merchantFromParent, sellerMerchant]); */}
+
+
 
   useEffect(() => {
     if (priceInputRef.current) {
@@ -117,7 +123,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   }, [priceInputRef]);
 
   useEffect(() => {
-    const selectedTax = sellerMerchant?.taxes.find(tax => tax.default) || sellerMerchant?.taxes[0];
+    const selectedTax = sellerMerchant?.taxes?.find(tax => tax.default) || sellerMerchant?.taxes?.[0];
     setDefaultTax(selectedTax || null);
   }, [sellerMerchant])
 
@@ -153,8 +159,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
 
   useEffect(() => {
     setIsCheckingFormStatus(true);
-    const storedData = sessionStorage.getItem('newSaleFormData');
     
+    const storedData = sessionStorage.getItem('newSaleFormData');
+    try {
     if (storedData) {
       const parsedData: SaleFormData = JSON.parse(storedData);
       if (parsedData.hasOwnProperty('tax') && parsedData.tax > 0) {
@@ -193,6 +200,9 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       }
       setIsTaxChecked(formData.tax > 0);
     }
+  } catch (error) {
+    setErrorMessage("Invalid saved form data.");
+  }
     setIsCheckingFormStatus(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, checkoutStatus, merchantFromParent]);
@@ -304,7 +314,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
               {currentCustomer ? (
                 <Button variant='surface' size={'4'} style={{width: "100%"}}>
                   <PersonIcon height={'25px'} width={'25px'} /> 
-                  {user?.google?.name? user.google.name : currentCustomer.userInfo.email}
+                  {user?.google?.name ? user.google.name : currentCustomer?.userInfo.email}
                 </Button>
               ) : (
                 <Button variant='surface' size={'4'}>
@@ -482,7 +492,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                   </Flex>
                   <Dialog.Title mb={'5'}>Select payment method</Dialog.Title>
                   <VisuallyHidden><Dialog.Description>Select payment method</Dialog.Description></VisuallyHidden>
-                  {paymentMethods.length > 0 ? (
+                  {paymentMethods?.length > 0 ? (
                     <Grid
                       columns={{ initial: '2', xs: '2' }} // Responsive grid columns
                       gap="4"

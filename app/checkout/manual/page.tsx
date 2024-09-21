@@ -145,7 +145,7 @@ export default function ManualCreditCardPayment() {
         await cardPayment.attach(cardContainerRef.current);
         setCard(cardPayment);
         } else {
-          throw new Error('Card container element not found');
+          throw new Error("Card container element not found");
         }
       } catch (err) {
         setError('Failed to initialize card');
@@ -186,8 +186,8 @@ export default function ManualCreditCardPayment() {
       welcomeDiscountAmount = formData.sellerMerchant?.rewards?.welcome_reward
     }
 
-    if (formData.customer && formData.customer.currentDiscount.amount) {
-      rewardsDiscountAmount = formData.customer.currentDiscount.amount
+    if (formData.customer && formData.customer.currentDiscount?.amount) {
+      rewardsDiscountAmount = formData.customer.currentDiscount?.amount
     }
 
     const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
@@ -278,8 +278,8 @@ export default function ManualCreditCardPayment() {
           buyerPrivyId: formData?.sellerMerchant?.privyId,
           productName: formData?.product,
           productPrice: formData?.price,
-          discountType: formData?.customer?.currentDiscount.type,
-          discountAmount: formData?.customer?.currentDiscount.amount,
+          discountType: formData?.customer?.currentDiscount?.type,
+          discountAmount: formData?.customer?.currentDiscount?.amount,
           welcomeDiscount: welcomeDiscount,
           salesTax: calculatedSalesTax,
           paymentType: 'ManualEntry',
@@ -649,9 +649,9 @@ export default function ManualCreditCardPayment() {
               <Flex direction={'row'} width={'300px'} justify={'between'}>
                 <Text size={'5'} align={'left'}>Rewards discount:</Text>
                 {formData.customer?.currentDiscount.type === 'percent' ? (
-                  <Text size={'5'} align={'left'}><Strong>{formData.customer.currentDiscount.amount}%</Strong></Text>
+                  <Text size={'5'} align={'left'}><Strong>{formData.customer.currentDiscount?.amount}%</Strong></Text>
                 ) : formData.customer?.currentDiscount.type === 'dollar' && (
-                  <Text size={'5'} align={'left'}><Strong>${formData.customer.currentDiscount.amount}</Strong></Text>
+                  <Text size={'5'} align={'left'}><Strong>${formData.customer.currentDiscount?.amount}</Strong></Text>
                 )}
               </Flex>
             )}
