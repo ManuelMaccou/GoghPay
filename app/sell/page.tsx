@@ -268,21 +268,6 @@ function SellContent() {
 
     // If the transaction is successful and we have a transaction ID, fetch payment details
     if (statusParam === 'success' && merchantId && transactionIdToUpdate && currentUser) {
-      const storedFormData = localStorage.getItem('newSaleFormData');
-
-      if (storedFormData) {
-        try {
-          const parsedFormData = JSON.parse(storedFormData);
-  
-          // Set the state with the parsed form data
-          setNewSaleFormData(parsedFormData);
-  
-        } catch (error) {
-          console.error('Failed to parse newSaleFormData from localStorage', error);
-        }
-      } else {
-        console.log('stored data from localStorage not found');
-      }
 
       setShowNewSaleForm(false);
       setSuccessMessage1(null);
@@ -783,6 +768,16 @@ function SellContent() {
       setNewSaleFormData(parsedData);
     }
     console.log('session data:', sessionStorage)
+  }, []);
+
+  useEffect(() => {
+    const storedData = localStorage.getItem('newSaleFormData');
+    
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setNewSaleFormData(parsedData);
+    }
+    console.log('session data:', localStorage)
   }, []);
 
   useEffect(() => {
