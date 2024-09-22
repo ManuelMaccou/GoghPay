@@ -206,7 +206,6 @@ function SellContent() {
       transactionIdToUpdate: string,
       statusToSave: string,
       rewardsCustomer: string,
-      newSaleFormData: SaleFormData | null,
     ) => {  
       try {
         console.log('fetchAndUpdatePaymentDetails is running');
@@ -238,6 +237,9 @@ function SellContent() {
         } 
 
         sessionStorage.removeItem('newSaleFormData');
+        localStorage.removeItem('newSaleFormData');
+        console.log('removed local storage')
+
         resetUrl("/sell");
         setNewSaleFormData(null);
         setShowNewSaleForm(true);
@@ -251,6 +253,7 @@ function SellContent() {
   useEffect(() => {
     if (!currentUser) return;
     if (!newSaleFormData) return;
+    console.log('new form data from local storage:', localStorage.getItem('newSaleFormData'));
 
     // Extract query parameters from the URL
     const statusParam = searchParams.get('status');
@@ -265,6 +268,22 @@ function SellContent() {
 
     // If the transaction is successful and we have a transaction ID, fetch payment details
     if (statusParam === 'success' && merchantId && transactionIdToUpdate && currentUser) {
+      const storedFormData = localStorage.getItem('newSaleFormData');
+
+      if (storedFormData) {
+        try {
+          const parsedFormData = JSON.parse(storedFormData);
+  
+          // Set the state with the parsed form data
+          setNewSaleFormData(parsedFormData);
+  
+        } catch (error) {
+          console.error('Failed to parse newSaleFormData from localStorage', error);
+        }
+      } else {
+        console.log('stored data from localStorage not found');
+      }
+
       setShowNewSaleForm(false);
       setSuccessMessage1(null);
       setSuccessMessage2(null);
@@ -273,7 +292,7 @@ function SellContent() {
 
       setSquarePosSuccessMessage(messageParam);
 
-      fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer, newSaleFormData);
+      fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer);
     } else if (statusParam === 'error' && messageParam) {
       setShowNewSaleForm(true);
       setSquarePosErrorMessage(messageParam);
@@ -744,6 +763,10 @@ function SellContent() {
       setShowSquareDialog(true);
       sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
       console.log('session storage:', sessionStorage)
+
+      localStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
+      console.log('local storage:', localStorage.getItem('newSaleFormData'));
+
       router.replace('/sell?status=square');
 
     } else if (method === 'ManualEntry') {
