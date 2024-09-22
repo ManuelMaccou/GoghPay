@@ -205,7 +205,8 @@ function SellContent() {
       merchantId: string,
       transactionIdToUpdate: string,
       statusToSave: string,
-      rewardsCustomer: string
+      rewardsCustomer: string,
+      newSaleFormData: SaleFormData | null,
     ) => {  
       try {
         console.log('fetchAndUpdatePaymentDetails is running');
@@ -249,12 +250,13 @@ function SellContent() {
 
   useEffect(() => {
     if (!currentUser) return;
+    if (!newSaleFormData) return;
+
     // Extract query parameters from the URL
     const statusParam = searchParams.get('status');
     const statusToSave = searchParams.get('statusToSave') || 'PENDING';
     const clientTransactionId = searchParams.get('clientTransactionId') || '';
     const serverTransactionId = searchParams.get('serverTransactionId');
-    console.log('servertransactionId:', serverTransactionId);
 
     const messageParam = searchParams.get('message') || '';
     const merchantId = searchParams.get('merchantId');
@@ -271,12 +273,12 @@ function SellContent() {
 
       setSquarePosSuccessMessage(messageParam);
 
-      fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer);
+      fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer, newSaleFormData);
     } else if (statusParam === 'error' && messageParam) {
       setShowNewSaleForm(true);
       setSquarePosErrorMessage(messageParam);
     }
-  }, [searchParams, currentUser, fetchAndUpdatePaymentDetails]);
+  }, [searchParams, currentUser, fetchAndUpdatePaymentDetails, newSaleFormData]);
 
   const fetchSquarePaymentId = async (
     serverTransactionId: string,
