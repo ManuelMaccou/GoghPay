@@ -14,6 +14,8 @@ import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { useSearchParams } from "next/navigation";
+import * as Sentry from "@sentry/browser";
+import { ApiError } from '@/app/utils/ApiError';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -142,16 +144,29 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
         setAppUser(data.updatedUser);
       } else {
         const errorMessage = await response.text();
+        const apiError = new ApiError(
+          `Adding Square user Id to Gogh user - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+          response.status,
+          data
+        );
+        Sentry.captureException(apiError, {
+          extra: {
+            privyId: currentUser?.privyId ?? 'unknown privyId'
+          }
+        });
+
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
         console.error(`Failed to update Gogh user: ${errorMessage}`);
       }
 
     } catch (err) {
+      Sentry.captureException(err);
       if (isError(err)) {
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
         console.error(`Error syncing Square customer with Gogh: ${err.message}`);
@@ -180,20 +195,71 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
 
+      const apiError = new ApiError(
+        `Creating a new Square customer - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+        response.status,
+        data
+      );
+
+      if (response.ok) {
         await updateGoghUserWithSquareId(data.newSquareCustomer?.id)
+
       } else if (response.status === 503) {
+        Sentry.captureException(apiError, {
+          extra: {
+            responseStatus: response?.status ?? 'unknown',
+            responseMessage: data?.message || 'Unknown Error',
+            email: currentUser?.email ?? 'unknown email',
+            merchantId: merchant?._id ?? 'unknown merchant Id',
+            goghUserId: currentUser?._id ?? 'unknown userId',
+            privyId: currentUser?.privyId ?? 'unknown',
+            },
+        });
+
         setErrorCheckingSquareDirectory('The was an error with Square. Please wait a few minutes and try again.');
       } else if (response.status === 401) {
+        Sentry.captureException(apiError, {
+          extra: {
+            responseStatus: response?.status ?? 'unknown',
+            responseMessage: data?.message || 'Unknown Error',
+            email: currentUser?.email ?? 'unknown email',
+            merchantId: merchant?._id ?? 'unknown merchant Id',
+            goghUserId: currentUser?._id ?? 'unknown userId',
+            privyId: currentUser?.privyId ?? 'unknown',
+            },
+        });
+
         setErrorCheckingSquareDirectory('Unauthorized.');
       } else {
+        Sentry.captureException(apiError, {
+          extra: {
+            responseStatus: response?.status ?? 'unknown',
+            responseMessage: data?.message || 'Unknown Error',
+            email: currentUser?.email ?? 'unknown email',
+            merchantId: merchant?._id ?? 'unknown merchant Id',
+            goghUserId: currentUser?._id ?? 'unknown userId',
+            privyId: currentUser?.privyId ?? 'unknown',
+            },
+        });
+
         const errorMessage = await response.text();
         console.error(`Failed to create Square customer: ${errorMessage}`);
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
       }
     } catch (err) {
+      Sentry.captureException(err, {
+          extra: {
+            message: err instanceof Error ? err.message : 'Unknown error',
+            stack: err instanceof Error ? err.stack : undefined,
+            email: currentUser?.email ?? 'unknown email',
+            merchantId: merchant?._id ?? 'unknown merchant Id',
+            goghUserId: currentUser?._id ?? 'unknown userId',
+            privyId: currentUser?.privyId ?? 'unknown',
+            },
+        });
+
       if (isError(err)) {
         console.error(`Error creating new square customer: ${err.message}`);
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
@@ -220,29 +286,32 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         },
       });
       if (response.ok) {
-        const data = await response.json();
-        // Update the user with the returned customer ID
-        if (data.customers && data.customers.length > 0) {
-          await updateGoghUserWithSquareId(data.customers[0].id);
-        } else {
+        if (response.status === 204) {
           await createNewSquareCustomer();
+        } else {
+          const data = await response.json();
+          if (data.customers && data.customers.length > 0) {
+            await updateGoghUserWithSquareId(data.customers[0].id);
+          } else {
+            await createNewSquareCustomer();
+          }
         }
-
-      } else if (response.status === 404) {
-        // Add the user to Square.
-        await createNewSquareCustomer();
       } else {
         const errorMessage = await response.text();
-        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
+        setErrorCheckingSquareDirectory(
+          'Failed to check in. Please re-scan QR code and try again.'
+        );
+        Sentry.captureMessage(`Error searching Square directory: ${errorMessage}`);
         console.error(`Error searching Square directory: ${errorMessage}`);
       }
-
     } catch (err) {
+      setErrorCheckingSquareDirectory(
+        'Failed to check in. Please re-scan QR code and try again.'
+      );
+      Sentry.captureException(err);
       if (isError(err)) {
-        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
         console.error(`Error searching Square directory: ${err.message}`);
       } else {
-        setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
         console.error('Error searching Square directory');
       }
     } finally {
@@ -353,18 +422,34 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           })
         });
 
-        if (response.ok) {
-          const userRewardsData = await response.json();
+        const userRewardsData = await response.json();
 
+        if (response.ok) {
+         
           if (userRewardsData?.userReward) {
             setCurrentUserMerchantRewards(userRewardsData.userReward);
           } else {
             console.error('No valid user reward data returned');
           }
         } else {
+          const apiError = new ApiError(
+            `Creating new user reward record - ${response.statusText} - ${userRewardsData.message || 'Unknown Error'}`,
+            response.status,
+            userRewardsData
+          );
+          Sentry.captureException(apiError, {
+            extra: {
+              responseStatus: response?.status ?? 'unknown',
+              responseMessage: userRewardsData?.message || 'Unknown Error',
+              privyId: currentUser?.privyId ?? 'uknown',
+              customerId: currentUser._id ?? 'unknown',
+              merchantId: merchantId ?? 'unknown',
+            },
+          });
           console.error('Failed to create new reward:', response.statusText);
         }
       } catch (error: unknown) {
+        Sentry.captureException(error);
         if (isError(error)) {
           console.error('Error fetching merchant rewards:', error.message);
         } else {
@@ -401,7 +486,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
         if (response.ok) {
           if (response.status === 204) {
-            console.log('creating new reward')
             await createNewRewards();
           } else {
             const userRewardsData = await response.json();
@@ -411,6 +495,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           console.error('Failed to fetch rewards:', response.statusText);
         }
       } catch (error: unknown) {
+        Sentry.captureException(error);
         if (isError(error)) {
           console.error('Error fetching merchant rewards:', error.message);
         } else {

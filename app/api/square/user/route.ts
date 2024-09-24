@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
       return new NextResponse(JSON.stringify({ customers: sanitizedCustomers }), { status: 200 });
     } else {
-      return new NextResponse('No customers found', { status: 404 });
+      return new Response(null, { status: 204 });
     }
 
   } catch (error) {
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       
       return new NextResponse(JSON.stringify({ newSquareCustomer: sanitizedCustomer }), { status: 200 });
     } else {
-      return new NextResponse('Error creating customer', { status: 404 });
+      return new NextResponse('There was an error checking in and we are looking into it.', { status: 404 });
     }
 
   } catch (error) {
