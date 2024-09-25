@@ -213,6 +213,7 @@ function SellContent() {
 
         if (serverTransactionId) {
           // Fetch Square payment ID using the server transaction ID
+          // Move this to callback code. Update the transaction from the call back code.
           const fetchedSquarePaymentId = await fetchSquarePaymentId(
             serverTransactionId,
             merchantId
@@ -256,34 +257,44 @@ function SellContent() {
     console.log('new form data from local storage:', localStorage.getItem('newSaleFormData'));
 
     // Extract query parameters from the URL
+    // Provided by Square. Can be done in the callback code
     const statusParam = searchParams.get('status');
     const statusToSave = searchParams.get('statusToSave') || 'PENDING';
     const clientTransactionId = searchParams.get('clientTransactionId') || '';
     const serverTransactionId = searchParams.get('serverTransactionId');
 
+    // This can go in the cookie
     const messageParam = searchParams.get('message') || '';
     const merchantId = searchParams.get('merchantId');
     const transactionIdToUpdate = searchParams.get('goghTransactionId');
     const rewardsCustomer = searchParams.get('rewardsCustomer') || '';
 
-    // If the transaction is successful and we have a transaction ID, fetch payment details
+    // Pass success status from callback if all functions were performed correctly
+    // if not, give a status of error with a user friendly message if needed. Or simply
+    // log it if it's not critical and handle it manually while you figure out how to fix it.
     if (statusParam === 'success' && merchantId && transactionIdToUpdate && currentUser) {
 
-      setShowNewSaleForm(false);
-      setSuccessMessage1(null);
-      setSuccessMessage2(null);
-      setErrorMessage(null);
-      setDiscountUpgradeMessage(null)
+      setShowNewSaleForm(false); // keep 
+      setSuccessMessage1(null); // keep and pass success messages from the callback code
+      setSuccessMessage2(null); // keep and pass success messages from the callback code
+      setErrorMessage(null); // keep and pass error messages from the callback code
+      setDiscountUpgradeMessage(null) // keep and pass success messages from the callback code
 
-      setSquarePosSuccessMessage(messageParam);
+      setSquarePosSuccessMessage(messageParam); // keep and pass success messages from the callback code. Currently: "Payment successful"
 
+      // Move this to backend
       fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer);
     } else if (statusParam === 'error' && messageParam) {
       setShowNewSaleForm(true);
-      setSquarePosErrorMessage(messageParam);
+      if (messageParam === "Error: payment_canceled") {
+        setSquarePosErrorMessage('Payment canceled');
+      } else {
+        setSquarePosErrorMessage(messageParam);
+      }
     }
   }, [searchParams, currentUser, fetchAndUpdatePaymentDetails, newSaleFormData]);
 
+  // Move this to callback code
   const fetchSquarePaymentId = async (
     serverTransactionId: string,
     merchantId: string
@@ -1409,7 +1420,7 @@ function SellContent() {
                       <Callout.Icon>
                         <RocketIcon height={'25'} width={'25'} />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}>
+                      <Callout.Text size={'4'}>
                         {discountUpgradeMessage}
                       </Callout.Text>
                     </Callout.Root>
@@ -1420,7 +1431,7 @@ function SellContent() {
                     <Callout.Icon>
                       <InfoCircledIcon />
                     </Callout.Icon>
-                    <Callout.Text size={'6'}>
+                    <Callout.Text size={'4'}>
                       {successMessage1}
                     </Callout.Text>
                   </Callout.Root>
@@ -1431,7 +1442,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}>
+                      <Callout.Text size={'4'}>
                         {successMessage2}
                       </Callout.Text>
                     </Callout.Root>
@@ -1442,7 +1453,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}>
+                      <Callout.Text size={'4'}>
                         {squarePosSuccessMessage}
                       </Callout.Text>
                     </Callout.Root>
@@ -1453,7 +1464,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}  wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
+                      <Callout.Text size={'4'}  wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
                         {errorMessage}
                       </Callout.Text>
                     </Callout.Root>
@@ -1464,7 +1475,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'} wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
+                      <Callout.Text size={'4'} wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
                         {squarePosErrorMessage}
                       </Callout.Text>
                     </Callout.Root>
