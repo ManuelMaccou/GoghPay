@@ -324,7 +324,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     // Run the API sync only if `currentUser` is available and has not been synced yet
     if (!currentUser) return;
     if (currentUser && !currentUser?.email) {
-      setErrorCheckingSquareDirectory('Please connect using an email address to participate in Rewards')
+      setErrorCheckingSquareDirectory('Please log in using an email address to participate in Rewards')
       return;
     }
 

@@ -3,6 +3,7 @@
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { User, Transaction } from "@/app/types/types";
+import { ApiError } from "@/app/utils/ApiError";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, BellIcon } from "@radix-ui/react-icons";
@@ -11,6 +12,7 @@ import axios from "axios";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
+import * as Sentry from "@sentry/browser";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -71,24 +73,28 @@ export default function Sales({ params }: { params: { userId: string } }) {
       }
       
       if (chainIdNum !== null && chainId !== `eip155:${chainIdNum}`) {
-        try {
-          await wallet.switchChain(chainIdNum);
-        } catch (error: unknown) {
-          console.error('Error switching chain:', error);
-      
-          if (typeof error === 'object' && error !== null && 'code' in error) {
-            const errorCode = (error as { code: number }).code;
-            if (errorCode === 4001) {
-              alert('You need to switch networks to proceed.');
+        if (wallet && typeof wallet.switchChain === 'function') {
+          try {
+            await wallet.switchChain(chainIdNum);
+          } catch (error: unknown) {
+            console.error('Error switching chain:', error);
+            
+            if (typeof error === 'object' && error !== null && 'code' in error) {
+              const errorCode = (error as { code: number }).code;
+              if (errorCode === 4001) {
+                alert('You need to switch networks to proceed.');
+              } else {
+                alert('Failed to switch the network. Please try again.');
+              }
             } else {
-              alert('Failed to switch the network. Please try again.');
+              console.log('An unexpected error occurred.');
             }
-          } else {
-            console.log('An unexpected error occurred.');
+            return;
           }
-          return;
+        } else {
+          console.error('Wallet is undefined or does not support switchChain');
         }
-      };
+      }
     },
     onError: (error) => {
       console.error("Privy login error:", error);
@@ -187,15 +193,25 @@ export default function Sales({ params }: { params: { userId: string } }) {
         setIsFetchingTransactions(true)
         const response = await fetch(`/api/transaction/buyer/${currentUser._id}`);
 
+        if (response.status === 204) {
+          setNoPurchases(true)
+          return;
+        }
+
         if (!response.ok) {
-          if (response.status === 404) {
-            setNoPurchases(true)
-          }
+          const apiError = new ApiError(
+            `Fetching purchases for userId: ${currentUser?._id ?? 'uknown user'} - ${response.statusText}`,
+            response.status,
+            null
+          );
+
+          Sentry.captureException(apiError);
+
           throw new Error(`Unexpected status: ${response.status}`);
         }
 
         const { totalTransactions } = await response.json();
-
+       
         const transactionsWithFinalPrice = totalTransactions.map((transaction: Transaction) => {
           const { product, payment, discount } = transaction;
 
@@ -203,7 +219,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
           let rewardsDiscountAmount = 0
           let priceAfterDiscount = product.price
 
-          if (discount && discount.amount) {
+          if (discount && discount.welcome) {
             welcomeDiscountAmount = discount.welcome
           }
 
@@ -229,8 +245,10 @@ export default function Sales({ params }: { params: { userId: string } }) {
             }
           }
   
-          // Formula: (product price - discount) + tip + tax
-          const finalPrice = priceAfterDiscount + (payment.tipAmount || 0) + payment.salesTax;
+          const finalPrice =
+            Number(priceAfterDiscount ?? 0) +
+            Number(payment.tipAmount ?? 0) +
+            Number(payment.salesTax ?? 0);
           console.log('finalPrice:', finalPrice)
           
           return {
@@ -248,6 +266,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
         setTotalTransactions(sortedTotalTransactions);
 
       } catch (err) {
+        Sentry.captureException(err);
+
         if (isError(err)) {
           setError(`Error fetching buyer transactions: ${err.message}`);
         } else {
