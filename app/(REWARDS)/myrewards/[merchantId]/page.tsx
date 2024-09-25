@@ -29,7 +29,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   
-  const { appUser, setIsFetchingUser, setAppUser } = useUser();
+  const { appUser, setAppUser } = useUser();
 
   const [error, setError] = useState<string | null>(null);
   const [errorCheckingSquareDirectory, setErrorCheckingSquareDirectory] = useState<string | null>(null);
