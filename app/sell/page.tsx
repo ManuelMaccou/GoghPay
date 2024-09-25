@@ -418,8 +418,6 @@ function SellContent() {
         setMerchant(data);
         setMerchantVerified(true);
 
-        console.log('merchant on sell page:', data)
-
       } catch (err) {
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);
