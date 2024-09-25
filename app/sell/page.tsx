@@ -286,7 +286,11 @@ function SellContent() {
       fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer);
     } else if (statusParam === 'error' && messageParam) {
       setShowNewSaleForm(true);
-      setSquarePosErrorMessage(messageParam); // keep and pass error messages from the callback code
+      if (messageParam === "Error: payment_canceled") {
+        setSquarePosErrorMessage('Payment canceled');
+      } else {
+        setSquarePosErrorMessage(messageParam);
+      }
     }
   }, [searchParams, currentUser, fetchAndUpdatePaymentDetails, newSaleFormData]);
 
@@ -1416,7 +1420,7 @@ function SellContent() {
                       <Callout.Icon>
                         <RocketIcon height={'25'} width={'25'} />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}>
+                      <Callout.Text size={'4'}>
                         {discountUpgradeMessage}
                       </Callout.Text>
                     </Callout.Root>
@@ -1427,7 +1431,7 @@ function SellContent() {
                     <Callout.Icon>
                       <InfoCircledIcon />
                     </Callout.Icon>
-                    <Callout.Text size={'6'}>
+                    <Callout.Text size={'4'}>
                       {successMessage1}
                     </Callout.Text>
                   </Callout.Root>
@@ -1438,7 +1442,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}>
+                      <Callout.Text size={'4'}>
                         {successMessage2}
                       </Callout.Text>
                     </Callout.Root>
@@ -1449,7 +1453,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}>
+                      <Callout.Text size={'4'}>
                         {squarePosSuccessMessage}
                       </Callout.Text>
                     </Callout.Root>
@@ -1460,7 +1464,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'}  wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
+                      <Callout.Text size={'4'}  wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
                         {errorMessage}
                       </Callout.Text>
                     </Callout.Root>
@@ -1471,7 +1475,7 @@ function SellContent() {
                       <Callout.Icon>
                         <InfoCircledIcon />
                       </Callout.Icon>
-                      <Callout.Text size={'6'} wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
+                      <Callout.Text size={'4'} wrap={'wrap'} style={{ wordBreak: 'break-word' }}>
                         {squarePosErrorMessage}
                       </Callout.Text>
                     </Callout.Root>
