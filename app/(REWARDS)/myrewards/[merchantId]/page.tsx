@@ -1,12 +1,14 @@
 'use client'
 
 import { debounce } from 'lodash';
+import { useRouter } from 'next/navigation';
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
 import { Button, Callout, Card, Flex, Heading, Spinner, Text, Separator } from "@radix-ui/themes";
+import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
@@ -14,17 +16,20 @@ import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { useSearchParams } from "next/navigation";
+import { getComplementaryColor, hexToRgba } from '@/app/utils/getComplementaryColor';
+
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
 function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }) {  
+  const router = useRouter();
   const { ready, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   
-  const { appUser, setIsFetchingUser, setAppUser } = useUser();
+  const { appUser, setAppUser } = useUser();
 
   const [error, setError] = useState<string | null>(null);
   const [errorCheckingSquareDirectory, setErrorCheckingSquareDirectory] = useState<string | null>(null);
@@ -44,6 +49,9 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
   const [primaryColor, setPrimaryColor] = useState<string>("#FFFFFF");
   const [secondaryColor, setSecondaryColor] = useState<string>("#000000");
+  const [complementaryColor, setcomplementaryColor] = useState<string>("#000000");
+  const [secondaryColorWithTransparency, setSecondaryColorWithTransparency] = useState<string>("#000000");
+  
 
   const [code, setCode] = useState<string | null>(null);
 
@@ -185,7 +193,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
         await updateGoghUserWithSquareId(data.newSquareCustomer?.id)
       } else if (response.status === 503) {
-        setErrorCheckingSquareDirectory('The was an error with Square. Please wait a few minutes and try again.');
+        setErrorCheckingSquareDirectory('The was an error checking in. Please wait a few minutes and try again.');
       } else if (response.status === 401) {
         setErrorCheckingSquareDirectory('Unauthorized.');
       } else {
@@ -251,6 +259,10 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   }, [currentUser, merchant, createNewSquareCustomer, updateGoghUserWithSquareId]);
   
   useEffect(() => {
+    if (!merchant?.square) {
+      setIsCheckingSquareDirectory(false);
+      return;
+    };
     console.log('ischeckingsquaredirectory:', isCheckingSquareDirectory)
     // Run the API sync only if `currentUser` is available and has not been synced yet
     if (!currentUser) return;
@@ -279,10 +291,11 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
       }
       
     }
-  }, [currentUser, hasSynced, isCheckingSquareDirectory, findExistingSquareCustomer, merchantTokenIsValid, isCheckingMerchantToken]);
+  }, [merchant, currentUser, hasSynced, isCheckingSquareDirectory, findExistingSquareCustomer, merchantTokenIsValid, isCheckingMerchantToken]);
     
   useEffect(() => {
     if (merchantId) {
+      console.log('mechant ID when fetching merchant:', merchantId)
       setIsFetchingMerchant(true);
       const fetchMerchant = async () => {
         try {
@@ -309,6 +322,22 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
       fetchMerchant();
     }
   }, [merchantId]);
+
+  useEffect (() => {
+    if (!merchant) return;
+
+    let complementaryColorState;
+    if (merchant.branding?.primary_color === '#000000') {
+      complementaryColorState = "#8c8c8c"
+    } else {
+      complementaryColorState = getComplementaryColor(merchant.branding?.primary_color || '#000000');
+    }
+
+    setcomplementaryColor(complementaryColorState) // Border and text of current tier
+
+    const transparentSecondaryColor = hexToRgba(merchant.branding?.secondary_color || '#FFFFFF', 0.6);
+    setSecondaryColorWithTransparency(transparentSecondaryColor) // Border and text of other tiers
+  }, [merchant])
 
   useEffect(() => {
     const debouncedCheck = debounce(async () => {
@@ -534,20 +563,18 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
               <Spinner />
             </Flex>
           )
-        ) : ( !isFetchingMerchant && !isFetchingCurrentUserRewards ) ? (
+        ) : ( !isFetchingMerchant && !isFetchingCurrentUserRewards && isCheckingSquareDirectory === false && !errorCheckingSquareDirectory ) ? (
           <>
             <Flex 
               direction='column'
-              position='relative'
-              height='100vh'
+              height='100'
               style={{
-                background: 'linear-gradient(to bottom, #ff962d 0%,#ff7b0d 12%)'
+                background: primaryColor
               }}
             >
-              <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
-                <Heading size={'8'} style={{color: "white"}}>Rewards</Heading>
+              <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
                 <Header
-                  color={'white'}
+                  color={secondaryColor}
                   merchant={currentUser?.merchant}
                   embeddedWallet={embeddedWallet}
                   authenticated={authenticated}
@@ -557,115 +584,120 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
               </Flex>
               <Flex
                 flexGrow={'1'}
-                py={'7'}
+                pb={'7'}
                 direction={'column'}
                 gap={'5'}
                 align={'center'}
                 justify={'between'}
-                height={'100%'}
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: '20px 20px 0px 0px',
-                  boxShadow: 'var(--shadow-6)'
-                }}
+               
               >
                 <Flex direction={'column'} width={'100%'}>
-                  <Card style={{marginRight: '20px', marginLeft: '20px'}}>
+                  <Flex justify={'center'} style={{marginRight: '20px', marginLeft: '20px'}}>
                     <Flex direction={'column'} align={'center'} gap={'4'} px={'2'}>
-                      <Heading>{merchant?.name}</Heading>
+                      {merchant?.branding?.logo ? (
+                        <Flex height={'120px'} width={'80vw'} position={'relative'} direction={'column'} align={'center'} justify={'center'}
+                          style={{maxHeight: '100px'}}
+                        >
+                          <Image
+                            priority
+                            src={merchant.branding.logo}
+                            alt={merchant.name}
+                            fill
+                            sizes="(max-width: 200px) 50vw"
+                            style={{
+                              objectFit: 'contain',
+                             // padding: '10px 50px',
+                            }}
+                          />
+                        </Flex>
+                      ) : (
+                        <Heading style={{color: secondaryColor}}>{merchant?.name}</Heading>
+                      )}
                      
-                        {usersCurrentRewardsTier ? (
-                          <Flex direction={'row'} justify={'between'} width={'100%'}>
-                            <Text weight={'bold'} size={'6'}>{usersCurrentRewardsTier.name}</Text>
-                            <Text weight={'bold'} size={'6'}>{usersCurrentRewardsTier.discount}% off</Text>
-                          </Flex>
-                        ) : (
-                          <Flex direction={'row'} justify={'center'} width={'100%'}>
-                            <Heading align={'center'} size={'8'}>Welcome</Heading>
+                      
+                     
+                        {usersCurrentRewardsTier && (
+                          <Flex direction={'column'} justify={'center'} width={'100%'}>
+                            <Text weight={'bold'} align={'center'} size={'6'} style={{color: secondaryColor}}>Earning{' '}{usersCurrentRewardsTier.discount}% off</Text>
                           </Flex>
                         )}
-                      
-                      <Separator size="3" />
-                    
 
                         {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id ? (
                           <Flex direction={'row'} 
                           width={'100%'} 
                           justify={'between'} align={'center'}>
-                            <Text wrap={'wrap'} size={'5'}>
+                            <Text wrap={'wrap'} size={'5'} style={{color: secondaryColor}}>
                               Remaining until<br></br> next upgrade:
                             </Text>
-                            <Text size={'5'}>${amountToNextRewardsTier}</Text>
+                            <Text size={'5'} style={{color: secondaryColor}}>${amountToNextRewardsTier}</Text>
                           </Flex>
                         
                         ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id && (  
-                          <Flex direction={'column'} 
-                            width={'100vw'} 
-                            align={'center'} justify={'center'}>
-                            <Callout.Root color="green" 
-                            style={{ 
-                              width: '100vw', 
-                            padding: '7px', display: 'flex', justifyContent: 'center' }}>
-                              <Callout.Text size={'4'} weight={'bold'} align={'center'}>
-                                You&apos;re earning the max discount!
-                              </Callout.Text>
-                            </Callout.Root>
+                          <Flex 
+                            direction={'column'} 
+                            align={'center'} justify={'center'}
+                            p={'3'}
+                            style={{backgroundColor: complementaryColor, borderRadius: '5px'}}
+                          >
+                            <Text weight={'bold'} size={'4'} align={'center'}
+                              style={{color: secondaryColor}}
+                            >
+                              You&apos;re earning the max discount!
+                            </Text>
                           </Flex>
-                          
                         )}
                     </Flex>
-                  </Card>
-                  <Flex direction={'row'} py={'5'} px={'3'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
+                  </Flex>
+                  <Flex direction={'column'} py={'5'} px={'3'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
                     {sortedMilestoneTiers.map((tier) => (
-                      <Card key={tier._id}
+                      <Flex key={tier._id}
                         ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
                         style={{
+                          padding: '16px',
+                          backgroundColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : "",
+                          borderStyle: 'solid',
+                          borderColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : secondaryColorWithTransparency,
+                          borderWidth: '1px',
+                          borderRadius: '8px',
                           flexShrink: 0,
-                          backgroundColor: tier._id === usersCurrentRewardsTier?._id ? "blue" : 'transparent'
                         }}
                       >
                         <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'} width={'auto'}>
-                          <Text size={'5'} weight="bold">
+                          <Text size={'5'} weight="bold" style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
                             {tier.name}
                           </Text>
-                          <Text size={'5'}>
+                          <Text size={'5'} style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
                             {tier.discount}% off
                           </Text>
                         </Flex>
-                      </Card>
+                      </Flex>
                     ))}
                   </Flex>
-
-                </Flex>
-                
-                <Flex>
-                  {!errorCheckingSquareDirectory ? (
-                    isCheckingSquareDirectory === false ? (
-                      <Text align={'center'} weight={'bold'} size={'5'}>You&apos;re checked in!</Text>
-                    ) :  (
-                      <Text align={'center'} weight={'bold'} size={'5'}>Checking in...</Text>
-                    )
-                  ) : (
-                    <Callout.Root color='red'>
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text>
-                        {errorCheckingSquareDirectory}
-                      </Callout.Text>
-                    </Callout.Root>
-                  )}
-                      
-                  
                 </Flex>
               </Flex>
             </Flex>
           </>
-        ) : (
-          <Flex justify={'center'} align={'center'} height={'100vh'}>
-            <Spinner />
+        ) : isCheckingSquareDirectory === false && errorCheckingSquareDirectory ? (
+          <Flex direction={'column'} gap={'4'} height={'100vh'} style={{
+              background: primaryColor
+            }}
+          >
+            <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
+                <Header
+                  color={secondaryColor}
+                  merchant={currentUser?.merchant}
+                  embeddedWallet={embeddedWallet}
+                  authenticated={authenticated}
+                  walletForPurchase={walletForPurchase}
+                  currentUser={currentUser}
+                />
+              </Flex>
+            <Text size={'7'} weight={'bold'} align={'center'} style={{color: secondaryColor}}>Oops!</Text>
+            <Text align={'center'} style={{color: secondaryColor}}>{errorCheckingSquareDirectory}</Text>
           </Flex>
-        )
+        ) : <Flex justify={'center'} align={'center'} height={'100vh'}>
+              <Spinner />
+            </Flex>
       ) : (
         <Flex justify={'center'} align={'center'} height={'100vh'}>
           <Spinner />
