@@ -16,7 +16,7 @@ import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { useSearchParams } from "next/navigation";
-import { getComplementaryColor, hexToRgba } from '@/app/utils/getComplementaryColor';
+import { getModifiedColor, hexToRgba } from '@/app/utils/getComplementaryColor';
 
 
 function isError(error: any): error is Error {
@@ -330,13 +330,13 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     if (merchant.branding?.primary_color === '#000000') {
       complementaryColorState = "#8c8c8c"
     } else {
-      complementaryColorState = getComplementaryColor(merchant.branding?.primary_color || '#000000');
+      complementaryColorState = getModifiedColor(merchant.branding?.primary_color || '#000000');
     }
 
-    setcomplementaryColor(complementaryColorState) // Border and text of current tier
+    setcomplementaryColor(complementaryColorState)
 
     const transparentSecondaryColor = hexToRgba(merchant.branding?.secondary_color || '#FFFFFF', 0.6);
-    setSecondaryColorWithTransparency(transparentSecondaryColor) // Border and text of other tiers
+    setSecondaryColorWithTransparency(transparentSecondaryColor) 
   }, [merchant])
 
   useEffect(() => {
