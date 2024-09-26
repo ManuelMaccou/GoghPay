@@ -32,6 +32,5 @@ export async function GET(req: NextRequest, context: { params: Params }) {
     return NextResponse.json({ message: "No transactions found." }, { status: 404 });
   }
 
-  console.log("Merchant transactions found:");
   return NextResponse.json({ totalTransactions, todaysTransactions }, { status: 200 });
 }

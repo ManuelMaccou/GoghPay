@@ -56,6 +56,7 @@ function SellContent() {
 
   const [rewardsDiscount, setRewardsDiscount] = useState<number | 0>(0);
   const [welcomeDiscount, setWelcomeDiscount] = useState<number | 0>(0);
+  const [priceAfterDiscount, setPriceAfterDiscount] = useState<string | null>(null);
   const [finalPriceCalculated, setFinalPriceCalculated] = useState<boolean>(false);
   const [finalPrice, setFinalPrice] = useState<string | null>(null);
 
@@ -163,7 +164,7 @@ function SellContent() {
         body: JSON.stringify({
           privyId: user?.id,
           purchaseData: newSaleFormData,
-          finalPrice,
+          priceAfterDiscount,
         }),
       });
 
@@ -254,6 +255,7 @@ function SellContent() {
   useEffect(() => {
     if (!currentUser) return;
     if (!newSaleFormData) return;
+    if (!priceAfterDiscount) return;
     console.log('new form data from local storage:', localStorage.getItem('newSaleFormData'));
 
     // Extract query parameters from the URL
@@ -292,7 +294,7 @@ function SellContent() {
         setSquarePosErrorMessage(messageParam);
       }
     }
-  }, [searchParams, currentUser, fetchAndUpdatePaymentDetails, newSaleFormData]);
+  }, [searchParams, currentUser, fetchAndUpdatePaymentDetails, newSaleFormData, priceAfterDiscount]);
 
   // Move this to callback code
   const fetchSquarePaymentId = async (
@@ -789,7 +791,7 @@ function SellContent() {
       const parsedData = JSON.parse(storedData);
       setNewSaleFormData(parsedData);
     }
-    console.log('session data:', localStorage)
+    console.log('localstorage data:', localStorage)
   }, []);
 
   useEffect(() => {
@@ -805,7 +807,7 @@ function SellContent() {
 
     let rewardsDiscountAmount = 0;
     let welcomeDiscountAmount = 0;
-    let priceAfterDiscount = priceNum;
+    let priceAfterDiscountAmount = priceNum;
 
     let finalPriceCalculation = priceNum;
 
@@ -822,27 +824,28 @@ function SellContent() {
 
     if (newSaleFormData.customer && newSaleFormData.customer?.currentDiscount?.type === 'percent') {
       if (totalDiscountAmount > 100) {
-        priceAfterDiscount = 0
+        priceAfterDiscountAmount = 0
 
       } else {
-        priceAfterDiscount = priceNum - ((totalDiscountAmount/100) * priceNum)
+        priceAfterDiscountAmount = priceNum - ((totalDiscountAmount/100) * priceNum)
       }
 
     } else if (newSaleFormData.customer && newSaleFormData.customer.currentDiscount?.type === 'dollar') {
-      priceAfterDiscount = priceNum - totalDiscountAmount
-      if (priceAfterDiscount < 0) {
-        priceAfterDiscount = 0
+      priceAfterDiscountAmount = priceNum - totalDiscountAmount
+      if (priceAfterDiscountAmount < 0) {
+        priceAfterDiscountAmount = 0
       }
     }
     
     if (newSaleFormData.tax > 0) {
-      finalPriceCalculation = priceAfterDiscount + ((newSaleFormData.tax / 100) * priceAfterDiscount);
+      finalPriceCalculation = priceAfterDiscountAmount + ((newSaleFormData.tax / 100) * priceAfterDiscountAmount);
     } else {
-      finalPriceCalculation = priceAfterDiscount
+      finalPriceCalculation = priceAfterDiscountAmount
     }
 
     setRewardsDiscount(rewardsDiscountAmount);
     setWelcomeDiscount(welcomeDiscountAmount);
+    setPriceAfterDiscount(priceAfterDiscountAmount.toFixed(2))
     setFinalPriceCalculated(true);
     setFinalPrice(finalPriceCalculation.toFixed(2));
 
@@ -878,7 +881,7 @@ function SellContent() {
           body: JSON.stringify({
             privyId: user?.id,
             purchaseData: newSaleFormData,
-            finalPrice,
+            priceAfterDiscount,
           }),
         });
 
@@ -1106,6 +1109,7 @@ function SellContent() {
                           </AlertDialog.Cancel>
                           <AlertDialog.Action>
                             <Button size={'4'} 
+                              loading={!priceAfterDiscount}
                               onClick={() => {
                                 handleSavePaymentAndUpdateRewards(newSaleFormData);
                                 setShowVenmoDialog(false);

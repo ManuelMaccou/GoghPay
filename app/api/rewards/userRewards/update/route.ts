@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const userIdFromToken = req.headers.get('x-user-id');
     const body = await req.json();
     const privyId: string = body.privyId;
-    const finalPrice: string = body.finalPrice;
+    const priceAfterDiscount: string = body.priceAfterDiscount;
     const purchaseData: SaleFormData = body.purchaseData;
 
     if (!purchaseData) {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing user reward object" }, { status: 400 });
     }
 
-    const newPurchaseAmount = parseFloat(finalPrice || "0");
+    const newPurchaseAmount = parseFloat(priceAfterDiscount || "0");
     if (isNaN(newPurchaseAmount)) {
       console.error("Invalid purchase amount.");
       return NextResponse.json({ message: "Invalid purchase amount" }, { status: 400 });
