@@ -744,14 +744,17 @@ function SellContent() {
     if (method === 'Venmo') {
       setShowVenmoDialog(true);
       sessionStorage.removeItem('newSaleFormData');
+      localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Zelle') {
       setShowZelleDialog(true);
       sessionStorage.removeItem('newSaleFormData');
+      localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Cash') {
       setShowCashDialog(true);
       sessionStorage.removeItem('newSaleFormData');
+      localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Square') {
       setShowSquareDialog(true);
