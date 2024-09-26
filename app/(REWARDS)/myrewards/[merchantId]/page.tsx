@@ -662,7 +662,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
                           flexShrink: 0,
                         }}
                       >
-                        <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'} width={'auto'}>
+                        <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'} width={'100%'}>
                           <Text size={'5'} weight="bold" style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
                             {tier.name}
                           </Text>
