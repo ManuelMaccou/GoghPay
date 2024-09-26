@@ -567,7 +567,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           <>
             <Flex 
               direction='column'
-              height='100'
+              minHeight='100vh'
               style={{
                 background: primaryColor
               }}
