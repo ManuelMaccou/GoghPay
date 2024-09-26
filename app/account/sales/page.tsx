@@ -247,6 +247,48 @@ export default function Sales({ params }: { params: { userId: string } }) {
     verifyMerchantStatus();
   }, [user, ready, authenticated]);
 
+  const calculateFinalPriceWithoutTax = (transaction: Transaction) => {
+    // Ensure product and payment exist
+    if (!transaction.product || !transaction.product.price) {
+      console.error("Transaction missing product or price:", transaction);
+      return 0.00;
+    }
+  
+    const { product, payment = { tipAmount: 0 }, discount = { type: 'percent', welcome: 0, amount: 0 } } = transaction;
+  
+    let welcomeDiscountAmount = 0;
+    let rewardsDiscountAmount = 0;
+    let priceAfterDiscount = product.price;
+  
+    // Welcome discount
+    if (discount.welcome) {
+      welcomeDiscountAmount = discount.welcome;
+    }
+  
+    // Rewards discount
+    if (discount.amount) {
+      rewardsDiscountAmount = discount.amount;
+    }
+  
+    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount;
+  
+    // Calculate price based on discount type
+    if (discount.type === 'percent') {
+      priceAfterDiscount =
+        totalDiscountAmount > 100
+          ? 0
+          : product.price - (totalDiscountAmount / 100) * product.price;
+    } else if (discount.type === 'dollar') {
+      priceAfterDiscount = product.price - totalDiscountAmount;
+      if (priceAfterDiscount < 0) priceAfterDiscount = 0;
+    }
+  
+    // Return final price without sales tax, just original price and discount
+    return Number((priceAfterDiscount + (payment.tipAmount || 0)).toFixed(2));
+  };
+  
+  
+
   useEffect(() => {
     const getPSTStartAndEndOfDay = () => {
       // Calculate the start of today in PST
@@ -269,14 +311,28 @@ export default function Sales({ params }: { params: { userId: string } }) {
         }
   
         const { totalTransactions, todaysTransactions } = await response.json();
+
+        // Calculate finalPrice with discounts applied
+        const transactionsWithFinalPrice = totalTransactions.map(
+          (transaction: Transaction) => ({
+            ...transaction,
+            finalPrice: calculateFinalPriceWithoutTax(transaction), // Use the custom utility function
+          })
+        );
   
         // Sort totalTransactions by date in descending order
-        const sortedTotalTransactions = totalTransactions.slice().sort((a: Transaction, b: Transaction) => {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
+        const sortedTotalTransactions = transactionsWithFinalPrice
+          .slice()
+          .sort((a: Transaction, b: Transaction) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
   
         // Calculate total sale for all transactions
-        const total = sortedTotalTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.product.price + (transaction.payment.tipAmount || 0), 0);
+        const total = sortedTotalTransactions.reduce(
+          (acc: number, transaction: Transaction) =>
+            acc + parseFloat(transaction.finalPrice ?? '0') + (transaction.payment.tipAmount || 0),
+          0
+        );
         setTotalSale(total);
         setTotalTransactions(sortedTotalTransactions);
 
@@ -293,7 +349,11 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   
         // Calculate total sale for today's transactions
-        const todayTotal = sortedTodaysTransactions.reduce((acc: number, transaction: Transaction) => acc + transaction.product.price + (transaction.payment.tipAmount || 0), 0);
+        const todayTotal = sortedTodaysTransactions.reduce(
+          (acc: number, transaction: Transaction) =>
+            acc + parseFloat(transaction.finalPrice ?? '0') + (transaction.payment.tipAmount || 0),
+          0
+        );
         setTodaysTotalSale(todayTotal);
         setTodaysTransactions(sortedTodaysTransactions);
       } catch (err) {
@@ -408,7 +468,9 @@ export default function Sales({ params }: { params: { userId: string } }) {
                           const { label, color } = getPaymentTypeInfo(transaction.payment.paymentType);
                           return (
                             <Table.Row key={transaction._id}>
-                              <Table.RowHeaderCell>${((transaction.product.price) + (transaction.payment.tipAmount || 0)).toFixed(2)}</Table.RowHeaderCell>
+                             <Table.RowHeaderCell>
+                              ${parseFloat(transaction.finalPrice ?? '0').toFixed(2)}
+                            </Table.RowHeaderCell>
                             {/* <Table.Cell>
                               <Text wrap={'nowrap'}>
                                 {transaction.tipAmount ? `$${transaction.tipAmount.toFixed(2)}` : '-'}
