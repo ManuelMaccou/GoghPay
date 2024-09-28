@@ -60,11 +60,14 @@ export const checkAndRefreshToken = async (merchantId: string): Promise<boolean>
 
         const data = response.data;
 
-        merchant.square.access_token = encrypt(data.access_token);
-        merchant.square.token_expires_at = new Date(data.expires_at);
-        merchant.square.merchant_id = data.merchant_id;
-        merchant.square.refresh_token = encrypt(data.refresh_token);
-        await merchant.save();
+        await merchant.updateOne({
+          $set: {
+            'square.access_token': encrypt(data.access_token),
+            'square.token_expires_at': new Date(data.expires_at),
+            'square.merchant_id': data.merchant_id,
+            'square.refresh_token': encrypt(data.refresh_token),
+          },
+        });
 
         return true;
 
