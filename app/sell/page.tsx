@@ -16,6 +16,7 @@ import { logAdminError } from '../utils/logAdminError';
 import { ApiError } from '../utils/ApiError';
 import { useDeviceType } from '../contexts/DeviceType';
 import { useSearchParams } from 'next/navigation';
+import { setSaleDataCookie } from '../actions/setSaleDataCookie';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -242,6 +243,7 @@ function SellContent() {
         localStorage.removeItem('newSaleFormData');
         console.log('removed local storage')
 
+        // Figure out what to do with these when the response comes back. Maybe dont need it.
         resetUrl("/sell");
         setNewSaleFormData(null);
         setShowNewSaleForm(true);
@@ -518,12 +520,29 @@ function SellContent() {
         });
       }
 
+      let storedSaleDataCookieName;
+
+      try {
+        // Call the server action and get the response
+        const response = await setSaleDataCookie(newSaleFormData);
+    
+        if (response.success) {
+          storedSaleDataCookieName = response.cookieName
+          console.log("Cookie set with name:", response.cookieName);
+        } else {
+          console.error("Failed to set the cookie.");
+        }
+      } catch (error) {
+        console.error("An error occurred:", error);
+      }
+      
+
 
       const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/ios`;
       const state = {
-        merchantId: newSaleFormData.sellerMerchant?._id,
+        cookieName: storedSaleDataCookieName,
         goghTransactionId: goghTransactionId,
-        rewardsCustomer: rewardsCustomer,
+        // rewardsCustomer: rewardsCustomer,
       };
       
       let dataParameter;

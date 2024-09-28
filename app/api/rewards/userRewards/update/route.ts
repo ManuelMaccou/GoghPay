@@ -9,6 +9,8 @@ import connectToDatabase from '@/app/utils/mongodb';
 export async function POST(req: NextRequest) {
   try {
     const userIdFromToken = req.headers.get('x-user-id');
+    const serverAuthentication = req.headers.get('authorization');
+
     const body = await req.json();
     const privyId: string = body.privyId;
     const priceAfterDiscount: string = body.priceAfterDiscount;
@@ -18,12 +20,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing purchase data" }, { status: 400 });
     }
 
-    if (!privyId) {
-      return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
-    }
+    if (serverAuthentication === process.env.SERVER_AUTH) {
+      console.log("Request authenticated from the server.");
+    } else {
+      if (!privyId) {
+        return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
+      }
 
-    if (!userIdFromToken || userIdFromToken !== privyId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      if (!userIdFromToken || userIdFromToken !== privyId) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
     }
 
     await connectToDatabase();
