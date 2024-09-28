@@ -57,7 +57,7 @@ const merchantSchema = new mongoose.Schema({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
   merchantId: { type: String, required: true },
-  walletAddress: { type: String, required: true },
+  walletAddress: { type: String },
   storeImage: { type: String },
   privyId: { type: String },
   admin: { type: Boolean },

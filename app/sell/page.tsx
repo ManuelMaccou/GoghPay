@@ -197,7 +197,7 @@ function SellContent() {
       console.error(error);
       return false;
     }
-  }, [finalPrice, user?.id])
+  }, [user?.id, priceAfterDiscount])
 
   const fetchAndUpdatePaymentDetails = useCallback(
     async (
