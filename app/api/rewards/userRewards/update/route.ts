@@ -9,8 +9,10 @@ import connectToDatabase from '@/app/utils/mongodb';
 export async function POST(req: NextRequest) {
   try {
     const userIdFromToken = req.headers.get('x-user-id');
+    const serverAuthentication = req.headers.get('authorization');
+
     const body = await req.json();
-    const privyId: string = body.privyId;
+    const privyId: string | null = body.privyId || null;
     const priceAfterDiscount: string = body.priceAfterDiscount;
     const purchaseData: SaleFormData = body.purchaseData;
 
@@ -18,12 +20,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing purchase data" }, { status: 400 });
     }
 
-    if (!privyId) {
-      return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
-    }
+    if (serverAuthentication === process.env.SERVER_AUTH) {
+      console.log("Request authenticated from the server.");
+    } else {
+      if (!privyId) {
+        return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
+      }
 
-    if (!userIdFromToken || userIdFromToken !== privyId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      if (!userIdFromToken || userIdFromToken !== privyId) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
     }
 
     await connectToDatabase();
@@ -73,11 +79,11 @@ export async function POST(req: NextRequest) {
       purchaseCount: purchaseCount
     };
 
-    let discountUpgradeMessage = null;
+    let customerUpgraded = false;
 
     if (highestTier && highestTier.discount > (userRewardObject.currentDiscount?.amount || 0)) {
       fieldsToUpdate['currentDiscount.amount'] = highestTier?.discount;
-      discountUpgradeMessage = `Nice! Your customer has been upgraded to the next rewards tier.`;
+      customerUpgraded = true;
     }
 
     const updatedUserReward = await UserReward.findOneAndUpdate(
@@ -93,7 +99,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       message: 'User rewards updated successfully',
       updatedReward: updatedUserReward,
-      discountUpgradeMessage: discountUpgradeMessage
+      customerUpgraded: customerUpgraded
     }, { status: 200 });
   } catch (error) {
     console.error('Error updating rewards:', error);
