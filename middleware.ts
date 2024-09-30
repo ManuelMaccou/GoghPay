@@ -8,7 +8,7 @@ export async function middleware(req: NextRequest) {
     try {
       // Extract the Authorization header from the request
       const authHeader = req.headers.get('authorization');
-      const serverAuth = process.env.SERVER_AUTH;
+      const serverAuth = `Bearer ${process.env.SERVER_AUTH}`;
 
       // If there is no Authorization header or it doesn't start with 'Bearer ', return an unauthorized response.
       if (!authHeader || !authHeader.startsWith('Bearer ')) {

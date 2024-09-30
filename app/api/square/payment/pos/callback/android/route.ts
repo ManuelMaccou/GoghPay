@@ -341,6 +341,7 @@ const handleSquareCallback = async (
     if (error) {
       if (error === 'Error: payment_canceled') {
         message = 'Payment canceled'
+        status = 'canceled'
       } else {
         message = `Error: ${error}`;
       }
@@ -351,12 +352,13 @@ const handleSquareCallback = async (
       status = "success";
       message = `Payment successful.`;
 
-      fetchAndUpdatePaymentDetails(transactionDetails, statusToSave, priceAfterDiscount, finalSquarePaymentResults)
+      await fetchAndUpdatePaymentDetails(transactionDetails, statusToSave, priceAfterDiscount, finalSquarePaymentResults)
 
       redirectUrl += `${status}&rewardsUpdated=${encodeURIComponent(finalSquarePaymentResults.rewardsUpdatedInGogh)}&customerUpgraded=${finalSquarePaymentResults.customerUpgraded}`;
     } else {
       console.log("No valid transaction ID provided from Square.");
-      redirectUrl += status;
+      message = 'Bad response from Square. Please try again.'
+      redirectUrl += `${status}&message=${encodeURIComponent(message)}`;
     }
 
     console.log("Redirecting to URL:", redirectUrl);

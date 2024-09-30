@@ -155,9 +155,12 @@ function SellContent() {
       });
 
       if (response.ok) {
-        const rewardsCustomers = await response.json();
-        setCurrentRewardsCustomers(rewardsCustomers);
-
+        if (response.status === 204) {
+          setCurrentRewardsCustomers([]);
+        } else {
+          const rewardsCustomers = await response.json();
+          setCurrentRewardsCustomers(rewardsCustomers);
+        }
       } else if (response.status === 401) {
         setErrorFetchingRewards('Unauthorized access. Please log in again.');
       } else if (response.status === 404) {
@@ -321,7 +324,6 @@ function SellContent() {
       let storedSaleDataCookieName;
 
       try {
-        // Call the server action and get the response
         const response = await setSaleDataCookie(newSaleFormData);
     
         if (response.success) {
@@ -467,7 +469,6 @@ function SellContent() {
       const tenderTypes = [
         "com.squareup.pos.TENDER_CARD",
         "com.squareup.pos.TENDER_CARD_ON_FILE",
-        "com.squareup.pos.TENDER_CASH",
       ].join(",");
 
       let posUrl
@@ -589,29 +590,14 @@ function SellContent() {
 
     } else if (method === 'Square') {
       setShowSquareDialog(true);
-      sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
       console.log('session storage:', sessionStorage)
 
       localStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
       console.log('local storage:', localStorage.getItem('newSaleFormData'));
 
       router.replace('/sell?status=square');
-
-    } else if (method === 'ManualEntry') {
-      sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
-      router.push('/checkout/manual');
     }
   };
-
-  useEffect(() => {
-    const storedData = sessionStorage.getItem('newSaleFormData');
-    
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      setNewSaleFormData(parsedData);
-    }
-    console.log('session data:', sessionStorage)
-  }, []);
 
   useEffect(() => {
     const storedData = localStorage.getItem('newSaleFormData');
@@ -1234,7 +1220,6 @@ function SellContent() {
                     customers={currentRewardsCustomers}
                     paymentMethods={paymentMethods}
                     onNewSaleFormSubmit={(formData: SaleFormData) => {
-                      setShowNewSaleForm(false);
                       setNewSaleFormData(formData);
                       handlePaymentMethodChange(formData.paymentMethod, formData);
                     }}
