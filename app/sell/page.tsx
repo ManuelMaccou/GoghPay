@@ -63,11 +63,9 @@ function SellContent() {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const [successMessage1, setSuccessMessage1] = useState<string | null>(null);
-  const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
-  const [discountUpgradeMessage, setDiscountUpgradeMessage] = useState<string | null>(null);
+  const [rewardsUpdated, setRewardsUpdated] = useState<boolean>(false);
+  const [customerUpgraded, setCustomerUpgraded] =  useState<boolean>(false);
   const [squarePosError, setSquarePosError] = useState<string | null>(null);
-  const [squarePosSuccessMessage, setSquarePosSuccessMessage] = useState<string | null>(null);
   const [squarePosErrorMessage, setSquarePosErrorMessage] = useState<string | null>(null);
 
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
@@ -110,233 +108,33 @@ function SellContent() {
       window.history.replaceState(null, "", newUrl);
     }
   };
-  
-  const updateTransactionDetails = useCallback(async (
-    squarePaymentId: string | null,
-    clientTransactionId: string,
-    transactionIdToUpdate: string,
-    statusToSave: string
-  ) => {
-    try {
-      console.log('squarepaymentId at updateTransactionDetails:', squarePaymentId)
-
-      const accessToken = await getAccessToken();
-      const response = await fetch('/api/transaction/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`, 
-        },
-        body: JSON.stringify({
-          privyId: user?.id,
-          transactionId: transactionIdToUpdate,
-          clientTransactionId,
-          status: statusToSave,
-          squarePaymentId,
-        }),
-      });
-      const responseData = await response.json();
-  
-      if (!response.ok) {
-        const apiError = new ApiError(
-          `API Error11: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
-          response.status,
-          responseData
-        );
-
-        console.error('Transaction update failed:', apiError);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }, [user])
-
-  const updateRewards = useCallback(async (newSaleFormData: SaleFormData) => {
-    console.log('updating rewards with data:', newSaleFormData);
-    const accessToken = await getAccessToken();
-
-    try {
-      const response = await fetch(`/api/rewards/userRewards/update`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          privyId: user?.id,
-          purchaseData: newSaleFormData,
-          priceAfterDiscount,
-        }),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        const apiError = new ApiError(
-          `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
-          response.status,
-          responseData
-        );
-        console.error(apiError);
-        return false;
-      } else {
-        setSuccessMessage1('Customer rewards have been saved.');
-
-        if (responseData.discountUpgradeMessage) {
-          setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
-        }
-
-        return true;
-      }
-    } catch (error) {
-      // Catch any other errors and log them with their full details
-      await logAdminError(newSaleFormData.sellerMerchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction. User: ${newSaleFormData.customer?.userInfo._id}. Amount: ${newSaleFormData.price}.`, {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-    
-      console.error(error);
-      return false;
-    }
-  }, [user?.id, priceAfterDiscount])
-
-  const fetchAndUpdatePaymentDetails = useCallback(
-    async (
-      serverTransactionId: string | null,
-      clientTransactionId: string,
-      merchantId: string,
-      transactionIdToUpdate: string,
-      statusToSave: string,
-      rewardsCustomer: string,
-    ) => {  
-      try {
-        console.log('fetchAndUpdatePaymentDetails is running');
-        let squarePaymentId = '';
-
-        if (serverTransactionId) {
-          // Fetch Square payment ID using the server transaction ID
-          // Move this to callback code. Update the transaction from the call back code.
-          const fetchedSquarePaymentId = await fetchSquarePaymentId(
-            serverTransactionId,
-            merchantId
-          );
-
-          console.log('fetchedSquarePaymentId:', fetchedSquarePaymentId)
-
-          if (fetchedSquarePaymentId) {
-            squarePaymentId = fetchedSquarePaymentId;
-          }
-        }
-
-        await updateTransactionDetails(
-          squarePaymentId,
-          clientTransactionId,
-          transactionIdToUpdate,
-          statusToSave
-        );
-        console.log('check update rewards. newSaleFormData:', newSaleFormData, 'rewards customer:', rewardsCustomer);
-        if (newSaleFormData && rewardsCustomer && rewardsCustomer !== '') {
-          await updateRewards(newSaleFormData)
-        } 
-
-        sessionStorage.removeItem('newSaleFormData');
-        localStorage.removeItem('newSaleFormData');
-        console.log('removed local storage')
-
-        // Figure out what to do with these when the response comes back. Maybe dont need it.
-        resetUrl("/sell");
-        setNewSaleFormData(null);
-        setShowNewSaleForm(true);
-      } catch (error) {
-        console.error('Error updating payment details:', error);
-      }
-    },
-  [newSaleFormData, updateTransactionDetails, updateRewards]
-);
 
   useEffect(() => {
     if (!currentUser) return;
-    if (!newSaleFormData) return;
-    if (!priceAfterDiscount) return;
     console.log('new form data from local storage:', localStorage.getItem('newSaleFormData'));
 
-    // Extract query parameters from the URL
-    // Provided by Square. Can be done in the callback code
     const statusParam = searchParams.get('status');
-    const statusToSave = searchParams.get('statusToSave') || 'PENDING';
-    const clientTransactionId = searchParams.get('clientTransactionId') || '';
-    const serverTransactionId = searchParams.get('serverTransactionId');
-
-    // This can go in the cookie
     const messageParam = searchParams.get('message') || '';
-    const merchantId = searchParams.get('merchantId');
-    const transactionIdToUpdate = searchParams.get('goghTransactionId');
-    const rewardsCustomer = searchParams.get('rewardsCustomer') || '';
+    const customerUpgradedParam = searchParams.get('customerUpgraded');
+    const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
 
-    // Pass success status from callback if all functions were performed correctly
-    // if not, give a status of error with a user friendly message if needed. Or simply
-    // log it if it's not critical and handle it manually while you figure out how to fix it.
-    if (statusParam === 'success' && merchantId && transactionIdToUpdate && currentUser) {
+    if (statusParam === 'success') {
+      if (customerUpgradedParam === 'true') {
+        setCustomerUpgraded(true)
+      }
 
-      setShowNewSaleForm(false); // keep 
-      setSuccessMessage1(null); // keep and pass success messages from the callback code
-      setSuccessMessage2(null); // keep and pass success messages from the callback code
-      setErrorMessage(null); // keep and pass error messages from the callback code
-      setDiscountUpgradeMessage(null) // keep and pass success messages from the callback code
+      if (rewardsUpdatedParam === 'true') {
+        setRewardsUpdated(true)
+      }
 
-      setSquarePosSuccessMessage(messageParam); // keep and pass success messages from the callback code. Currently: "Payment successful"
+      setShowNewSaleForm(true);
+      setErrorMessage(null);
 
-      // Move this to backend
-      fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer);
     } else if (statusParam === 'error' && messageParam) {
       setShowNewSaleForm(true);
-      if (messageParam === "Error: payment_canceled") {
-        setSquarePosErrorMessage('Payment canceled');
-      } else {
-        setSquarePosErrorMessage(messageParam);
-      }
+      setSquarePosErrorMessage(messageParam);
     }
-  }, [searchParams, currentUser, fetchAndUpdatePaymentDetails, newSaleFormData, priceAfterDiscount]);
-
-  // Move this to callback code
-  const fetchSquarePaymentId = async (
-    serverTransactionId: string,
-    merchantId: string
-  ): Promise<string | null> => {
-    try {
-      const response = await fetch(
-        `/api/square/orders?transactionId=${serverTransactionId}&merchantId=${merchantId}`
-      );
-      const data = await response.json();
-      
-      if (response.ok) {
-       
-        if (data.paymentId) {
-          console.log('paymentId:', data.paymentId)
-         
-          return data.paymentId;
-        } else if (data.message) {
-          // Handle valid cash transaction (no order)
-          console.log('Message:', data.message);
-          return null;
-        } else {
-          setError('Failed to fetch payment details from Square.');
-          return null;
-        }
-      } else {
-        if (data.message) {
-          setError(data.message);
-        } else {
-          setError('Failed to fetch payment details from Square.');
-        }
-        return null;
-      }
-    } catch (err) {
-      console.error('Error fetching payment details:', err);
-      setError('An error occurred while fetching payment details.');
-      return null
-    }
-  };
+  }, [searchParams, currentUser]);
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
@@ -542,7 +340,6 @@ function SellContent() {
       const state = {
         cookieName: storedSaleDataCookieName,
         goghTransactionId: goghTransactionId,
-        // rewardsCustomer: rewardsCustomer,
       };
       
       let dataParameter;
@@ -556,7 +353,6 @@ function SellContent() {
           callback_url: callbackUrl,
           client_id: squareClientId,
           version: "1.3",
-          notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
           customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
           state: JSON.stringify(state),
           options: {
@@ -574,7 +370,6 @@ function SellContent() {
           callback_url: callbackUrl,
           client_id: squareClientId,
           version: "1.3",
-          notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
           state: JSON.stringify(state),
           options: {
             supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE"],
@@ -648,6 +443,22 @@ function SellContent() {
         });
       }
 
+      let storedSaleDataCookieName;
+
+      try {
+        // Call the server action and get the response
+        const response = await setSaleDataCookie(newSaleFormData);
+    
+        if (response.success) {
+          storedSaleDataCookieName = response.cookieName
+          console.log("Cookie set with name:", response.cookieName);
+        } else {
+          console.error("Failed to set the cookie.");
+        }
+      } catch (error) {
+        console.error("An error occurred:", error);
+      }
+
       //const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android?merchantId=${merchantId}&goghTransactionId=${goghTransactionId}`;
       const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android`;
       const sdkVersion = "v1.3";
@@ -656,6 +467,7 @@ function SellContent() {
       const tenderTypes = [
         "com.squareup.pos.TENDER_CARD",
         "com.squareup.pos.TENDER_CARD_ON_FILE",
+        "com.squareup.pos.TENDER_CASH",
       ].join(",");
 
       let posUrl
@@ -672,8 +484,7 @@ function SellContent() {
         `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
         `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
         `S.com.squareup.pos.CUSTOMER_ID=${customerId};` +
-        `S.com.squareup.pos.REQUEST_METADATA={"merchantId":"${newSaleFormData.sellerMerchant?._id}","goghTransactionId":"${goghTransactionId}","rewardsCustomer":"${rewardsCustomer}"};` +
-        `S.com.squareup.pos.NOTE=${encodeURIComponent(`Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`)};` +
+        `S.com.squareup.pos.REQUEST_METADATA={"cookieName":"${storedSaleDataCookieName}","goghTransactionId":"${goghTransactionId}"};` +
         "end;";
 
       } else {
@@ -689,7 +500,6 @@ function SellContent() {
           `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
           `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
           `S.com.squareup.pos.REQUEST_METADATA={"merchantId":"${newSaleFormData.sellerMerchant?._id}","goghTransactionId":"${goghTransactionId}","rewardsCustomer":"${rewardsCustomer}"};` +
-          `S.com.squareup.pos.NOTE=${encodeURIComponent(`Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ${goghTransactionId}`)};` +
           "end;";
       }
         console.log('url:', posUrl)
@@ -839,7 +649,7 @@ function SellContent() {
     }
     
 
-    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
+    const totalDiscountAmount = Math.max(rewardsDiscountAmount, welcomeDiscountAmount);
 
     if (newSaleFormData.customer && newSaleFormData.customer?.currentDiscount?.type === 'percent') {
       if (totalDiscountAmount > 100) {
@@ -875,11 +685,10 @@ function SellContent() {
   };
 
   const handleResetMessages = () => {
-    setSuccessMessage1(null);
-    setSuccessMessage2(null);
+    setRewardsUpdated(false);
     setErrorMessage(null);
     setSquarePosErrorMessage(null);
-    setDiscountUpgradeMessage(null);
+    setCustomerUpgraded(false);
   };
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
@@ -929,12 +738,12 @@ function SellContent() {
           if (merchant) {
             fetchCheckedInCustomers(merchant._id)
           }
-          setSuccessMessage1('Customer rewards have been saved.');
+          setRewardsUpdated(false);
           setNewSaleFormData(null);
           setShowNewSaleForm(true);
 
           if (responseData.discountUpgradeMessage) {
-            setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
+            setCustomerUpgraded(responseData.customerUpgraded) // boolean
           }
 
           console.log('Rewards updated successfully:', responseData);
@@ -994,7 +803,6 @@ function SellContent() {
     
         console.error(error);
       } else {
-        setSuccessMessage2('Transaction saved.');
         setNewSaleFormData(null);
         setShowNewSaleForm(true);
         sessionStorage.removeItem('newSaleFormData');
@@ -1439,48 +1247,26 @@ function SellContent() {
 
                 <Flex direction={'column'} gap={'4'}>
 
-                  {discountUpgradeMessage && (
+                  {customerUpgraded && (
                     <Callout.Root color='green' mx={'4'}>
                       <Callout.Icon>
                         <RocketIcon height={'25'} width={'25'} />
                       </Callout.Icon>
                       <Callout.Text size={'4'}>
-                        {discountUpgradeMessage}
+                        Nice! Your customer has upgraded to the next rewards tier.
                       </Callout.Text>
                     </Callout.Root>
                   )}
               
-                  {successMessage1 && (
+                  {rewardsUpdated && (
                     <Callout.Root mx={'4'}>
                     <Callout.Icon>
                       <InfoCircledIcon />
                     </Callout.Icon>
                     <Callout.Text size={'4'}>
-                      {successMessage1}
+                      Customer rewards have been updated.
                     </Callout.Text>
                   </Callout.Root>
-                  )}
-
-                  {successMessage2 && (
-                    <Callout.Root mx={'4'}>
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text size={'4'}>
-                        {successMessage2}
-                      </Callout.Text>
-                    </Callout.Root>
-                  )}
-
-                  {squarePosSuccessMessage && (
-                    <Callout.Root mx={'4'}>
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text size={'4'}>
-                        {squarePosSuccessMessage}
-                      </Callout.Text>
-                    </Callout.Root>
                   )}
 
                   {errorMessage && (

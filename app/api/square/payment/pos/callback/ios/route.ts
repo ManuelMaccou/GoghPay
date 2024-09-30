@@ -19,18 +19,6 @@ interface TransactionDetails {
   goghTransactionId: string;
 }
 
-let finalSquarePaymentResults: {
-  successfulResponseFromSquare: boolean
-  transactionUpdatedWithSquareData: boolean,
-  rewardsUpdatedInGogh: boolean,
-  rawData: TransactionDetails | null
-} = {
-  successfulResponseFromSquare: false,
-  transactionUpdatedWithSquareData: false,
-  rewardsUpdatedInGogh: false,
-  rawData: null
-}
-
 const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
   try {
     const dataParam = searchParams.get("data");
@@ -71,7 +59,7 @@ const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
       
         if (saleFormDataCookie) {
           saleFormData = JSON.parse(saleFormDataCookie.value);
-          console.log(saleFormData);
+          console.log('saleFormData from cookie:', saleFormData);
         } else {
           console.error("Sale data cookie was not retrieved from storage.");
         }
@@ -100,12 +88,12 @@ const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
 };
 
 const fetchSquarePaymentId = async (
-  serverTransactionId: string,
+  transactionId: string,
   merchantId: string
 ): Promise<string | null> => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/orders?transactionId=${serverTransactionId}&merchantId=${merchantId}`
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/orders?transactionId=${transactionId}&merchantId=${merchantId}`
     );
 
     const data = await response.json();
@@ -124,7 +112,7 @@ const fetchSquarePaymentId = async (
   }
 };
 
-const updateTransactionDetails = async (squarePaymentId: string, transactionDetails: TransactionDetails, statusToSave: string) => {
+const updateTransactionDetails = async (squarePaymentId: string | null, transactionDetails: TransactionDetails, statusToSave: string) => {
   try {
     console.log('squarepaymentId at updateTransactionDetails:', squarePaymentId)
 
@@ -163,10 +151,8 @@ const updateTransactionDetails = async (squarePaymentId: string, transactionDeta
   }
 }
 
-const updateRewards = async (transactionDetails: TransactionDetails, priceAfterDiscount: number) => {
+const updateRewards = async (transactionDetails: TransactionDetails, priceAfterDiscount: number): Promise<{ success: boolean; customerUpgraded?: boolean }> => {
   console.log('updating rewards with data:', transactionDetails);
-
-  
 
   const accessToken = process.env.SERVER_AUTH
 
@@ -192,26 +178,42 @@ const updateRewards = async (transactionDetails: TransactionDetails, priceAfterD
         responseData
       );
       console.error(apiError);
-      return false;
+      return { success: false };
     } else {
-      return true;
+      return { success: true, customerUpgraded: responseData.customerUpgraded };
     }
   } catch (error) {
-    Sentry.captureException(error);
-
     console.error(error);
-    return false;
+    return { success: false };
   }
 }
 
-const fetchAndUpdatePaymentDetails = async (transactionDetails:TransactionDetails, statusToSave: string, priceAfterDiscount: number) => {  
+const fetchAndUpdatePaymentDetails = async (
+  transactionDetails:TransactionDetails,
+  statusToSave: string,
+  priceAfterDiscount: number,
+  finalSquarePaymentResults: { 
+    squarePaymentIdCaptured: boolean | 'NA', 
+    successfulResponseFromSquare: boolean,
+    transactionUpdatedWithSquareData: boolean,
+    rewardsUpdatedInGogh: boolean,
+    customerUpgraded: boolean,
+    rawData: TransactionDetails | null 
+  }
+): Promise<{
+  squarePaymentIdCaptured: boolean | 'NA',
+  successfulResponseFromSquare: boolean,
+  transactionUpdatedWithSquareData: boolean,
+  rewardsUpdatedInGogh: boolean,
+  customerUpgraded: boolean,
+  rawData: TransactionDetails | null
+}> => {
 
   try {
     console.log('fetchAndUpdatePaymentDetails is running');
-    let squarePaymentId = '';
+    let squarePaymentId: string | null = null;
 
     if (transactionDetails.transactionId && transactionDetails.saleFormData?.sellerMerchant) {
-
       const fetchedSquarePaymentId = await fetchSquarePaymentId(
         transactionDetails.transactionId,
         transactionDetails.saleFormData?.sellerMerchant?._id,
@@ -221,22 +223,38 @@ const fetchAndUpdatePaymentDetails = async (transactionDetails:TransactionDetail
 
       if (fetchedSquarePaymentId) {
         squarePaymentId = fetchedSquarePaymentId;
-      } 
+        finalSquarePaymentResults.squarePaymentIdCaptured = true;
+      } else {
+        finalSquarePaymentResults.squarePaymentIdCaptured = false;
+      }
+    } else {
+      finalSquarePaymentResults.squarePaymentIdCaptured = 'NA';
     }
 
     if (transactionDetails.goghTransactionId) {
-      transactionUpdatedWithSquareData = await updateTransactionDetails(
+      const transactionUpdateSuccess = await updateTransactionDetails(
         squarePaymentId,
         transactionDetails,
         statusToSave
       );
+      finalSquarePaymentResults.transactionUpdatedWithSquareData = transactionUpdateSuccess;
     } else {
       console.error('Gogh transaction ID is missing')
+      finalSquarePaymentResults.transactionUpdatedWithSquareData = false;
     }
     
     if (transactionDetails.saleFormData?.customer?.userInfo._id) {
-      rewardsUpdatedInGogh = await updateRewards(transactionDetails, priceAfterDiscount)
-    } 
+      const rewardsUpdateResponse = await updateRewards(transactionDetails, priceAfterDiscount)
+
+      finalSquarePaymentResults.rewardsUpdatedInGogh = rewardsUpdateResponse.success;
+
+      if (rewardsUpdateResponse.customerUpgraded) {
+        finalSquarePaymentResults.customerUpgraded = rewardsUpdateResponse.customerUpgraded;
+      }
+
+    } else {
+      finalSquarePaymentResults.rewardsUpdatedInGogh = false;
+    }
 
   } catch (error) {
     console.error('Error updating payment details:', error);
@@ -246,18 +264,38 @@ const fetchAndUpdatePaymentDetails = async (transactionDetails:TransactionDetail
 }
 
 
-export async function POST(req: NextRequest) {
+const handleSquareCallback = async (
+  req: NextRequest,
+  method: string
+) => {
+
+  let finalSquarePaymentResults: {
+    squarePaymentIdCaptured: boolean | 'NA',
+    successfulResponseFromSquare: boolean,
+    transactionUpdatedWithSquareData: boolean,
+    rewardsUpdatedInGogh: boolean,
+    customerUpgraded: boolean,
+    rawData: TransactionDetails | null
+  } = {
+    squarePaymentIdCaptured: false,
+    successfulResponseFromSquare: false,
+    transactionUpdatedWithSquareData: false,
+    rewardsUpdatedInGogh: false,
+    customerUpgraded: false,
+    rawData: null
+  }
+
   try {
     const searchParams = req.nextUrl.searchParams;
-
     const transactionDetails = parseTransactionDetailsFromQuery(searchParams);
 
     if (!transactionDetails) {
       return NextResponse.json({ error: 'Invalid transaction data' }, { status: 400 });
     }
 
-    const priceNum = parseFloat(transactionDetails.saleFormData?.price || '0')
+    console.log(`Received a ${method} request from Square`);
 
+    const priceNum = parseFloat(transactionDetails.saleFormData?.price || '0')
     let rewardsDiscountAmount: number = 0;
     let welcomeDiscountAmount: number = 0;
     let priceAfterDiscount: number = priceNum;
@@ -269,9 +307,8 @@ export async function POST(req: NextRequest) {
     if (transactionDetails.saleFormData?.customer && transactionDetails.saleFormData?.customer.currentDiscount?.amount) {
       rewardsDiscountAmount = transactionDetails.saleFormData?.customer.currentDiscount?.amount
     }
-    
 
-    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
+    const totalDiscountAmount = Math.max(rewardsDiscountAmount, welcomeDiscountAmount);
 
     if (transactionDetails.saleFormData?.customer && transactionDetails.saleFormData?.customer?.currentDiscount?.type === 'percent') {
       if (totalDiscountAmount > 100) {
@@ -317,20 +354,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (error) {
-      message = `Error: ${error}`;
+      if (error === 'Error: payment_canceled') {
+        message = 'Payment canceled'
+      } else {
+        message = `Error: ${error}`;
+      }
+
       redirectUrl += `${status}&message=${encodeURIComponent(message)}`;
 
     } else if (transactionId || clientTransactionId) {
-      // Successful transaction case
       status = "success";
       message = `Payment successful.`;
 
-      const squareTransactionResult = fetchAndUpdatePaymentDetails(transactionDetails, statusToSave, priceAfterDiscount)
+      fetchAndUpdatePaymentDetails(transactionDetails, statusToSave, priceAfterDiscount, finalSquarePaymentResults)
 
-      Sentry.captureMessage(squareTransactionResult);
-
-
-      redirectUrl += `${status}&statusToSave=${encodeURIComponent(statusToSave)}`;
+      redirectUrl += `${status}&rewardsUpdated=${encodeURIComponent(finalSquarePaymentResults.rewardsUpdatedInGogh)}&customerUpgraded=${finalSquarePaymentResults.customerUpgraded}`;
     } else {
       console.log("No valid transaction ID provided from Square.");
       redirectUrl += status;
@@ -346,61 +384,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  return handleSquareCallback(req, 'POST');
+}
+
 export async function GET(req: NextRequest) {
-  try {
-    const searchParams = req.nextUrl.searchParams;
-
-    const transactionDetails = parseTransactionDetailsFromQuery(searchParams);
-
-    if (!transactionDetails) {
-      return NextResponse.json({ error: 'Invalid transaction data' }, { status: 400 });
-    }
-
-    const {
-      transactionId,
-      clientTransactionId,
-      error,
-      merchantId,
-      goghTransactionId,
-      rewardsCustomer,
-    } = transactionDetails;
-
-    // Initial redirect URL and status
-    let redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/sell?status=`;
-    let status = "error";
-    let statusToSave = "PENDING";
-    let message = "Unknown error occurred.";
-
-    if (!transactionId && clientTransactionId) {
-      statusToSave = "COMPLETE_OFFLINE";
-    } else if (transactionId && clientTransactionId) {
-      statusToSave = "COMPLETE";
-    } else if (transactionId && !clientTransactionId) {
-      statusToSave = "COMPLETE";
-    } else {
-      statusToSave = "PENDING";
-    }
-
-    if (error) {
-      message = `Error: ${error}`;
-      redirectUrl += `${status}&message=${encodeURIComponent(message)}`;
-    } else if (transactionId || clientTransactionId) {
-      // Successful transaction case
-      status = "success";
-      message = `Payment successful.`;
-
-      redirectUrl += `${status}&statusToSave=${encodeURIComponent(statusToSave)}&clientTransactionId=${encodeURIComponent(clientTransactionId || '')}&serverTransactionId=${encodeURIComponent(transactionId || '')}&merchantId=${encodeURIComponent(merchantId)}&goghTransactionId=${encodeURIComponent(goghTransactionId)}&rewardsCustomer=${encodeURIComponent(rewardsCustomer)}`;
-    } else {
-      console.log("No valid transaction ID provided from Square.");
-      redirectUrl += status;
-    }
-
-    console.log("Redirecting to URL:", redirectUrl);
-
-    // Redirect to /sell with appropriate query parameters
-    return NextResponse.redirect(redirectUrl, 302);
-  } catch (error) {
-    console.error('Error processing Square POS callback:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  return handleSquareCallback(req, 'GET');
 }
