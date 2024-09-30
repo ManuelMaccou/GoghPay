@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing purchase data" }, { status: 400 });
     }
 
-    if (serverAuthentication === process.env.SERVER_AUTH) {
+    if (serverAuthentication === `Bearer ${process.env.SERVER_AUTH}`) {
       console.log("Request authenticated from the server.");
     } else {
       if (!privyId) {
