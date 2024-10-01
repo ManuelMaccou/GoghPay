@@ -16,6 +16,7 @@ import { logAdminError } from '../utils/logAdminError';
 import { ApiError } from '../utils/ApiError';
 import { useDeviceType } from '../contexts/DeviceType';
 import { useSearchParams } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
 import { setSaleDataCookie } from '../actions/setSaleDataCookie';
 
 function isError(error: any): error is Error {
@@ -169,6 +170,7 @@ function SellContent() {
       }
 
     } catch (error: unknown) {
+      Sentry.captureException(error);
       if (isError(error)) {
         console.error('Error fetching reward customers:', error.message);
       } else {
@@ -213,6 +215,19 @@ function SellContent() {
         }
 
         if (!response.ok) {
+          const apiError = new ApiError(
+            `Verifying merchant status on sell page - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+            response.status,
+            data
+          );
+          Sentry.captureException(apiError, {
+            extra: {
+              responseStatus: response?.status ?? 'unknown',
+              responseMessage: data?.message || 'Unknown Error',
+              userId: userId ?? 'unkown userId'
+            },
+          });
+
           throw new Error(`Unexpected status: ${response.status}`);
         } else {
           setMerchant(data);
@@ -223,7 +238,16 @@ function SellContent() {
         setMerchantVerified(true);
 
       } catch (err) {
+        Sentry.captureException(err, {
+          extra: {
+            message: err instanceof Error ? err.message : 'Unknown error',
+            stack: err instanceof Error ? err.stack : undefined,
+            userId: userId ?? 'unkown userId'
+          },
+        });
+
         if (isError(err)) {
+          Sentry.captureException(err);
           console.error(`Error fetching merchant: ${err.message}`);
         } else {
           console.error('Error fetching merchant');
@@ -297,28 +321,41 @@ function SellContent() {
         if (!response.ok) {
         
           const apiError = new ApiError(
-            `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+            `Saving the initial tx pending transaction during Square payment on iPhone - ${response.statusText} - ${data.message || 'Unknown Error'}`,
             response.status,
             data
           );
-      
-          await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
-            message: apiError.message,
-            status: apiError.status,
-            responseBody: apiError.responseBody,
-            stack: apiError.stack,
+          Sentry.captureException(apiError, {
+            tags: {
+              paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
+            },
+            extra: {
+              responseStatus: response?.status ?? 'unknown',
+              responseMessage: data?.message || 'Unknown Error',
+              product: newSaleFormData?.product ?? 'unknown product',
+              price: newSaleFormData?.price ?? 'unknown price',
+              merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
+              buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
+            },
           });
-      
           console.error(error);
         } else {
           goghTransactionId = data.transaction._id
           console.log('Transaction from POS saved successfully:', data);
         }
       } catch (error) {
-  
-        await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
+        Sentry.captureException(error, {
+          tags: {
+            paymentMethod: newSaleFormData?.paymentMethod,
+          },
+          extra: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            product: newSaleFormData?.product ?? 'unknown product',
+            price: newSaleFormData?.price ?? 'unknown price',
+            merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
+            buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
+          },
         });
       }
 
@@ -334,6 +371,7 @@ function SellContent() {
           console.error("Failed to set the cookie.");
         }
       } catch (error) {
+        Sentry.captureException(error);
         console.error("An error occurred:", error);
       }
       
@@ -421,28 +459,41 @@ function SellContent() {
         if (!response.ok) {
         
           const apiError = new ApiError(
-            `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+            `Saving the initial tx pending transaction during Square payment on Android - ${response.statusText} - ${data.message || 'Unknown Error'}`,
             response.status,
             data
           );
-      
-          await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
-            message: apiError.message,
-            status: apiError.status,
-            responseBody: apiError.responseBody,
-            stack: apiError.stack,
+          Sentry.captureException(apiError, {
+            tags: {
+              paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
+            },
+            extra: {
+              responseStatus: response?.status ?? 'unknown',
+              responseMessage: data?.message || 'Unknown Error',
+              product: newSaleFormData?.product ?? 'unknown product',
+              price: newSaleFormData?.price ?? 'unknown price',
+              merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
+              buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
+            },
           });
-      
           console.error(error);
         } else {
           goghTransactionId = data.transaction._id
           console.log('Transaction from POS saved successfully:', data);
         }
       } catch (error) {
-  
-        await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
+        Sentry.captureException(error, {
+          tags: {
+            paymentMethod: newSaleFormData?.paymentMethod,
+          },
+          extra: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            product: newSaleFormData?.product ?? 'unknown product',
+            price: newSaleFormData?.price ?? 'unknown price',
+            merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
+            buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
+          },
         });
       }
 
@@ -459,6 +510,7 @@ function SellContent() {
           console.error("Failed to set the cookie.");
         }
       } catch (error) {
+        Sentry.captureException(error);
         console.error("An error occurred:", error);
       }
 
@@ -701,16 +753,21 @@ function SellContent() {
           setErrorMessage('There was an error updating the customer rewards. We have received the error and are looking into it.');
     
           const apiError = new ApiError(
-            `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+            `Updating reward details after QR code or cash payment - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
             response.status,
             responseData
           );
-      
-          await logAdminError(merchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction`, {
-            message: apiError.message,
-            status: apiError.status,
-            responseBody: apiError.responseBody,
-            stack: apiError.stack,
+          Sentry.captureException(apiError, {
+            tags: {
+              paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
+            },
+            extra: {
+              responseStatus: response?.status ?? 'unknown',
+              responseMessage: responseData?.message || 'Unknown Error',
+              privyId: user?.id ?? 'unknown privyId',
+              purchaseData: newSaleFormData ?? 'unknown purchase data',
+              finalPrice: finalPrice ?? 'unknown',
+            },
           });
       
           console.error(apiError);
@@ -729,10 +786,17 @@ function SellContent() {
           console.log('Rewards updated successfully:', responseData);
         }
       } catch (error) {
-        // Catch any other errors and log them with their full details
-        await logAdminError(merchant?._id, `Attempting to update user rewards`, {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
+        Sentry.captureException(error, {
+          tags: {
+            paymentMethod: newSaleFormData?.paymentMethod,
+          },
+          extra: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            privyId: user?.id ?? 'unknown privyId',
+            purchaseData: newSaleFormData ?? 'unknown purchase data',
+            finalPrice: finalPrice ?? 'unknown',
+          },
         });
       
         console.error(error);
@@ -769,16 +833,23 @@ function SellContent() {
         setErrorMessage('There was an error saving the transaction. We have received the error and are looking into it.');
         
         const apiError = new ApiError(
-          `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+          `Saving a transaction for QR code or cash payment - ${response.statusText} - ${data.message || 'Unknown Error'}`,
           response.status,
           data
         );
-    
-        await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
-          message: apiError.message,
-          status: apiError.status,
-          responseBody: apiError.responseBody,
-          stack: apiError.stack,
+
+        Sentry.captureException(apiError, {
+          tags: {
+            paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
+          },
+          extra: {
+            responseStatus: response?.status ?? 'unknown',
+            responseMessage: data?.message || 'Unknown Error',
+            product: newSaleFormData?.product ?? 'unknown product',
+            price: newSaleFormData?.price ?? 'unknown price',
+            merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
+            buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
+          },
         });
     
         console.error(error);
@@ -788,10 +859,19 @@ function SellContent() {
         console.log('Transaction saved successfully:', data);
       }
     } catch (error) {
-
-      await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
+       Sentry.captureException(error, {
+        tags: {
+          paymentMethod: newSaleFormData?.paymentMethod,
+        },
+        extra: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          userId: user?.id ?? 'unknown Privy Id',
+          product: newSaleFormData?.product ?? 'unknown product',
+          price: newSaleFormData?.price ?? 'unknown price',
+          merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
+          buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
+        },
       });
     }
   };

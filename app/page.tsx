@@ -76,9 +76,9 @@ export default function Home() {
   useEffect(() => {
     if (!ready) return;
     if (isNewUser) return;
-  
+    if (!user) return;
+
     const fetchUser = async () => {
-      if (!user) return;
       setIsFetchingUser(true)
 
       try {
@@ -171,6 +171,7 @@ export default function Home() {
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
         <Image
+          priority
           src="/logos/gogh_logo_white.svg"
           alt="Gogh"
           width={960}

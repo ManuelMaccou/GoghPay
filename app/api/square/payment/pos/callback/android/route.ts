@@ -2,6 +2,7 @@ import { SaleFormData } from '@/app/types/types';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers'
 import { ApiError } from '@/app/utils/ApiError';
+import * as Sentry from '@sentry/nextjs';
 
 interface Metadata {
   cookieName?: string;
@@ -30,9 +31,11 @@ const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
       metadata = JSON.parse(decodeURIComponent(metadataString));
       console.log('Parsed metadata:', metadata);
     } catch (err) {
+      Sentry.captureException(err)
       console.error('Error parsing metadata:', err);
     }
   } else {
+    Sentry.captureMessage('No metadata found in query parameters');
     console.log('No metadata found in query parameters');
   }
 
@@ -45,6 +48,7 @@ const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
       saleDataCookieName = metadata.cookieName;
     } else {
       console.error("Cookie name was not included in iOS callback data");
+      Sentry.captureMessage("Cookie name was not included in iOS callback data");
     }
     
     const cookieStore = cookies();
@@ -57,13 +61,16 @@ const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
         console.log('saleFormData from cookie:', saleFormData);
       } else {
         console.error("Sale data cookie was not retrieved from storage.");
+        Sentry.captureMessage("Sale data cookie was not retrieved from storage.")
       }
     } else {
       console.error("Cookie name was invalid or not retrieved.");
+      Sentry.captureMessage("Sale data not captured from stored cookie");
     }
   
     if (!saleFormData) {
       console.error("Sale data not captured from stored cookie");
+      Sentry.captureMessage("Sale data not captured from stored cookie");
     }
   
     goghTransactionId = metadata.goghTransactionId || "";
@@ -91,8 +98,8 @@ const fetchSquarePaymentId = async (
       }
       return null;
   } catch (err) {
+    Sentry.captureException(err)
     console.error('Error fetching payment details:', err);
-    console.error('An error occurred while fetching payment details.');
     return null
   }
 };
@@ -125,12 +132,14 @@ const updateTransactionDetails = async (squarePaymentId: string | null, transact
         responseData
       );
 
+      Sentry.captureException(apiError);
       console.error('Transaction update failed:', apiError);
       return false
     } else {
       return true
     }
   } catch (error) {
+    Sentry.captureException(error)
     console.error(error);
     return false
   }
@@ -162,12 +171,14 @@ const updateRewards = async (transactionDetails: TransactionDetails, priceAfterD
         response.status,
         responseData
       );
+      Sentry.captureException(apiError);
       console.error(apiError);
       return { success: false };
     } else {
       return { success: true, customerUpgraded: responseData.customerUpgraded };
     }
   } catch (error) {
+    Sentry.captureException(error)
     console.error(error);
     return { success: false };
   }
@@ -242,6 +253,7 @@ const fetchAndUpdatePaymentDetails = async (
     }
 
   } catch (error) {
+    Sentry.captureException(error)
     console.error('Error updating payment details:', error);
   } finally {
     return finalSquarePaymentResults;
@@ -366,6 +378,7 @@ const handleSquareCallback = async (
     // Redirect to /sell with appropriate query parameters
     return NextResponse.redirect(redirectUrl, 302);
   } catch (error) {
+    Sentry.captureException(error)
     console.error('Error processing Square POS callback:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
