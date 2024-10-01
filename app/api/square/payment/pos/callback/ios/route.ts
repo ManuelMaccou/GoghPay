@@ -388,7 +388,7 @@ const handleSquareCallback = async (
 
     console.log("Redirecting to URL:", redirectUrl);
 
-    // Redirect to /sell with appropriate query parameters
+    // Redirect to /sell with appropriate query parameters.
     return NextResponse.redirect(redirectUrl, 302);
   } catch (error) {
     Sentry.captureException(error)
