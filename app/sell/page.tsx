@@ -111,7 +111,6 @@ function SellContent() {
 
   useEffect(() => {
     if (!currentUser) return;
-    console.log('new form data from local storage:', localStorage.getItem('newSaleFormData'));
 
     const statusParam = searchParams.get('status');
     const messageParam = searchParams.get('message') || '';
@@ -254,6 +253,8 @@ function SellContent() {
       setSquarePosError('Missing sale details. Please refresh the page and try again.')
       return;
     } 
+
+    setShowNewSaleForm(true)
 
     let goghTransactionId;
 
@@ -575,26 +576,20 @@ function SellContent() {
 
     if (method === 'Venmo') {
       setShowVenmoDialog(true);
-      sessionStorage.removeItem('newSaleFormData');
       localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Zelle') {
       setShowZelleDialog(true);
-      sessionStorage.removeItem('newSaleFormData');
       localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Cash') {
       setShowCashDialog(true);
-      sessionStorage.removeItem('newSaleFormData');
       localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Square') {
       setShowSquareDialog(true);
-      console.log('session storage:', sessionStorage)
 
       localStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
-      console.log('local storage:', localStorage.getItem('newSaleFormData'));
-
       router.replace('/sell?status=square');
     }
   };
@@ -606,7 +601,6 @@ function SellContent() {
       const parsedData = JSON.parse(storedData);
       setNewSaleFormData(parsedData);
     }
-    console.log('localstorage data:', localStorage)
   }, []);
 
   useEffect(() => {
@@ -724,12 +718,12 @@ function SellContent() {
           if (merchant) {
             fetchCheckedInCustomers(merchant._id)
           }
-          setRewardsUpdated(false);
+          setRewardsUpdated(true);
           setNewSaleFormData(null);
           setShowNewSaleForm(true);
 
-          if (responseData.discountUpgradeMessage) {
-            setCustomerUpgraded(responseData.customerUpgraded) // boolean
+          if (responseData.customerUpgraded) {
+            setCustomerUpgraded(responseData.customerUpgraded)
           }
 
           console.log('Rewards updated successfully:', responseData);
@@ -791,7 +785,6 @@ function SellContent() {
       } else {
         setNewSaleFormData(null);
         setShowNewSaleForm(true);
-        sessionStorage.removeItem('newSaleFormData');
         console.log('Transaction saved successfully:', data);
       }
     } catch (error) {
@@ -1220,6 +1213,7 @@ function SellContent() {
                     customers={currentRewardsCustomers}
                     paymentMethods={paymentMethods}
                     onNewSaleFormSubmit={(formData: SaleFormData) => {
+                      setShowNewSaleForm(false);
                       setNewSaleFormData(formData);
                       handlePaymentMethodChange(formData.paymentMethod, formData);
                     }}
