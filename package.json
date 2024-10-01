@@ -26,7 +26,7 @@
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/themes": "^3.0.5",
     "@sentry/browser": "^8.31.0",
-    "@sentry/nextjs": "^8",
+    "@sentry/nextjs": "^8.31.0",
     "@square/web-payments-sdk-types": "^1.60.7",
     "@square/web-sdk": "^2.0.1",
     "@stitches/react": "^1.2.8",
