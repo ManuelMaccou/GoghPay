@@ -400,7 +400,14 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                     <Heading align={'left'}>Milestones</Heading>
                     <Text>When a customer reaches a milestone, they will be rewarded with a discount on future purchases.</Text>
                   </Flex>
-                  <Flex direction={'column'} width={'100%'} maxHeight={'55vh'} overflow={'scroll'} gap={'3'}>
+                  <Button variant="ghost" 
+                    onClick={() => {
+                      setAddNewMilestone(true);
+                      setRewardsUpdateOperation('add');
+                    }}>
+                    + add milestone
+                  </Button>
+                  <Flex direction={'column'} width={'100%'} gap={'3'}>
                     {currentRewardsTiers
                     .sort((a, b) => a.milestone - b.milestone) // Sort by milestone in ascending order
                     .map((tier) => (
@@ -428,13 +435,6 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                       </Card>
                     ))}
                   </Flex>
-                  <Button variant="ghost" 
-                    onClick={() => {
-                      setAddNewMilestone(true);
-                      setRewardsUpdateOperation('add');
-                    }}>
-                    + add milestone
-                  </Button>
                 </>
               ) : null
             ) : (

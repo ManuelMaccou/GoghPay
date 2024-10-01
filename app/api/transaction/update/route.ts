@@ -6,13 +6,19 @@ export async function POST(req: NextRequest) {
   try {
     const { privyId, squarePaymentId, clientTransactionId, transactionId, status } = await req.json();
     const userIdFromToken = req.headers.get('x-user-id');
+    const serverAuthentication = req.headers.get('authorization');
 
-    if (!privyId) {
-      return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
-    }
-
-    if (!userIdFromToken || userIdFromToken !== privyId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    if (serverAuthentication === `Bearer ${process.env.SERVER_AUTH}`) {
+      console.log("Request authenticated from the server.");
+    } else {
+      // Perform Privy authentication if not server-authenticated
+      if (!privyId) {
+        return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
+      }
+    
+      if (!userIdFromToken || userIdFromToken !== privyId) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
     }
 
     await connectToDatabase();

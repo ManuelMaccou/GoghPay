@@ -13,6 +13,7 @@ import axios from "axios";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
 import { NewTaxForm } from "./components/taxForm";
+import React from "react";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -376,15 +377,16 @@ export default function Taxes({ params }: { params: { userId: string } }) {
                         <Select.Trigger style={{overflow: 'hidden', maxWidth: '200px'}} />
                         <Select.Content position="popper" style={{width: '90vw'}}>
                           {taxes.map((tax) => (
-                            <>
-                              <Select.Item key={tax._id} value={tax._id} disabled={!merchant} style={{marginTop: '20px', marginBottom: '20px'}}>
+                             <React.Fragment key={tax._id}>
+                               <Select.Item value={tax._id} disabled={!merchant} style={{marginTop: '20px', marginBottom: '20px'}}>
                                 <Flex direction={'row'} gap={'4'}>
                                   <Text size={'4'} as="label">{tax.name}</Text>
                                   <Text size={'4'}>{tax.rate}%</Text>
                                 </Flex>
                               </Select.Item>
                               <Select.Separator />
-                            </>
+                             </React.Fragment>
+                             
                           ))}
                         </Select.Content>
                       </Select.Root>
