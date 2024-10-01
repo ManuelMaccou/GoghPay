@@ -11,6 +11,8 @@ import { useMerchant } from "@/app/contexts/MerchantContext";
 import { useUser } from "@/app/contexts/UserContext";
 import styles from ".//styles.module.css";
 import { ExclamationTriangleIcon, Pencil2Icon, RocketIcon, TrashIcon } from "@radix-ui/react-icons";
+import { ApiError } from "@/app/utils/ApiError";
+import * as Sentry from "@sentry/browser";
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -204,12 +206,19 @@ export default function ManageRewards({ params }: { params: { merchantId: string
         setFormData({ name: '', milestone: '', discount: ''});
   
       } else {
+        const apiError = new ApiError(
+          `Updating tx details after Square payment - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+          response.status,
+          data
+        );
+        Sentry.captureException(apiError);
         setErrorMessage(data.message || 'There was an error updating the rewards. Please refresh and try again.');
       }
 
       setIsLoading(false);
 
     } catch (error) {
+      Sentry.captureException(error);
       console.error('Error updating merchant:', error);
       setErrorMessage('There was an error updating the rewards. Please refresh and try again.');
       setIsLoading(false);
