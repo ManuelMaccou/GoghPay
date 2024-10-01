@@ -16,7 +16,7 @@ import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { useSearchParams } from "next/navigation";
-import * as Sentry from "@sentry/browser";
+import * as Sentry from '@sentry/nextjs';
 import { ApiError } from '@/app/utils/ApiError';
 import { getModifiedColor, hexToRgba } from '@/app/utils/getComplementaryColor';
 

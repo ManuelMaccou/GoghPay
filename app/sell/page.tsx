@@ -16,7 +16,7 @@ import { logAdminError } from '../utils/logAdminError';
 import { ApiError } from '../utils/ApiError';
 import { useDeviceType } from '../contexts/DeviceType';
 import { useSearchParams } from 'next/navigation';
-import * as Sentry from "@sentry/browser";
+import * as Sentry from '@sentry/nextjs';
 import { setSaleDataCookie } from '../actions/setSaleDataCookie';
 
 function isError(error: any): error is Error {
@@ -170,6 +170,7 @@ function SellContent() {
       }
 
     } catch (error: unknown) {
+      Sentry.captureException(error);
       if (isError(error)) {
         console.error('Error fetching reward customers:', error.message);
       } else {
@@ -246,6 +247,7 @@ function SellContent() {
         });
 
         if (isError(err)) {
+          Sentry.captureException(err);
           console.error(`Error fetching merchant: ${err.message}`);
         } else {
           console.error('Error fetching merchant');
@@ -369,6 +371,7 @@ function SellContent() {
           console.error("Failed to set the cookie.");
         }
       } catch (error) {
+        Sentry.captureException(error);
         console.error("An error occurred:", error);
       }
       
@@ -507,6 +510,7 @@ function SellContent() {
           console.error("Failed to set the cookie.");
         }
       } catch (error) {
+        Sentry.captureException(error);
         console.error("An error occurred:", error);
       }
 

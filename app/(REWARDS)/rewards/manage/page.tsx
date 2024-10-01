@@ -12,7 +12,7 @@ import { useUser } from "@/app/contexts/UserContext";
 import styles from ".//styles.module.css";
 import { ExclamationTriangleIcon, Pencil2Icon, RocketIcon, TrashIcon } from "@radix-ui/react-icons";
 import { ApiError } from "@/app/utils/ApiError";
-import * as Sentry from "@sentry/browser";
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";

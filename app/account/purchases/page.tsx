@@ -12,7 +12,7 @@ import axios from "axios";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
-import * as Sentry from "@sentry/browser";
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
