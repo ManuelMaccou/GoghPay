@@ -3,6 +3,7 @@ import { createSquareClient } from '@/app/lib/square';
 import { v4 as uuidv4 } from 'uuid';
 import Merchant from '@/app/models/Merchant';
 import { decrypt } from '@/app/lib/encrypt-decrypt';
+import * as Sentry from '@sentry/nextjs';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -61,10 +62,11 @@ export async function GET(request: NextRequest) {
 
       return new NextResponse(JSON.stringify({ customers: sanitizedCustomers }), { status: 200 });
     } else {
-      return new NextResponse('No customers found', { status: 404 });
+      return new NextResponse(null, { status: 204 });
     }
 
   } catch (error) {
+    Sentry.captureException(error);
     console.error('Error with Square API:', error);
     return new NextResponse('Internal server error', { status: 500 });
   }
@@ -121,7 +123,7 @@ export async function POST(req: NextRequest) {
       
       return new NextResponse(JSON.stringify({ newSquareCustomer: sanitizedCustomer }), { status: 200 });
     } else {
-      return new NextResponse('Error creating customer', { status: 404 });
+      return new NextResponse('There was an error checking in and we are looking into it.', { status: 404 });
     }
 
   } catch (error) {
