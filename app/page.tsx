@@ -76,9 +76,9 @@ export default function Home() {
   useEffect(() => {
     if (!ready) return;
     if (isNewUser) return;
-    if (!user) return;
-
+    
     const fetchUser = async () => {
+      if (!user) return;
       setIsFetchingUser(true)
 
       try {
