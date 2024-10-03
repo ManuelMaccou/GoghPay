@@ -427,7 +427,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   useEffect(() => {
     const createNewRewards = async () => {
       if (!currentUser || !merchant) return;
-      console.log('no existing rewards. Creating new one')
+      if (!merchant.rewards || !merchant.rewards.discount_type || !merchant.rewards.tiers) return;
 
       const accessToken = await getAccessToken();
       try {

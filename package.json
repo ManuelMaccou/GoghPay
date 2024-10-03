@@ -16,7 +16,7 @@
     "@fortawesome/free-regular-svg-icons": "^6.5.2",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
-    "@privy-io/react-auth": "^1.77.0",
+    "@privy-io/react-auth": "^1.88.3",
     "@privy-io/server-auth": "^1.7.3",
     "@radix-ui/colors": "^3.0.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
