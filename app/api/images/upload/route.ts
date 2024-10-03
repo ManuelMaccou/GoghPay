@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         .toBuffer();
     }
 
-    // Save the processed image or PDF (as a cropped image) to the database
+    // Save the processed image or PDF (as a cropped image) to the database.
     const newImage = new QrCodeImage({
       paymentProvider,
       contentType: 'image/jpeg', // Store as JPEG (for both images and PDFs)
