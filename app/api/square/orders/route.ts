@@ -35,9 +35,8 @@ export async function GET(request: NextRequest) {
     // If no order is found (e.g., cash transaction), return a 200 status with a message
     if (!response.result || !response.result.order || !response.result.order.tenders) {
       return NextResponse.json({
-        message: 'No order found, but transactionId is valid (e.g., cash transaction).',
-        transactionId,
-      }, { status: 200 });
+        message: `No order found for order_id: ${transactionId}.`
+      }, { status: 404 });
 
     } else {
       const paymentId = response.result.order.tenders[0].id

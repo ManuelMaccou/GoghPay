@@ -8,11 +8,17 @@ export async function middleware(req: NextRequest) {
     try {
       // Extract the Authorization header from the request
       const authHeader = req.headers.get('authorization');
+      const serverAuth = `Bearer ${process.env.SERVER_AUTH}`;
 
       // If there is no Authorization header or it doesn't start with 'Bearer ', return an unauthorized response.
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         console.error("No authentication token provided or invalid format:", { authHeader });
         return NextResponse.json({ message: "No authentication token provided." }, { status: 401 });
+      }
+
+      if (authHeader === serverAuth) {
+        console.log("Server-side authorization detected, bypassing Privy authentication.");
+        return NextResponse.next();
       }
 
       // Extract the token from the Authorization header
