@@ -21,7 +21,8 @@ export async function GET(req: NextRequest, context: { params: Params }) {
   console.log('total transactions', totalTransactions);
 
   if (!totalTransactions.length) {
-    return new Response(null, { status: 204 });
+    console.log(`No transactions returned for buyer ID: ${buyerId}`);
+    return NextResponse.json({ message: "No transactions found." }, { status: 404 });
   }
 
   console.log("Buyer transactions found:", totalTransactions);

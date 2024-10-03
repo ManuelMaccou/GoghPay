@@ -16,8 +16,6 @@ import { logAdminError } from '../utils/logAdminError';
 import { ApiError } from '../utils/ApiError';
 import { useDeviceType } from '../contexts/DeviceType';
 import { useSearchParams } from 'next/navigation';
-import * as Sentry from '@sentry/nextjs';
-import { setSaleDataCookie } from '../actions/setSaleDataCookie';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -64,9 +62,11 @@ function SellContent() {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const [rewardsUpdated, setRewardsUpdated] = useState<boolean>(false);
-  const [customerUpgraded, setCustomerUpgraded] =  useState<boolean>(false);
+  const [successMessage1, setSuccessMessage1] = useState<string | null>(null);
+  const [successMessage2, setSuccessMessage2] = useState<string | null>(null);
+  const [discountUpgradeMessage, setDiscountUpgradeMessage] = useState<string | null>(null);
   const [squarePosError, setSquarePosError] = useState<string | null>(null);
+  const [squarePosSuccessMessage, setSquarePosSuccessMessage] = useState<string | null>(null);
   const [squarePosErrorMessage, setSquarePosErrorMessage] = useState<string | null>(null);
 
   const [showVenmoDialog, setShowVenmoDialog] = useState<boolean>(false);
@@ -109,32 +109,232 @@ function SellContent() {
       window.history.replaceState(null, "", newUrl);
     }
   };
+  
+  const updateTransactionDetails = useCallback(async (
+    squarePaymentId: string | null,
+    clientTransactionId: string,
+    transactionIdToUpdate: string,
+    statusToSave: string
+  ) => {
+    try {
+      console.log('squarepaymentId at updateTransactionDetails:', squarePaymentId)
+
+      const accessToken = await getAccessToken();
+      const response = await fetch('/api/transaction/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          transactionId: transactionIdToUpdate,
+          clientTransactionId,
+          status: statusToSave,
+          squarePaymentId,
+        }),
+      });
+      const responseData = await response.json();
+  
+      if (!response.ok) {
+        const apiError = new ApiError(
+          `API Error11: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+          response.status,
+          responseData
+        );
+
+        console.error('Transaction update failed:', apiError);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, [user])
+
+  const updateRewards = useCallback(async (newSaleFormData: SaleFormData) => {
+    console.log('updating rewards with data:', newSaleFormData);
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/rewards/userRewards/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          purchaseData: newSaleFormData,
+          priceAfterDiscount,
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        const apiError = new ApiError(
+          `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+          response.status,
+          responseData
+        );
+        console.error(apiError);
+        return false;
+      } else {
+        setSuccessMessage1('Customer rewards have been saved.');
+
+        if (responseData.discountUpgradeMessage) {
+          setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
+        }
+
+        return true;
+      }
+    } catch (error) {
+      // Catch any other errors and log them with their full details
+      await logAdminError(newSaleFormData.sellerMerchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction. User: ${newSaleFormData.customer?.userInfo._id}. Amount: ${newSaleFormData.price}.`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    
+      console.error(error);
+      return false;
+    }
+  }, [user?.id, priceAfterDiscount])
+
+  const fetchAndUpdatePaymentDetails = useCallback(
+    async (
+      serverTransactionId: string | null,
+      clientTransactionId: string,
+      merchantId: string,
+      transactionIdToUpdate: string,
+      statusToSave: string,
+      rewardsCustomer: string,
+    ) => {  
+      try {
+        console.log('fetchAndUpdatePaymentDetails is running');
+        let squarePaymentId = '';
+
+        if (serverTransactionId) {
+          // Fetch Square payment ID using the server transaction ID
+          // Move this to callback code. Update the transaction from the call back code.
+          const fetchedSquarePaymentId = await fetchSquarePaymentId(
+            serverTransactionId,
+            merchantId
+          );
+
+          console.log('fetchedSquarePaymentId:', fetchedSquarePaymentId)
+
+          if (fetchedSquarePaymentId) {
+            squarePaymentId = fetchedSquarePaymentId;
+          }
+        }
+
+        await updateTransactionDetails(
+          squarePaymentId,
+          clientTransactionId,
+          transactionIdToUpdate,
+          statusToSave
+        );
+        console.log('check update rewards. newSaleFormData:', newSaleFormData, 'rewards customer:', rewardsCustomer);
+        if (newSaleFormData && rewardsCustomer && rewardsCustomer !== '') {
+          await updateRewards(newSaleFormData)
+        } 
+
+        sessionStorage.removeItem('newSaleFormData');
+        localStorage.removeItem('newSaleFormData');
+        console.log('removed local storage')
+
+        resetUrl("/sell");
+        setNewSaleFormData(null);
+        setShowNewSaleForm(true);
+      } catch (error) {
+        console.error('Error updating payment details:', error);
+      }
+    },
+  [newSaleFormData, updateTransactionDetails, updateRewards]
+);
 
   useEffect(() => {
     if (!currentUser) return;
+    if (!newSaleFormData) return;
+    if (!priceAfterDiscount) return;
+    console.log('new form data from local storage:', localStorage.getItem('newSaleFormData'));
 
+    // Extract query parameters from the URL
+    // Provided by Square. Can be done in the callback code
     const statusParam = searchParams.get('status');
+    const statusToSave = searchParams.get('statusToSave') || 'PENDING';
+    const clientTransactionId = searchParams.get('clientTransactionId') || '';
+    const serverTransactionId = searchParams.get('serverTransactionId');
+
+    // This can go in the cookie
     const messageParam = searchParams.get('message') || '';
-    const customerUpgradedParam = searchParams.get('customerUpgraded');
-    const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
+    const merchantId = searchParams.get('merchantId');
+    const transactionIdToUpdate = searchParams.get('goghTransactionId');
+    const rewardsCustomer = searchParams.get('rewardsCustomer') || '';
 
-    if (statusParam === 'success') {
-      if (customerUpgradedParam === 'true') {
-        setCustomerUpgraded(true)
-      }
+    // Pass success status from callback if all functions were performed correctly
+    // if not, give a status of error with a user friendly message if needed. Or simply
+    // log it if it's not critical and handle it manually while you figure out how to fix it.
+    if (statusParam === 'success' && merchantId && transactionIdToUpdate && currentUser) {
 
-      if (rewardsUpdatedParam === 'true') {
-        setRewardsUpdated(true)
-      }
+      setShowNewSaleForm(false); // keep 
+      setSuccessMessage1(null); // keep and pass success messages from the callback code
+      setSuccessMessage2(null); // keep and pass success messages from the callback code
+      setErrorMessage(null); // keep and pass error messages from the callback code
+      setDiscountUpgradeMessage(null) // keep and pass success messages from the callback code
 
-      setShowNewSaleForm(true);
-      setErrorMessage(null);
+      setSquarePosSuccessMessage(messageParam); // keep and pass success messages from the callback code. Currently: "Payment successful"
 
+      // Move this to backend
+      fetchAndUpdatePaymentDetails(serverTransactionId, clientTransactionId, merchantId, transactionIdToUpdate, statusToSave, rewardsCustomer);
     } else if (statusParam === 'error' && messageParam) {
       setShowNewSaleForm(true);
-      setSquarePosErrorMessage(messageParam);
+      if (messageParam === "Error: payment_canceled") {
+        setSquarePosErrorMessage('Payment canceled');
+      } else {
+        setSquarePosErrorMessage(messageParam);
+      }
     }
-  }, [searchParams, currentUser]);
+  }, [searchParams, currentUser, fetchAndUpdatePaymentDetails, newSaleFormData, priceAfterDiscount]);
+
+  // Move this to callback code
+  const fetchSquarePaymentId = async (
+    serverTransactionId: string,
+    merchantId: string
+  ): Promise<string | null> => {
+    try {
+      const response = await fetch(
+        `/api/square/orders?transactionId=${serverTransactionId}&merchantId=${merchantId}`
+      );
+      const data = await response.json();
+      
+      if (response.ok) {
+       
+        if (data.paymentId) {
+          console.log('paymentId:', data.paymentId)
+         
+          return data.paymentId;
+        } else if (data.message) {
+          // Handle valid cash transaction (no order)
+          console.log('Message:', data.message);
+          return null;
+        } else {
+          setError('Failed to fetch payment details from Square.');
+          return null;
+        }
+      } else {
+        if (data.message) {
+          setError(data.message);
+        } else {
+          setError('Failed to fetch payment details from Square.');
+        }
+        return null;
+      }
+    } catch (err) {
+      console.error('Error fetching payment details:', err);
+      setError('An error occurred while fetching payment details.');
+      return null
+    }
+  };
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
@@ -155,12 +355,9 @@ function SellContent() {
       });
 
       if (response.ok) {
-        if (response.status === 204) {
-          setCurrentRewardsCustomers([]);
-        } else {
-          const rewardsCustomers = await response.json();
-          setCurrentRewardsCustomers(rewardsCustomers);
-        }
+        const rewardsCustomers = await response.json();
+        setCurrentRewardsCustomers(rewardsCustomers);
+
       } else if (response.status === 401) {
         setErrorFetchingRewards('Unauthorized access. Please log in again.');
       } else if (response.status === 404) {
@@ -170,7 +367,6 @@ function SellContent() {
       }
 
     } catch (error: unknown) {
-      Sentry.captureException(error);
       if (isError(error)) {
         console.error('Error fetching reward customers:', error.message);
       } else {
@@ -215,19 +411,6 @@ function SellContent() {
         }
 
         if (!response.ok) {
-          const apiError = new ApiError(
-            `Verifying merchant status on sell page - ${response.statusText} - ${data.message || 'Unknown Error'}`,
-            response.status,
-            data
-          );
-          Sentry.captureException(apiError, {
-            extra: {
-              responseStatus: response?.status ?? 'unknown',
-              responseMessage: data?.message || 'Unknown Error',
-              userId: userId ?? 'unkown userId'
-            },
-          });
-
           throw new Error(`Unexpected status: ${response.status}`);
         } else {
           setMerchant(data);
@@ -238,16 +421,7 @@ function SellContent() {
         setMerchantVerified(true);
 
       } catch (err) {
-        Sentry.captureException(err, {
-          extra: {
-            message: err instanceof Error ? err.message : 'Unknown error',
-            stack: err instanceof Error ? err.stack : undefined,
-            userId: userId ?? 'unkown userId'
-          },
-        });
-
         if (isError(err)) {
-          Sentry.captureException(err);
           console.error(`Error fetching merchant: ${err.message}`);
         } else {
           console.error('Error fetching merchant');
@@ -277,8 +451,6 @@ function SellContent() {
       setSquarePosError('Missing sale details. Please refresh the page and try again.')
       return;
     } 
-
-    setShowNewSaleForm(true)
 
     let goghTransactionId;
 
@@ -321,66 +493,37 @@ function SellContent() {
         if (!response.ok) {
         
           const apiError = new ApiError(
-            `Saving the initial tx pending transaction during Square payment on iPhone - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+            `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
             response.status,
             data
           );
-          Sentry.captureException(apiError, {
-            tags: {
-              paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
-            },
-            extra: {
-              responseStatus: response?.status ?? 'unknown',
-              responseMessage: data?.message || 'Unknown Error',
-              product: newSaleFormData?.product ?? 'unknown product',
-              price: newSaleFormData?.price ?? 'unknown price',
-              merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
-              buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
-            },
+      
+          await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
+            message: apiError.message,
+            status: apiError.status,
+            responseBody: apiError.responseBody,
+            stack: apiError.stack,
           });
+      
           console.error(error);
         } else {
           goghTransactionId = data.transaction._id
           console.log('Transaction from POS saved successfully:', data);
         }
       } catch (error) {
-        Sentry.captureException(error, {
-          tags: {
-            paymentMethod: newSaleFormData?.paymentMethod,
-          },
-          extra: {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined,
-            product: newSaleFormData?.product ?? 'unknown product',
-            price: newSaleFormData?.price ?? 'unknown price',
-            merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
-            buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
-          },
+  
+        await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
         });
       }
-
-      let storedSaleDataCookieName;
-
-      try {
-        const response = await setSaleDataCookie(newSaleFormData);
-    
-        if (response.success) {
-          storedSaleDataCookieName = response.cookieName
-          console.log("Cookie set with name:", response.cookieName);
-        } else {
-          console.error("Failed to set the cookie.");
-        }
-      } catch (error) {
-        Sentry.captureException(error);
-        console.error("An error occurred:", error);
-      }
-      
 
 
       const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/ios`;
       const state = {
-        cookieName: storedSaleDataCookieName,
+        merchantId: newSaleFormData.sellerMerchant?._id,
         goghTransactionId: goghTransactionId,
+        rewardsCustomer: rewardsCustomer,
       };
       
       let dataParameter;
@@ -394,6 +537,7 @@ function SellContent() {
           callback_url: callbackUrl,
           client_id: squareClientId,
           version: "1.3",
+          notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
           customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
           state: JSON.stringify(state),
           options: {
@@ -411,6 +555,7 @@ function SellContent() {
           callback_url: callbackUrl,
           client_id: squareClientId,
           version: "1.3",
+          notes: `Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`,
           state: JSON.stringify(state),
           options: {
             supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE"],
@@ -459,59 +604,29 @@ function SellContent() {
         if (!response.ok) {
         
           const apiError = new ApiError(
-            `Saving the initial tx pending transaction during Square payment on Android - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+            `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
             response.status,
             data
           );
-          Sentry.captureException(apiError, {
-            tags: {
-              paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
-            },
-            extra: {
-              responseStatus: response?.status ?? 'unknown',
-              responseMessage: data?.message || 'Unknown Error',
-              product: newSaleFormData?.product ?? 'unknown product',
-              price: newSaleFormData?.price ?? 'unknown price',
-              merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
-              buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
-            },
+      
+          await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
+            message: apiError.message,
+            status: apiError.status,
+            responseBody: apiError.responseBody,
+            stack: apiError.stack,
           });
+      
           console.error(error);
         } else {
           goghTransactionId = data.transaction._id
           console.log('Transaction from POS saved successfully:', data);
         }
       } catch (error) {
-        Sentry.captureException(error, {
-          tags: {
-            paymentMethod: newSaleFormData?.paymentMethod,
-          },
-          extra: {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined,
-            product: newSaleFormData?.product ?? 'unknown product',
-            price: newSaleFormData?.price ?? 'unknown price',
-            merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
-            buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
-          },
+  
+        await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
         });
-      }
-
-      let storedSaleDataCookieName;
-
-      try {
-        // Call the server action and get the response
-        const response = await setSaleDataCookie(newSaleFormData);
-    
-        if (response.success) {
-          storedSaleDataCookieName = response.cookieName
-          console.log("Cookie set with name:", response.cookieName);
-        } else {
-          console.error("Failed to set the cookie.");
-        }
-      } catch (error) {
-        Sentry.captureException(error);
-        console.error("An error occurred:", error);
       }
 
       //const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/payment/pos/callback/android?merchantId=${merchantId}&goghTransactionId=${goghTransactionId}`;
@@ -538,7 +653,8 @@ function SellContent() {
         `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
         `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
         `S.com.squareup.pos.CUSTOMER_ID=${customerId};` +
-        `S.com.squareup.pos.REQUEST_METADATA={"cookieName":"${storedSaleDataCookieName}","goghTransactionId":"${goghTransactionId}"};` +
+        `S.com.squareup.pos.REQUEST_METADATA={"merchantId":"${newSaleFormData.sellerMerchant?._id}","goghTransactionId":"${goghTransactionId}","rewardsCustomer":"${rewardsCustomer}"};` +
+        `S.com.squareup.pos.NOTE=${encodeURIComponent(`Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ReferenceID: ${goghTransactionId}`)};` +
         "end;";
 
       } else {
@@ -554,6 +670,7 @@ function SellContent() {
           `S.com.squareup.pos.CURRENCY_CODE=${currencyCode};` +
           `S.com.squareup.pos.TENDER_TYPES=${tenderTypes};` +
           `S.com.squareup.pos.REQUEST_METADATA={"merchantId":"${newSaleFormData.sellerMerchant?._id}","goghTransactionId":"${goghTransactionId}","rewardsCustomer":"${rewardsCustomer}"};` +
+          `S.com.squareup.pos.NOTE=${encodeURIComponent(`Gogh on behalf of ${newSaleFormData.sellerMerchant?.name}. ${goghTransactionId}`)};` +
           "end;";
       }
         console.log('url:', posUrl)
@@ -628,23 +745,44 @@ function SellContent() {
 
     if (method === 'Venmo') {
       setShowVenmoDialog(true);
+      sessionStorage.removeItem('newSaleFormData');
       localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Zelle') {
       setShowZelleDialog(true);
+      sessionStorage.removeItem('newSaleFormData');
       localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Cash') {
       setShowCashDialog(true);
+      sessionStorage.removeItem('newSaleFormData');
       localStorage.removeItem('newSaleFormData');
 
     } else if (method === 'Square') {
       setShowSquareDialog(true);
+      sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
+      console.log('session storage:', sessionStorage)
 
       localStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
+      console.log('local storage:', localStorage.getItem('newSaleFormData'));
+
       router.replace('/sell?status=square');
+
+    } else if (method === 'ManualEntry') {
+      sessionStorage.setItem('newSaleFormData', JSON.stringify(newSaleForm));
+      router.push('/checkout/manual');
     }
   };
+
+  useEffect(() => {
+    const storedData = sessionStorage.getItem('newSaleFormData');
+    
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setNewSaleFormData(parsedData);
+    }
+    console.log('session data:', sessionStorage)
+  }, []);
 
   useEffect(() => {
     const storedData = localStorage.getItem('newSaleFormData');
@@ -653,6 +791,7 @@ function SellContent() {
       const parsedData = JSON.parse(storedData);
       setNewSaleFormData(parsedData);
     }
+    console.log('localstorage data:', localStorage)
   }, []);
 
   useEffect(() => {
@@ -681,7 +820,7 @@ function SellContent() {
     }
     
 
-    const totalDiscountAmount = Math.max(rewardsDiscountAmount, welcomeDiscountAmount);
+    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
 
     if (newSaleFormData.customer && newSaleFormData.customer?.currentDiscount?.type === 'percent') {
       if (totalDiscountAmount > 100) {
@@ -717,10 +856,11 @@ function SellContent() {
   };
 
   const handleResetMessages = () => {
-    setRewardsUpdated(false);
+    setSuccessMessage1(null);
+    setSuccessMessage2(null);
     setErrorMessage(null);
     setSquarePosErrorMessage(null);
-    setCustomerUpgraded(false);
+    setDiscountUpgradeMessage(null);
   };
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
@@ -753,21 +893,16 @@ function SellContent() {
           setErrorMessage('There was an error updating the customer rewards. We have received the error and are looking into it.');
     
           const apiError = new ApiError(
-            `Updating reward details after QR code or cash payment - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+            `API Error: ${response.status} - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
             response.status,
             responseData
           );
-          Sentry.captureException(apiError, {
-            tags: {
-              paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
-            },
-            extra: {
-              responseStatus: response?.status ?? 'unknown',
-              responseMessage: responseData?.message || 'Unknown Error',
-              privyId: user?.id ?? 'unknown privyId',
-              purchaseData: newSaleFormData ?? 'unknown purchase data',
-              finalPrice: finalPrice ?? 'unknown',
-            },
+      
+          await logAdminError(merchant?._id, `Updating user rewards during ${newSaleFormData.paymentMethod} transaction`, {
+            message: apiError.message,
+            status: apiError.status,
+            responseBody: apiError.responseBody,
+            stack: apiError.stack,
           });
       
           console.error(apiError);
@@ -775,28 +910,21 @@ function SellContent() {
           if (merchant) {
             fetchCheckedInCustomers(merchant._id)
           }
-          setRewardsUpdated(true);
+          setSuccessMessage1('Customer rewards have been saved.');
           setNewSaleFormData(null);
           setShowNewSaleForm(true);
 
-          if (responseData.customerUpgraded) {
-            setCustomerUpgraded(responseData.customerUpgraded)
+          if (responseData.discountUpgradeMessage) {
+            setDiscountUpgradeMessage(responseData.discountUpgradeMessage)
           }
 
           console.log('Rewards updated successfully:', responseData);
         }
       } catch (error) {
-        Sentry.captureException(error, {
-          tags: {
-            paymentMethod: newSaleFormData?.paymentMethod,
-          },
-          extra: {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined,
-            privyId: user?.id ?? 'unknown privyId',
-            purchaseData: newSaleFormData ?? 'unknown purchase data',
-            finalPrice: finalPrice ?? 'unknown',
-          },
+        // Catch any other errors and log them with their full details
+        await logAdminError(merchant?._id, `Attempting to update user rewards`, {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
         });
       
         console.error(error);
@@ -833,45 +961,31 @@ function SellContent() {
         setErrorMessage('There was an error saving the transaction. We have received the error and are looking into it.');
         
         const apiError = new ApiError(
-          `Saving a transaction for QR code or cash payment - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+          `API Error: ${response.status} - ${response.statusText} - ${data.message || 'Unknown Error'}`,
           response.status,
           data
         );
-
-        Sentry.captureException(apiError, {
-          tags: {
-            paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
-          },
-          extra: {
-            responseStatus: response?.status ?? 'unknown',
-            responseMessage: data?.message || 'Unknown Error',
-            product: newSaleFormData?.product ?? 'unknown product',
-            price: newSaleFormData?.price ?? 'unknown price',
-            merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
-            buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
-          },
+    
+        await logAdminError(merchant?._id, `Saving a ${newSaleFormData.paymentMethod} transaction`, {
+          message: apiError.message,
+          status: apiError.status,
+          responseBody: apiError.responseBody,
+          stack: apiError.stack,
         });
     
         console.error(error);
       } else {
+        setSuccessMessage2('Transaction saved.');
         setNewSaleFormData(null);
         setShowNewSaleForm(true);
+        sessionStorage.removeItem('newSaleFormData');
         console.log('Transaction saved successfully:', data);
       }
     } catch (error) {
-       Sentry.captureException(error, {
-        tags: {
-          paymentMethod: newSaleFormData?.paymentMethod,
-        },
-        extra: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-          userId: user?.id ?? 'unknown Privy Id',
-          product: newSaleFormData?.product ?? 'unknown product',
-          price: newSaleFormData?.price ?? 'unknown price',
-          merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
-          buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
-        },
+
+      await logAdminError(merchant?._id, `Attempting to save a ${newSaleFormData.paymentMethod} transaction`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
       });
     }
   };
@@ -1306,26 +1420,48 @@ function SellContent() {
 
                 <Flex direction={'column'} gap={'4'}>
 
-                  {customerUpgraded && (
+                  {discountUpgradeMessage && (
                     <Callout.Root color='green' mx={'4'}>
                       <Callout.Icon>
                         <RocketIcon height={'25'} width={'25'} />
                       </Callout.Icon>
                       <Callout.Text size={'4'}>
-                        Nice! Your customer has upgraded to the next rewards tier.
+                        {discountUpgradeMessage}
                       </Callout.Text>
                     </Callout.Root>
                   )}
               
-                  {rewardsUpdated && (
+                  {successMessage1 && (
                     <Callout.Root mx={'4'}>
                     <Callout.Icon>
                       <InfoCircledIcon />
                     </Callout.Icon>
                     <Callout.Text size={'4'}>
-                      Customer rewards have been updated.
+                      {successMessage1}
                     </Callout.Text>
                   </Callout.Root>
+                  )}
+
+                  {successMessage2 && (
+                    <Callout.Root mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'4'}>
+                        {successMessage2}
+                      </Callout.Text>
+                    </Callout.Root>
+                  )}
+
+                  {squarePosSuccessMessage && (
+                    <Callout.Root mx={'4'}>
+                      <Callout.Icon>
+                        <InfoCircledIcon />
+                      </Callout.Icon>
+                      <Callout.Text size={'4'}>
+                        {squarePosSuccessMessage}
+                      </Callout.Text>
+                    </Callout.Root>
                   )}
 
                   {errorMessage && (

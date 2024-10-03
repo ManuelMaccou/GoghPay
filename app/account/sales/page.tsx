@@ -270,7 +270,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
       rewardsDiscountAmount = discount.amount;
     }
   
-    const totalDiscountAmount = Math.max(rewardsDiscountAmount, welcomeDiscountAmount);
+    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount;
   
     // Calculate price based on discount type
     if (discount.type === 'percent') {

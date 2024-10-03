@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!rewardsWithMerchantData || rewardsWithMerchantData.length === 0) {
-      return new Response(null, { status: 204 });
+      return new Response(null, { status: 204 }); // No content, no rewards found
     }
 
     return NextResponse.json(rewardsWithMerchantData, { status: 200 });

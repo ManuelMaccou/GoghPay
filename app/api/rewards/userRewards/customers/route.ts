@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!rewardsCustomers || rewardsCustomers.length === 0) {
-      return new NextResponse(null, { status: 204 });
+      return NextResponse.json({ message: 'No customers found' }, { status: 404 });
     }
 
     return NextResponse.json(rewardsCustomers, { status: 200 });

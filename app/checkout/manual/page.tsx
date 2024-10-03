@@ -190,7 +190,7 @@ export default function ManualCreditCardPayment() {
       rewardsDiscountAmount = formData.customer.currentDiscount?.amount
     }
 
-    const totalDiscountAmount = Math.max(rewardsDiscountAmount, welcomeDiscountAmount);
+    const totalDiscountAmount = rewardsDiscountAmount + welcomeDiscountAmount
 
     if (formData.customer && formData.customer.currentDiscount.type === 'percent') {
       if (totalDiscountAmount > 100) {
