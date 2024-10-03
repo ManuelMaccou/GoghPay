@@ -20,7 +20,7 @@ interface TransactionDetails {
   goghTransactionId: string;
 }
 
-const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
+export const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
   try {
     const dataParam = searchParams.get("data");
 
