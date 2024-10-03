@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
     }
 
-    if (!merchant.square.access_token) {
+    if (!!merchant.square || !merchant.square.access_token) {
       return NextResponse.json({ error: 'No access token' }, { status: 401 });
     }
 
