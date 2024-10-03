@@ -159,10 +159,10 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   useEffect(() => {
     setIsCheckingFormStatus(true);
     
-    const storedData = sessionStorage.getItem('newSaleFormData');
+    const localStoredData = localStorage.getItem('newSaleFormData');
     try {
-    if (storedData) {
-      const parsedData: SaleFormData = JSON.parse(storedData);
+    if (localStoredData) {
+      const parsedData: SaleFormData = JSON.parse(localStoredData);
       if (parsedData.hasOwnProperty('tax') && parsedData.tax > 0) {
         setIsTaxChecked(true);
       } else if (parsedData.hasOwnProperty('tax') && parsedData.tax === 0) {
@@ -179,7 +179,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
           paymentMethod: PaymentType.None,
         })
         setCurrentCustomer(null)
-      } else if (checkoutStatus === 'error' || checkoutStatus === 'cancel' || checkoutStatus === 'square') {
+      } else if (checkoutStatus === 'error' || checkoutStatus === 'cancel' || checkoutStatus === 'canceled' || checkoutStatus === 'square') {
         setlocalFormData({
           product: formData?.product || "",
           price: formData?.price || "",
@@ -292,7 +292,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
             <Dialog.Root open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
               <Dialog.Trigger style={{marginBottom: '20px'}}>
               {currentCustomer ? (
-                <Button variant='surface' size={'4'} style={{width: "100%"}}>
+                <Button variant='solid' size={'4'} color='green' style={{width: "100%"}}>
                   <PersonIcon height={'25px'} width={'25px'} /> 
                   {user?.google?.name ? user.google.name : currentCustomer?.userInfo.email}
                 </Button>

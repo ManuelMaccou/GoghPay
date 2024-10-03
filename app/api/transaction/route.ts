@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     let priceAfterDiscount = productPrice
 
-    const totalDiscountAmount = discountAmount + welcomeDiscount
+    const totalDiscountAmount = Math.max(discountAmount, welcomeDiscount)
     console.log('totalDiscountAmount in trans api:', totalDiscountAmount)
 
     if (discountType === 'percent') {
