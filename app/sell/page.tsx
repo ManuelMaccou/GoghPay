@@ -426,7 +426,7 @@ function SellContent() {
 
       console.log('ios POS url:', url);
 
-      window.location.href = url;
+      window.location.replace(url);
 
     } else if (deviceType === 'Android') {
 
@@ -559,7 +559,7 @@ function SellContent() {
       }
         console.log('url:', posUrl)
 
-        window.location.href = posUrl;
+        window.location.replace(posUrl);
     }
   };
 
