@@ -722,7 +722,6 @@ function SellContent() {
     setErrorMessage(null);
     setSquarePosErrorMessage(null);
     setCustomerUpgraded(false);
-    resetUrl('/sell')
   };
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
