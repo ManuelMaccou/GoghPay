@@ -363,7 +363,7 @@ const handleSquareCallback = async (
     }
 
     if (error) {
-      if (error === 'Error: payment_canceled') {
+      if (error === 'payment_canceled') {
         message = 'Payment canceled'
         status = 'canceled'
       } else {

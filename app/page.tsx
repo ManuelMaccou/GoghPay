@@ -80,6 +80,7 @@ export default function Home() {
     const fetchUser = async () => {
       if (!user) return;
       setIsFetchingUser(true)
+      if (!user) return;
 
       try {
         const response = await fetch(`/api/user/me/${user.id}`);

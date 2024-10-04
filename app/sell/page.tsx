@@ -397,7 +397,7 @@ function SellContent() {
           customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
           state: JSON.stringify(state),
           options: {
-            supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE"],
+            supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE", "CASH"],
             auto_return: true,
             clear_default_fees: true,
           },
@@ -426,7 +426,7 @@ function SellContent() {
 
       console.log('ios POS url:', url);
 
-      window.location.href = url;
+      window.location.replace(url);
 
     } else if (deviceType === 'Android') {
 
@@ -522,6 +522,7 @@ function SellContent() {
       const tenderTypes = [
         "com.squareup.pos.TENDER_CARD",
         "com.squareup.pos.TENDER_CARD_ON_FILE",
+        "com.squareup.pos.TENDER_CASH",
       ].join(",");
 
       let posUrl
@@ -558,7 +559,7 @@ function SellContent() {
       }
         console.log('url:', posUrl)
 
-        window.location.href = posUrl;
+        window.location.replace(posUrl);
     }
   };
 
