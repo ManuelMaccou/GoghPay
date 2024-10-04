@@ -76,10 +76,11 @@ export default function Home() {
   useEffect(() => {
     if (!ready) return;
     if (isNewUser) return;
-    if (!user) return;
+    
 
     const fetchUser = async () => {
       setIsFetchingUser(true)
+      if (!user) return;
 
       try {
         const response = await fetch(`/api/user/me/${user.id}`);
