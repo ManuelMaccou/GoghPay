@@ -77,8 +77,8 @@ export default function Home() {
     if (!ready) return;
     if (isNewUser) return;
     
-
     const fetchUser = async () => {
+      if (!user) return;
       setIsFetchingUser(true)
       if (!user) return;
 
