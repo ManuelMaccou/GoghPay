@@ -98,12 +98,17 @@ const fetchSquarePaymentId = async (
   transactionId: string,
   merchantId: string
 ): Promise<string | null> => {
+
+  console.log ('transactionId in fetchSquarePaymentId:', transactionId);
+  console.log ('merchantId in fetchSquarePaymentId:', merchantId);
+
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/square/orders?transactionId=${transactionId}&merchantId=${merchantId}`
     );
 
     const data = await response.json();
+    console.log ('data from fetchSquarePaymentId:', data)
     
     if (response.ok) {
       return data.paymentId;
