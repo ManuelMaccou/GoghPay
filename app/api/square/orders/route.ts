@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Try to retrieve the order
     const response = await client.ordersApi.retrieveOrder(transactionId);
+    console.log('Order response:', response);
 
     // If no order is found (e.g., cash transaction), return a 200 status with a message
     if (!response.result || !response.result.order || !response.result.order.tenders) {
