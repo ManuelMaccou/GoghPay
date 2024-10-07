@@ -1,11 +1,9 @@
 'use client';
 
-import { Header } from "@/app/components/Header";
-import { useUser } from "@/app/contexts/UserContext";
 import { useMerchant } from "../contexts/MerchantContext";
-import { getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 import { Button, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
-import { ReactNode, useEffect, useState } from "react";
+import { useEffect } from "react";
 import React from "react";
 
 export default function OnboardLayout({
@@ -13,6 +11,7 @@ export default function OnboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { ready, authenticated } = usePrivy();
   const { merchant, isFetchingMerchant } = useMerchant();
 
   useEffect(() => {
@@ -52,15 +51,14 @@ export default function OnboardLayout({
           background: "white",
         }}
       >
-        {/* Check the fetching status first */}
-        {isFetchingMerchant ? (
-          <Spinner /> // Show loading state while fetching merchant data
-        ) : merchant ? (
-          // Only show children (onboarding steps) if merchant data exists
-          children
-        ) : (
-          // Fallback if merchant data is not found
-          <Flex direction="column" align="center" gap={'4'}>
+        {ready && authenticated ? (
+
+          isFetchingMerchant ? (
+            <Spinner />
+          ) : merchant ? (
+            children
+          ) : (
+            <Flex direction="column" align="center" gap={'4'}>
             <Heading>Welcome to Gogh!</Heading>
             <Text>
               To join the Gogh family of small businesses, please reach out. We
@@ -76,7 +74,18 @@ export default function OnboardLayout({
               </Link>
             </Button>
           </Flex>
-        )}
+          )
+        ) : ready && !authenticated ? (
+          <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To continue, please log in.
+              </Text>
+              <Button asChild>
+                <Link href="/">Log in</Link>
+              </Button>
+            </Flex>
+        ) : <Spinner /> }
       </Flex>
     </Flex>
   );

@@ -5,11 +5,14 @@ import { useMerchant } from '@/app/contexts/MerchantContext';
 import { Button, Flex, Heading, Text } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
+import { useState } from 'react';
 
 export default function Step1() {
   const router = useRouter();
   const { merchant, setMerchant } = useMerchant();
   const {user} = usePrivy();
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleUpdateOnboardingStep = async () => {
     console.log(merchant)
@@ -37,14 +40,14 @@ export default function Step1() {
         const updatedMerchant = await response.json();
         setMerchant(updatedMerchant.merchant);
         console.log("updated merchant:", updatedMerchant.merchant);
+        router.push('/onboard/step2');
       } else (
         console.error('Failed to update merchant', response.statusText)
       )
     } catch (error) {
-      console.error('Error updating merchant:', error);
+      console.error('An unexpected error happened:', error);
+      setErrorMessage('An unexpected error happened. Please try again later.');
       Sentry.captureException(error);
-    } finally {
-      router.push('/onboard/step2');
     }
   };
 
