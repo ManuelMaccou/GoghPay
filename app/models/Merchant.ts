@@ -61,6 +61,7 @@ const merchantSchema = new mongoose.Schema({
   storeImage: { type: String },
   privyId: { type: String },
   admin: { type: Boolean },
+  onboardingStep: { type: Number },
   stripeConnectedAccountId: { type: String },
   taxes: { type: [taxSchema] },
   promo: { type: Boolean },

@@ -36,6 +36,7 @@ export async function PATCH(req: NextRequest) {
       'rewards.tiers.name',
       'rewards.tiers.discount',
       'rewards.tiers.milestone',
+      'onboardingStep',
     ];
     
     const fieldsToUpdate: { [key: string]: any } = {};

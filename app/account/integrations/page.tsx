@@ -535,7 +535,8 @@ function IntegrationsContent() {
                             <Flex direction={'column'}>
                               <UploadImage 
                                 merchantId={merchant._id}
-                                paymentProvider='Venmo'
+                                fieldToUpdate="paymentMethods.venmoQrCodeImage" 
+                                crop={true}
                                 onUploadSuccess={(updatedMerchant: Merchant) => setMerchant(updatedMerchant)} 
                               />
                             </Flex>
@@ -578,7 +579,8 @@ function IntegrationsContent() {
                             <Flex direction={'column'}>
                               <UploadImage 
                                 merchantId={merchant._id}
-                                paymentProvider='Zelle'
+                                fieldToUpdate="paymentMethods.zelleQrCodeImage" 
+                                crop={true}
                                 onUploadSuccess={(updatedMerchant: Merchant) => setMerchant(updatedMerchant)} 
                               />
                             </Flex>

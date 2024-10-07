@@ -6,11 +6,12 @@ import { Merchant } from '../types/types';
 
 interface UploadImageProps {
   merchantId: string;
-  paymentProvider: 'Venmo' | 'Zelle';
+  fieldToUpdate: string;
+  crop?: boolean;
   onUploadSuccess: (updatedMerchant: Merchant) => void;
 }
 
-const UploadImage: React.FC<UploadImageProps> = ({ merchantId, paymentProvider, onUploadSuccess }) => {
+const UploadImage: React.FC<UploadImageProps> = ({ merchantId, fieldToUpdate, crop = false, onUploadSuccess }) => {
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -24,13 +25,9 @@ const UploadImage: React.FC<UploadImageProps> = ({ merchantId, paymentProvider, 
 
     const formData = new FormData();
     formData.append('image', selectedFile);
-    formData.append('paymentProvider', paymentProvider);
     formData.append('merchantId', merchantId);
-
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
-  
+    formData.append('fieldToUpdate', fieldToUpdate);
+    formData.append('crop', crop ? 'true' : 'false');
 
     setIsLoading(true);
 
@@ -58,20 +55,19 @@ const UploadImage: React.FC<UploadImageProps> = ({ merchantId, paymentProvider, 
   };
 
   const triggerFileInput = () => {
-    document.getElementById(`file-input-${paymentProvider}`)?.click(); // Unique ID for each payment method
+    document.getElementById(`file-input-${fieldToUpdate}`)?.click();
   };
-
 
   return (
     <Flex direction="column" align="center" gap="2">
       <input
-        id={`file-input-${paymentProvider}`}
+        id={`file-input-${fieldToUpdate}`}
         type="file"
         onChange={handleFileChange}
-        style={{ display: 'none' }} // Hide the default input
+        style={{ display: 'none' }}
       />
       <Button onClick={triggerFileInput} disabled={isLoading}>
-        {isLoading ? 'Uploading...' : 'Upload QR code'}
+        {isLoading ? 'Uploading...' : 'Upload Image'}
       </Button>
       {message && <Text>{message}</Text>}
     </Flex>

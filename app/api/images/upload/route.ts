@@ -7,8 +7,9 @@ import sharp from 'sharp';
 
 // Validation schema using Joi
 const schema = Joi.object({
-  paymentProvider: Joi.string().valid('Venmo', 'Zelle').required(),
+  // paymentProvider: Joi.string().valid('Venmo', 'Zelle').required(),
   merchantId: Joi.string().required(),
+  fieldToUpdate: Joi.string().required(),
 });
 
 export const runtime = 'nodejs'; // Specifies the runtime environment (Node.js is default)
@@ -20,8 +21,9 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData(); // Use formData to parse incoming form data
     const file = formData.get('image') as File; // Get the file from formData
-    const paymentProvider = formData.get('paymentProvider') as string;
+    const crop = formData.get('crop') === 'true';
     const merchantId = formData.get('merchantId') as string;
+    const fieldToUpdate = formData.get('fieldToUpdate') as string;
 
     // Check if file exists
     if (!file) {
@@ -29,7 +31,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate the form data
-    const { error } = schema.validate({ paymentProvider, merchantId });
+    //const { error } = schema.validate({ paymentProvider, merchantId, fieldToUpdate });
+    const { error } = schema.validate({ merchantId, fieldToUpdate });
     if (error) {
       return NextResponse.json({ error: error.details[0].message }, { status: 400 });
     }
@@ -47,44 +50,51 @@ export async function POST(req: NextRequest) {
     // Convert the file to a buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    let croppedImageBuffer;
+    let croppedImageBuffer = buffer;
+    let contentType = file.type;
 
-    if (file.type === 'application/pdf') {
-      // Convert the first page of the PDF to an image and crop it
-      croppedImageBuffer = await sharp(buffer, { pages: 1 })
-        .resize(500, 500, {
-          fit: 'cover', // Ensure the image is cropped to exactly 500x500
-          position: 'center', // Center the image when cropping
-        })
-        .jpeg() // Convert to JPEG for storage
-        .toBuffer();
-    } else {
-      // For image files (JPEG/PNG), crop and resize
-      croppedImageBuffer = await sharp(buffer)
-        .resize(500, 500, {
-          fit: 'cover', // Ensure the image is cropped to exactly 500x500
-          position: 'center', // Center the image when cropping
-        })
-        .toBuffer();
-    }
+    if (crop) {
+      if (file.type === 'application/pdf') {
+        // Convert the first page of the PDF to an image and crop it
+        croppedImageBuffer = await sharp(buffer, { pages: 1 })
+          .resize(500, 500, {
+            fit: 'cover', 
+            position: 'center',
+          })
+          .jpeg()
+          .toBuffer();
+          contentType = 'image/jpeg';
+        } else if (file.type === 'image/png') {
+          croppedImageBuffer = await sharp(buffer)
+            .resize(500, 500, {
+              fit: 'cover',
+              position: 'center', 
+            })
+            .png()
+            .toBuffer();
+        } else {
+          croppedImageBuffer = await sharp(buffer)
+            .resize(500, 500, {
+              fit: 'cover',
+              position: 'center',
+            })
+            .jpeg()
+            .toBuffer();
+        }
+      }
 
     // Save the processed image or PDF (as a cropped image) to the database
     const newImage = new QrCodeImage({
-      paymentProvider,
-      contentType: 'image/jpeg', // Store as JPEG (for both images and PDFs)
+      //paymentProvider,
+      contentType,
       data: croppedImageBuffer, // Save the processed buffer
     });
 
     const savedImage = await newImage.save();
 
-    // Update the corresponding field in the Merchant model
-    const updateField = paymentProvider === 'Venmo' ? 'paymentMethods.venmoQrCodeImage' : 'paymentMethods.zelleQrCodeImage';
-
     const updatedMerchant = await Merchant.findByIdAndUpdate(
       merchantId,
-      {
-        $set: { [updateField]: `${process.env.NEXT_PUBLIC_BASE_URL}/api/images/${savedImage._id}` }, // Save the image path
-      },
+      { $set: { [fieldToUpdate]: `${process.env.NEXT_PUBLIC_BASE_URL}/api/images/${savedImage._id}` } },
       { new: true }
     );
 

@@ -64,6 +64,7 @@ export interface Merchant {
   stripeConnectedAccountId?: string;
   promo?: boolean;
   admin: boolean;
+  onboardingStep: number;
   taxes: Tax[];
   shopify?: Shopify;
   square?: Square;
@@ -202,7 +203,7 @@ export interface PaymentMethod {
 }
 
 export interface QrCodeImage {
-  paymentProvider: PaymentProvider
+  //paymentProvider: PaymentProvider
   contentType: string;
   data: Buffer
 }
