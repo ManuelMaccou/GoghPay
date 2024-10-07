@@ -9,7 +9,7 @@ import * as Avatar from '@radix-ui/react-avatar';
 import { Suspense, useEffect, useState } from "react";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import crypto from 'crypto';
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import NotificationMessage from "@/app/components/Notification";
 import UploadImage from "@/app/components/UploadImage";
@@ -19,6 +19,7 @@ function isError(error: any): error is Error {
 }
 
 function IntegrationsContent() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [revokeSuccess, setRevokeSuccess] = useState<string | null>(null);
@@ -28,6 +29,7 @@ function IntegrationsContent() {
   const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string>('');
+  const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -117,8 +119,10 @@ function IntegrationsContent() {
   ];
   const scopeString = squareScopes.join('+');
 
+  const destinationPath = '/account/integrations';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
+  //const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
+  const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}&path=${destinationPath}`);
   const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=${csrfToken}&redirect_uri=${redirectUri}`
 
   const handleRevokeSquareAccess = async () => {
@@ -245,6 +249,13 @@ function IntegrationsContent() {
       console.error('Error updating selected location:', error);
       setError('Failed to update selected location');
     }
+  };
+
+  const handleConnectSquare = () => {
+    setIsAuthenticating(true);
+    setTimeout(() => {
+      router.push(squareAuthUrl);
+    }, 100);
   };
 
   useEffect(() => {
@@ -426,10 +437,13 @@ function IntegrationsContent() {
                                 <RedCircle />
                               </Flex>
                               <Text>{locationError}</Text>
-                              <Button asChild size={'4'} style={{width: '250px'}}>
-                                <Link href={squareAuthUrl}>
-                                  Connect Square
-                                </Link>
+                              <Button 
+                                loading={isAuthenticating}
+                                size={'4'}
+                                style={{width: '250px'}}
+                                onClick={handleConnectSquare}
+                              >
+                                Connect Square
                               </Button>
                             </Flex>
                           ) : (

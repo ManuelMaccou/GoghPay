@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/nextjs';
 import UploadImage from '@/app/components/UploadImage';
 import { useEffect, useState } from 'react';
 import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { initial } from 'lodash';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -87,12 +88,12 @@ export default function Step2() {
   return (
     <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
       <Heading size={{ initial: "5", md: "8" }}>Branding</Heading>
-      <Flex direction={'column'} justify={'center'} align={'start'} gap={'5'} style={{width: 'max-content', alignSelf: 'center'}}>
+      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
         <Text align={'left'} mb={'-3'}>Business name</Text>
         <TextField.Root
           size={'3'}
           placeholder="Your business name"
-          style={{width: '200px'}}
+
           type="text"
           value={newMerchantName || ''}
           onChange={handleMerchantNameChange}
@@ -121,9 +122,10 @@ export default function Step2() {
       
       <Flex direction={'column'} align={'end'} justify={'end'} width={'100%'}>
         <Button
+          disabled={!merchant || !isLogoUploaded || !newMerchantName}
           size={'4'}
           variant='ghost'
-          style={{ width: '250px', cursor: 'pointer', fontWeight: 'bold' }}
+          style={{ width: '250px', cursor: !merchant || !isLogoUploaded || !newMerchantName ? 'default' : 'pointer', fontWeight: 'bold' }}
           onClick={handleFinishStep2}
         >
           Next

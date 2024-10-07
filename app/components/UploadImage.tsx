@@ -66,7 +66,7 @@ const UploadImage: React.FC<UploadImageProps> = ({ merchantId, fieldToUpdate, cr
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />
-      <Button onClick={triggerFileInput} disabled={isLoading}>
+      <Button onClick={triggerFileInput} disabled={isLoading} style={{cursor: 'pointer'}}>
         {isLoading ? 'Uploading...' : 'Upload Image'}
       </Button>
       {message && <Text>{message}</Text>}

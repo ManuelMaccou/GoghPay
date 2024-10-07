@@ -2,15 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { useMerchant } from '@/app/contexts/MerchantContext';
-import { Button, Flex, Heading, Text } from "@radix-ui/themes";
+import { Button, Callout, Flex, Heading, Text } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { useState } from 'react';
+import { InfoCircledIcon } from '@radix-ui/react-icons';
 
 export default function Step1() {
   const router = useRouter();
   const { merchant, setMerchant } = useMerchant();
-  const {user} = usePrivy();
+  const { user } = usePrivy();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -61,6 +62,16 @@ export default function Step1() {
       >
         Get started
       </Button>
+      {errorMessage && (
+        <Callout.Root color='red' mx={'4'}>
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            {errorMessage}
+          </Callout.Text>
+        </Callout.Root>
+      )}
     </Flex>
   );
 }
