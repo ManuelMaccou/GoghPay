@@ -15,6 +15,12 @@ enum PaymentProvider {
   Zelle = 'Zelle',
 }
 
+enum MerchantStatus {
+  Onboarding = 'onboarding',
+  Active = 'active',
+  Inactive = 'inactive',
+}
+
 export enum PaymentTypes {
   Venmo = 'Venmo',
   Zelle = 'Zelle',
@@ -57,6 +63,7 @@ export interface User {
 
 export interface Merchant {
   _id: string;
+  status?: MerchantStatus;
   name: string;
   walletAddress?: string;
   storeImage?: string;

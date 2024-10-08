@@ -3,6 +3,8 @@ import { Schema } from 'mongoose';
 
 const paymentTypes = ['Venmo', 'Zelle', 'Square', 'ManualEntry', 'Cash'];
 
+const MerchantStatus = ['onboarding', 'active', 'inactive'];
+
 const PaymentMethodSchema = new mongoose.Schema({
   types: [{ type: String, enum: paymentTypes, required: true }],
   venmoQrCodeImage: { type: String },
@@ -54,6 +56,7 @@ const RewardsSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const merchantSchema = new mongoose.Schema({
+  status: { type: String, enum: MerchantStatus},
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
   merchantId: { type: String, required: true },

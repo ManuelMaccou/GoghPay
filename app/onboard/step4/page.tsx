@@ -2,16 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useMerchant } from '@/app/contexts/MerchantContext';
-import { useUser } from '@/app/contexts/UserContext';
-import { AlertDialog, Button, Callout, Flex, Heading, Link, RadioGroup, Spinner, Strong, Text, VisuallyHidden } from "@radix-ui/themes";
+import { Button, Callout, Checkbox, Flex, Heading, Link, Separator, Text, TextField } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
-import Cookies from "js-cookie";
-import crypto from 'crypto';
-import { useSearchParams } from "next/navigation";
-import { Location } from '@/app/types/types';
+import { Tax } from '@/app/types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -20,199 +16,93 @@ function isError(error: any): error is Error {
 export default function Step4() {
   const router = useRouter();
   const { merchant, setMerchant } = useMerchant();
-  const { appUser, setAppUser } = useUser();
   const { user } = usePrivy();
 
-  const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
-  const [showLocationDialog, setShowLocationDialog] = useState<boolean>(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [csrfToken, setCsrfToken] = useState<string>('');
-  const [status, setStatus] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [squareLocationName, setSquareLocationName] = useState<string | null>(null);
+  const [errorMessageWithLogin, setErrorMessageWithLogin] = useState<boolean>(false);
+  const [taxAmount, setTaxAmount] = useState<number | null>(null);
+  const [taxes, setTaxes] = useState<Tax[] | null>(null);
+  const [isChecked, setIsChecked] = useState<boolean>(false);
+  const [taxesUpdated, setTaxesUpdated] = useState<boolean>(false);
 
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    let token = Cookies.get('csrfToken');
-  
-    if (!token) {
-      token = crypto.randomBytes(16).toString('hex');
-      setCsrfToken(token);
-  
-      Cookies.set('csrfToken', token, {
-        expires: 1, // 1 day
-        path: '/',
-        secure: process.env.SECURE_ENV === 'true', // Secure flag set based on environment
-        sameSite: 'lax' // Changed from 'strict' to 'lax'
-      });
+  const handleTaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedRate = validateAndFormatRate(e.target.value);
+    if (formattedRate) {
+      setTaxAmount(parseFloat(formattedRate));
+      setErrorMessage(null);
     } else {
-      setCsrfToken(token);
+      setTaxAmount(null);
+      setErrorMessage("Please enter a valid tax percentage (e.g., 9.5).");
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    const fetchLocations = async (merchantId: string) => {
-      setIsFetchingLocations(true);
-      try {
-        const response = await fetch(`/api/square/locations?merchantId=${merchantId}`);
-        console.log('location response:', response);
-        if (response.status === 401) {
-          const errorText = await response.text();
-          if (errorText.includes('expired')) {
-            setLocationError('Token expired. Please reconnect.');
-          } else if (errorText.includes('revoked')) {
-            setLocationError('Token revoked. Please reconnect.');
-          } else if (errorText.includes('No access token')) {
-            setLocationError(null);
-          } else {
-            setLocationError('Unauthorized. Please reconnect.');
-          }
-          setLocations([]);
-        } else if (response.status === 403) {
-          setLocationError('Insufficient permissions. Please contact us.');
-          setLocations([]);
-        } else if (response.ok) {
-          const data = await response.json();
-          setLocations(data.locations || []);
-        } else {
-          setLocationError('Process failed. Please try again.');
-          setLocations([]);
-        }
-      } catch (err) {
-        if (isError(err)) {
-          setLocationError(`Error fetching locations: ${err.message}`);
-        } else {
-          setLocationError('Error fetching locations. Please contact us.');
-        }
-      } finally {
-        setIsFetchingLocations(false);
-      }
-    };
+  const handleAddTax = async (newTax: { rate: string }) => {
+    if (!merchant) return;
 
-    if (merchant && merchant.square?.access_token) {
-      fetchLocations(merchant._id);
+    if(!newTax.rate) {
+      setErrorMessage('Please enter a valid tax rate.');
+      return;
     }
-  }, [merchant]);
 
-  useEffect(() => {
-    if (merchant?.square?.location_name) {
-      setSquareLocationName(merchant.square.location_name);
-    }
-  }, [merchant?.square]);
-
-  useEffect(() => {
-    const statusParam = searchParams.get('status');
-    const messageParam = searchParams.get('message');
-
-    setStatus(statusParam);
-    setMessage(decodeURIComponent(messageParam || ''));
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (status === 'error') {
-      setErrorMessage(message);
-    }
-  }, [status, message]);
-
-  useEffect(() => {
-    if (status === 'success') {
-      setShowLocationDialog(true);
-    }
-  }, [status]);
-
-  const handleLocationSelect = async () => {
-    setErrorMessage(null);
-    if (!selectedLocation) return;
-    
     const accessToken = await getAccessToken();
+
+    const updatedTaxes = [
+      ...(taxes?.map((tax: Tax) => ({
+        ...tax,
+        default: false, // Set all existing taxes to non-default
+      })) || []), // Fallback to an empty array if taxes is null or undefined
+      { name: 'Default', rate: newTax.rate, default: true }, // Add the new tax and set it as the default
+    ];
+
     try {
       const response = await fetch(`/api/merchant/update`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`, 
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           privyId: user?.id,
-          square: {
-            location_id: selectedLocation.id,
-            location_name: selectedLocation.name
-          },
-        })
+          taxes: updatedTaxes,
+        }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to update selected location');
-      } else {
+
+      if (response.ok) {
         const updatedMerchant = await response.json();
         setMerchant(updatedMerchant.merchant);
-        setSquareLocationName(selectedLocation.name);
+        setTaxes(updatedMerchant.merchant.taxes);
+        setTaxesUpdated(true);
+      } else {
+        const errorText = await response.text();
+        console.error("Failed to fetch merchant", response.statusText, errorText);
+        Sentry.captureMessage(`Failed to fetch merchant: ${response.statusText}, ${errorText}`);
+        setErrorMessage("Failed to update tax information. Please try again.");
       }
     } catch (error) {
-      console.error('Error updating selected location:', error);
-      setErrorMessage('Failed to update selected location');
       Sentry.captureException(error);
+      if (isError(error)) {
+        console.error('Error updating merchant taxes:', error.message);
+        setErrorMessage('There was an error. Please try again.');
+      } else {
+        console.error('An unexpected error occurred:', error);
+        setErrorMessage('There was an error. Please try again.');
+      }
     }
   };
 
-  const squareAppId = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
-  const squareEnv = process.env.NEXT_PUBLIC_SQUARE_ENV;
-  const squareScopes = [
-    'CUSTOMERS_READ',
-    'CUSTOMERS_WRITE',
-    'ITEMS_WRITE',
-    'ITEMS_READ',
-    'MERCHANT_PROFILE_READ',
-    'ORDERS_WRITE',
-    'ORDERS_READ',
-    'PAYMENTS_WRITE',
-    'PAYMENTS_WRITE_SHARED_ONFILE',
-    'PAYMENTS_WRITE_ADDITIONAL_RECIPIENTS',
-    'PAYMENTS_READ',
-  ];
-  const scopeString = squareScopes.join('+');
-
-  const destinationPath = '/onboard/step4';
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}&path=${destinationPath}`);
-  const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=${csrfToken}&redirect_uri=${redirectUri}`
-
-  const handleConnectSquare = () => {
-    setIsAuthenticating(true);
-    setTimeout(() => {
-      router.push(squareAuthUrl);
-    }, 100);
+  const handleCheckBoxChange = (checked: boolean | 'indeterminate') => {
+    setIsChecked(checked === true);
   };
 
-  const RedCircle = () => (
-    <svg width="16" height="16">
-      <circle cx="5" cy="5" r="5" fill="red" />
-    </svg>
-  );
-
-  const GreenCircle = () => (
-    <svg width="16" height="16">
-      <circle cx="5" cy="5" r="5" fill="green" />
-    </svg>
-  );
-  
   const handleFinishStep4 = async () => {
     if (!merchant) {
       console.error("No merchant data available");
+      setErrorMessageWithLogin(true);
       return;
     }
 
-    if (!merchant.square) {
-      setErrorMessage("Please connect to Square first.");
-      return;
-    }
-
-    if (!merchant.square.location_name) {
-      setErrorMessage("Please select a location first.");
+    if (!isChecked && (!merchant.taxes || merchant.taxes.length === 0)) {
+      setErrorMessage("Please add sales tax or opt out. You can change this later.");
       return;
     }
 
@@ -235,18 +125,28 @@ export default function Step4() {
         const updatedMerchant = await response.json();
         setMerchant(updatedMerchant.merchant);
         router.push('/onboard/step5');
-      } else (
-        console.error('Failed to update merchant', response.statusText)
-      )
+      } else {
+        console.error('Failed to update merchant', response.statusText);
+        setErrorMessage('An unexpected error happened. Please try again later.');
+      }
     } catch (error) {
-      console.error('An unexpected error happened:', error);
+      console.error('Error updating merchant:', error);
       setErrorMessage('An unexpected error happened. Please try again later.');
       Sentry.captureException(error);
+    
+      if (isError(error)) {
+        console.error(error.message);
+      }
     }
   };
 
+  const validateAndFormatRate = (rate: string): string => { 
+    const validRate = rate.match(/^\d+(\.\d{0,2})?$/);
+    return validRate ? validRate[0] : '';
+  };
+
   useEffect(() => {
-    if (merchant && merchant.onboardingStep < 3) {
+    if (merchant && (merchant.onboardingStep ?? 0) < 3) {
       const timer = setTimeout(() => {
         router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
       }, 3000);
@@ -255,7 +155,19 @@ export default function Step4() {
     }
   }, [merchant, router]);
 
-  if (merchant && merchant.onboardingStep < 3) {
+  useEffect(() => {
+    if (merchant && merchant.taxes) {
+      setTaxes(merchant.taxes);
+    }
+  }, [merchant?.taxes]);
+
+  useEffect(() => {
+    if (merchant?.name) {
+      setTaxAmount(merchant.taxes?.find(tax => tax.default === true)?.rate || null);
+    }
+  }, [merchant?.name]);
+
+  if (merchant && (merchant.onboardingStep ?? 0) < 3) {
     return (
       <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
       <Heading size={{ initial: "5", md: "8" }}>Connect Square</Heading>
@@ -269,121 +181,73 @@ export default function Step4() {
 
   return (
     <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Connect Square</Heading>
-      <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
+      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Configure sales tax</Heading>
+      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
         <Text>
-          Connect your Square account to accept credit card and mobile payments.
+          For credit card payments, we will use your tax settings from Square. 
+          If you would like us to calculate sales tax for Venmo, Zelle, 
+          and cash payments, enter the amount here. You change this later.
         </Text>
-
-        <AlertDialog.Root open={showLocationDialog} onOpenChange={setShowLocationDialog}>
-          <AlertDialog.Trigger>
-            <Button style={{ display: 'none' }} />
-          </AlertDialog.Trigger>
-          <AlertDialog.Content maxWidth="450px">
-            <AlertDialog.Title>Select a location</AlertDialog.Title>
-            <VisuallyHidden>
-              <AlertDialog.Description size="2" mb="4">
-                Select a location
-              </AlertDialog.Description>
-            </VisuallyHidden>
-            {!isFetchingLocations ? (
-              <RadioGroup.Root value={selectedLocation?.id || ''} onValueChange={(value) => setSelectedLocation(locations.find(loc => loc.id === value) || null)} name="locations">
-                {locations.map((location) => (
-                  <RadioGroup.Item key={location.id} value={location.id} disabled={!merchant}>
-                    <Text as='label'>{location.name}</Text>
-                  </RadioGroup.Item>
-                ))}
-              </RadioGroup.Root>
-            ) : (
-              <Spinner />
-            )}
-            <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
-              <AlertDialog.Action>
-                <Button onClick={handleLocationSelect}>
-                    Continue
-                </Button>
-              </AlertDialog.Action>
-            </Flex>
-          </AlertDialog.Content>
-        </AlertDialog.Root>
-
-        <Flex direction={'column'}>
-          {!isFetchingLocations ? (
-            locationError ? (
-              <Flex direction={'column'} gap={'2'}>
-                <Flex direction={'row'} gap={'2'}>
-                  <Text><Strong>Status:</Strong> Not connected</Text>
-                  <RedCircle />
-                </Flex>
-                <Text>{locationError}</Text>
-                <Button 
-                  loading={isAuthenticating}
-                  size={'4'}
-                  style={{width: '250px'}}
-                  onClick={handleConnectSquare}
-                >
-                  Connect Square
-                </Button>
-              </Flex>
-            ) : (
-              <>
-                {locations.length > 0 ? (
-                  <>
-                    <Flex direction={'row'} gap={'2'}>
-                      <Text><Strong>Status:</Strong> Connected</Text>
-                      <GreenCircle />
-                    </Flex>
-
-                    {squareLocationName ? (
-                      <>
-                  
-                        <Flex direction={'row'} gap={'4'} align={'center'} mb={'4'}>
-                          <Text><Strong>Location:</Strong> {squareLocationName}</Text>
-                          <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
-                            Change location
-                          </Button>
-                        </Flex>
-                      
-                      </>
-                    ) : (
-                      <Flex direction={'row'} gap={'4'} my={'4'}>
-                        <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
-                          Select location
-                        </Button>
-                      </Flex>
-                    )}
-
-                    
-                  </>
-                ) : (
-                  <Button 
-                    loading={isAuthenticating}
-                    size={'4'}
-                    style={{width: '250px'}}
-                    onClick={handleConnectSquare}
-                  >
-                    Connect Square
-                  </Button>
-                )}
-              </>
-            )
-          ) : (
-            <Spinner />
+        <Text align={'left'} mb={'-3'}>Tax percentage</Text>
+        <Flex direction={'column'} gap={'2'}>
+          <Flex direction={'row'} gap={'2'}>
+            <TextField.Root
+              size={'3'}
+              placeholder="9.5"
+              type="number"
+              value={taxAmount !== null ? taxAmount.toString() : 'Enter amount'}
+              onChange={handleTaxChange}
+              required
+            >
+            <TextField.Slot side='right'>
+              <Text>%</Text>
+            </TextField.Slot>
+            </TextField.Root>
+            <Button
+              size={'3'}
+              onClick={() => {
+                if (taxAmount !== null) {
+                  handleAddTax({ rate: taxAmount.toString() });
+                }
+              }}
+            >
+              Confirm
+            </Button>
+          </Flex>
+          {(taxesUpdated || (merchant?.taxes?.find(tax => tax.default === true)?.rate)) && (
+            <Callout.Root color='green' size={'1'} style={{padding: '10px', width: 'max-content'}}>
+              <Callout.Text>
+                Tax set to {taxAmount}%
+              </Callout.Text>
+            </Callout.Root>
           )}
+          
         </Flex>
+        <Separator size={'4'} />
+        <Text as="label" size="3">
+          <Flex direction={'row'} gap="2">
+            <Checkbox
+              onCheckedChange={handleCheckBoxChange} 
+              checked={isChecked}
+            />
+            I opt out of collecting sales tax.
+          </Flex>
+        </Text>
       </Flex>
+      
       <Flex direction={'column'} align={'end'} justify={'end'} width={'100%'}>
-      <Button
-        disabled={!merchant}
-        size={'4'}
-        variant='ghost'
-        style={{ width: '250px', cursor: !merchant ? 'default' : 'pointer', fontWeight: 'bold' }}
+        <Button
+          disabled={!merchant || (!taxes?.length && !isChecked)}
+          size={'4'}
+          variant='ghost'
+          style={{ width: '250px', cursor: !merchant?.taxes && !isChecked ? 'default' : 'pointer', fontWeight: 'bold' }}
           onClick={handleFinishStep4}
         >
           Next
           <ArrowRightIcon height={'20'} width={'20'} />
         </Button>
       </Flex>
+
       {errorMessage && (
         <Callout.Root color='red' mx={'4'}>
           <Callout.Icon>
@@ -394,6 +258,17 @@ export default function Step4() {
           </Callout.Text>
         </Callout.Root>
       )}
+       {errorMessageWithLogin && (
+        <Callout.Root color='red' mx={'4'}>
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            An unexpected error happened. Please {" "} <Link href="/">log in and try again.</Link>
+          </Callout.Text>
+        </Callout.Root>
+      )}
+      
     </Flex>
   );
 }

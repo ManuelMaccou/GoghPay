@@ -1,51 +1,37 @@
 'use client'
 
 import { useRouter } from 'next/navigation';
+import Image from "next/image";
 import { useMerchant } from '@/app/contexts/MerchantContext';
-import { Avatar, Button, Callout, Flex, Heading, Text, TextField } from "@radix-ui/themes";
+import { Avatar, Button, Callout, Checkbox, Flex, Heading, Link, Separator, Text } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
-import UploadImage from '@/app/components/UploadImage';
 import { useEffect, useState } from 'react';
 import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
-import { initial } from 'lodash';
-
-function isError(error: any): error is Error {
-  return error instanceof Error && typeof error.message === "string";
-}
 
 export default function Step2() {
   const router = useRouter();
   const { merchant, setMerchant } = useMerchant();
   const { user } = usePrivy();
 
-  const [newMerchantName, setNewMerchantName] = useState<string | null>(null);
-  const [isLogoUploaded, setIsLogoUploaded] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessageWithLogin, setErrorMessageWithLogin] = useState<boolean>(false);
+  const [isChecked, setIsChecked] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (merchant?.name) {
-      setNewMerchantName(merchant.name);
-    }
-  }, [merchant?.name]);
-
-  const handleMerchantNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMerchantName(e.target.value);
+  const handleCheckBoxChange = (checked: boolean | 'indeterminate') => {
+    setIsChecked(checked === true);
   };
 
   const handleFinishStep2 = async () => {
+    console.log(merchant)
     if (!merchant) {
       console.error("No merchant data available");
+      setErrorMessageWithLogin(true);
       return;
     }
 
-    if (!isLogoUploaded) {
-      setErrorMessage("Please upload a logo first");
-      return;
-    }
-
-    if (!newMerchantName) {
-      setErrorMessage("Please enter a business name");
+    if (!isChecked) {
+      setErrorMessage("Please confirm you have the correct Square POS app installed.");
       return;
     }
 
@@ -60,7 +46,6 @@ export default function Step2() {
         },
         body: JSON.stringify({
           privyId: user?.id,
-          name: newMerchantName,
           onboardingStep: 2,
         }),
       });
@@ -70,88 +55,83 @@ export default function Step2() {
         setMerchant(updatedMerchant.merchant);
         console.log("updated merchant:", updatedMerchant.merchant);
         router.push('/onboard/step3');
-      } else {
-        console.error('Failed to update merchant', response.statusText);
-        setErrorMessage('An unexpected error happened. Please try again later.');
-      }
+      } else (
+        console.error('Failed to update merchant', response.statusText)
+      )
     } catch (error) {
-      console.error('Error updating merchant:', error);
+      console.error('An unexpected error happened:', error);
       setErrorMessage('An unexpected error happened. Please try again later.');
       Sentry.captureException(error);
-    
-      if (isError(error)) {
-        console.error(error.message);
-      }
     }
   };
 
+  useEffect(() => {
+    if (merchant && (merchant.onboardingStep ?? 0) < 1) {
+      const timer = setTimeout(() => {
+        router.push(`/onboard/step1`);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [merchant, router]);
+
+  if (merchant && (merchant.onboardingStep ?? 0) < 1) {
+    return (
+      <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
+      <Heading size={{ initial: "5", md: "8" }}>Connect Square</Heading>
+      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+        <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
+        <Text>Redirecting...</Text>
+      </Flex>
+    </Flex>
+    )
+  }
+
   return (
     <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Branding</Heading>
-      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
-        <Text align={'left'} mb={'-3'}>Business name</Text>
-        <TextField.Root
-          size={'3'}
-          placeholder="Your business name"
-
-          type="text"
-          value={newMerchantName || ''}
-          onChange={handleMerchantNameChange}
-          required
-        >
-        </TextField.Root>
-        {merchant ? (
-          <>
-            <Text mb={'-3'} align={'left'}>Your logo</Text>
-            {merchant.branding?.logo ? (
-              <Flex direction={'row'} align={'center'} gap={'5'}>
-                <Flex direction={'column'} align={'center'} p={'7'} style={{border: '1px dashed black'}}>
-                  <UploadImage
-                    merchantId={merchant._id}
-                    fieldToUpdate="branding.logo"
-                    onUploadSuccess={(updatedMerchant) => {
-                      setMerchant(updatedMerchant);
-                      setIsLogoUploaded(true);
-                    }}
-                  />
-                </Flex>
-                <Avatar
-                  size={'7'}
-                  src={merchant.branding.logo}
-                  fallback=""
-                />
-              </Flex>
-            ) : (
-              <Flex direction={'column'} align={'center'} p={'7'} style={{border: '1px dashed black'}}>
-                <UploadImage
-                  merchantId={merchant._id}
-                  fieldToUpdate="branding.logo"
-                  onUploadSuccess={(updatedMerchant) => {
-                    setMerchant(updatedMerchant);
-                    setIsLogoUploaded(true);
-                  }}
-                />
-              </Flex>
-            )}
-          </>
-        ) : (
-          <Button loading></Button>
-        )}
-      </Flex>
-      
-      <Flex direction={'column'} align={'end'} justify={'end'} width={'100%'}>
+      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Connect Square</Heading>
+      <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
+        <Text>First, let&apos;s confirm you have the right Square POS app installed on your phone. 
+          If the icon is grey and looks like the one below, you&apos;re all set. 
+          If you have a different app, click the link below to install the correct one. 
+          Don&apos;t worry, all of your settings and data will be exactly the same and you wont need to create a new account.</Text>
+          <Flex direction={'column'} align={'center'} gap={'5'}>
+            <Avatar
+              size={'7'}
+              src="/logos/squarePosIcon.png"
+              fallback=""
+            />
+            <Text>Download Square POS</Text>
+            <Flex direction={'row'} gap={'4'} align={'center'}>
+            <Link href="https://apps.apple.com/us/app/square-point-of-sale-pos/id335393788" target="_blank">iPhone</Link>
+            <Separator orientation="vertical" />
+            <Link href="https://play.google.com/store/apps/details?id=com.squareup" target="_blank">Android</Link>
+            </Flex>
+            
+          </Flex>
+          <Text as="label" size="3">
+            <Flex direction={'row'} gap="2">
+              <Checkbox
+                onCheckedChange={handleCheckBoxChange} 
+                checked={isChecked}
+                
+              />
+              I have the correct Square POS app installed.
+            </Flex>
+          </Text>
+        </Flex>
+        <Flex direction={'column'} align={'end'} justify={'end'} width={'100%'}>
         <Button
-          disabled={!merchant || !isLogoUploaded || !newMerchantName}
+          disabled={!merchant || !isChecked}
           size={'4'}
           variant='ghost'
-          style={{ width: '250px', cursor: !merchant || !isLogoUploaded || !newMerchantName ? 'default' : 'pointer', fontWeight: 'bold' }}
-          onClick={handleFinishStep2}
-        >
-          Next
-          <ArrowRightIcon height={'20'} width={'20'} />
-        </Button>
-      </Flex>
-
+          style={{ width: '250px', cursor: !merchant || !isChecked ? 'default' : 'pointer', fontWeight: 'bold' }}
+            onClick={handleFinishStep2}
+          >
+            Next
+            <ArrowRightIcon height={'20'} width={'20'} />
+          </Button>
+        </Flex>
       {errorMessage && (
         <Callout.Root color='red' mx={'4'}>
           <Callout.Icon>
@@ -162,7 +142,16 @@ export default function Step2() {
           </Callout.Text>
         </Callout.Root>
       )}
-      
+      {errorMessageWithLogin && (
+        <Callout.Root color='red' mx={'4'}>
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            An unexpected error happened. Please {" "} <Link href="/">log in and try again.</Link>
+          </Callout.Text>
+        </Callout.Root>
+      )}
     </Flex>
   );
 }

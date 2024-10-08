@@ -10,6 +10,7 @@ import { User } from './types/types';
 import styles from './components/styles.module.css';
 import { createSmartAccount } from './utils/createSmartAccount';
 import { useUser } from './contexts/UserContext';
+import { useMerchant } from './contexts/MerchantContext';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -24,6 +25,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const { appUser, setAppUser } = useUser();
+  const { merchant, setMerchant } = useMerchant();
 
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
   const {wallets} = useWallets();
@@ -152,7 +154,11 @@ export default function Home() {
 
   useEffect(() => {
     if (appUser && appUser.merchant) {
-      router.replace('/account/sales')
+      if (merchant && merchant.status === 'onboarding') {
+        router.replace('/onboard');
+      } else {
+        router.replace('/account/sales')
+      }
     } else if (appUser && !appUser.merchant) {
       router.replace('/myrewards')
     }
