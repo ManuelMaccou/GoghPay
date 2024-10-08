@@ -499,10 +499,13 @@ function IntegrationsContent() {
                                   </AlertDialog.Root>
                                 </>
                               ) : (
-                                <Button asChild size={'4'} style={{width: '250px'}}>
-                                  <Link href={squareAuthUrl}>
-                                    Connect Square
-                                  </Link>
+                                <Button 
+                                  loading={isAuthenticating}
+                                  size={'4'}
+                                  style={{width: '250px'}}
+                                  onClick={handleConnectSquare}
+                                >
+                                  Connect Square
                                 </Button>
                               )}
                             </>

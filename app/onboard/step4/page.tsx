@@ -100,6 +100,12 @@ export default function Step4() {
   }, [merchant]);
 
   useEffect(() => {
+    if (merchant?.square?.location_name) {
+      setSquareLocationName(merchant.square.location_name);
+    }
+  }, [merchant?.square]);
+
+  useEffect(() => {
     const statusParam = searchParams.get('status');
     const messageParam = searchParams.get('message');
 
@@ -221,11 +227,13 @@ export default function Step4() {
         },
         body: JSON.stringify({
           privyId: user?.id,
-          onboardingStep: 5,
+          onboardingStep: 4,
         }),
       });
 
       if (response.ok) {
+        const updatedMerchant = await response.json();
+        setMerchant(updatedMerchant.merchant);
         router.push('/onboard/step5');
       } else (
         console.error('Failed to update merchant', response.statusText)
@@ -261,7 +269,7 @@ export default function Step4() {
 
   return (
     <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }}>Connect Square</Heading>
+      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Connect Square</Heading>
       <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
         <Text>
           Connect your Square account to accept credit card and mobile payments.
@@ -338,18 +346,23 @@ export default function Step4() {
                       
                       </>
                     ) : (
-                      <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
-                        Select location
-                      </Button>
+                      <Flex direction={'row'} gap={'4'} my={'4'}>
+                        <Button variant="ghost" onClick={() => setShowLocationDialog(true)}>
+                          Select location
+                        </Button>
+                      </Flex>
                     )}
 
                     
                   </>
                 ) : (
-                  <Button asChild size={'4'} style={{width: '250px'}}>
-                    <Link href={squareAuthUrl}>
-                      Connect Square
-                    </Link>
+                  <Button 
+                    loading={isAuthenticating}
+                    size={'4'}
+                    style={{width: '250px'}}
+                    onClick={handleConnectSquare}
+                  >
+                    Connect Square
                   </Button>
                 )}
               </>

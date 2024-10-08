@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMerchant } from '@/app/contexts/MerchantContext';
-import { Button, Callout, Flex, Heading, Text, TextField } from "@radix-ui/themes";
+import { Avatar, Button, Callout, Flex, Heading, Text, TextField } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import UploadImage from '@/app/components/UploadImage';
@@ -87,7 +87,7 @@ export default function Step2() {
 
   return (
     <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }}>Branding</Heading>
+      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Branding</Heading>
       <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
         <Text align={'left'} mb={'-3'}>Business name</Text>
         <TextField.Root
@@ -103,17 +103,36 @@ export default function Step2() {
         {merchant ? (
           <>
             <Text mb={'-3'} align={'left'}>Your logo</Text>
-            <Flex direction={'column'} align={'center'} p={'7'} style={{border: '1px dashed black'}}>
-              <UploadImage
-                merchantId={merchant._id}
-                fieldToUpdate="branding.logo"
-                onUploadSuccess={(updatedMerchant) => {
-                  setMerchant(updatedMerchant);
-                  setIsLogoUploaded(true);
-                }}
-              />
-            </Flex>
-           
+            {merchant.branding?.logo ? (
+              <Flex direction={'row'} align={'center'} gap={'5'}>
+                <Flex direction={'column'} align={'center'} p={'7'} style={{border: '1px dashed black'}}>
+                  <UploadImage
+                    merchantId={merchant._id}
+                    fieldToUpdate="branding.logo"
+                    onUploadSuccess={(updatedMerchant) => {
+                      setMerchant(updatedMerchant);
+                      setIsLogoUploaded(true);
+                    }}
+                  />
+                </Flex>
+                <Avatar
+                  size={'7'}
+                  src={merchant.branding.logo}
+                  fallback=""
+                />
+              </Flex>
+            ) : (
+              <Flex direction={'column'} align={'center'} p={'7'} style={{border: '1px dashed black'}}>
+                <UploadImage
+                  merchantId={merchant._id}
+                  fieldToUpdate="branding.logo"
+                  onUploadSuccess={(updatedMerchant) => {
+                    setMerchant(updatedMerchant);
+                    setIsLogoUploaded(true);
+                  }}
+                />
+              </Flex>
+            )}
           </>
         ) : (
           <Button loading></Button>

@@ -87,7 +87,7 @@ export default function Step3() {
 
   return (
     <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }}>Connect Square</Heading>
+      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Connect Square</Heading>
       <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
         <Text>First, let&apos;s confirm you have the right Square POS app installed on your phone. 
           If the icon is grey and looks like the one below, you&apos;re all set. 
@@ -95,9 +95,9 @@ export default function Step3() {
           Don&apos;t worry, all of your settings and data will be exactly the same and you wont need to create a new account.</Text>
           <Flex direction={'column'} align={'center'} gap={'5'}>
             <Avatar
-            size={'7'}
+              size={'7'}
               src="/logos/squarePosIcon.png"
-              fallback="A"
+              fallback=""
             />
             <Text>Download Square POS</Text>
             <Flex direction={'row'} gap={'4'} align={'center'}>
