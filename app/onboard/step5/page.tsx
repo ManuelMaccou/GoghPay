@@ -168,7 +168,7 @@ export default function Step5() {
                         onCheckedChange={handleVenmoCheckBoxChange} 
                         checked={isVenmoChecked}
                       />
-                      I don`&apos;`t accept Venmo payments.
+                      I don&apos;t accept Venmo payments.
                     </Flex>
                   </Text>
                 </>
@@ -227,7 +227,7 @@ export default function Step5() {
                       onCheckedChange={handleZelleCheckBoxChange} 
                       checked={isZelleChecked}
                     />
-                    I don`&apos;`t accept Zelle payments.
+                    I don&apos;t accept Zelle payments.
                   </Flex>
                 </Text>
               </>
