@@ -94,7 +94,7 @@ export default function Step2() {
         <Text>First, let&apos;s confirm you have the right Square POS app installed on your phone. 
           If the icon is grey and looks like the one below, you&apos;re all set. 
           If you have a different app, click the link below to install the correct one. 
-          Don&apos;t worry, all of your settings and data will be exactly the same and you wont need to create a new account.</Text>
+          Don&apos;t worry, all of your settings and data will be exactly the same and you won&apos;t need to create a new account.</Text>
           <Flex direction={'column'} align={'center'} gap={'5'}>
             <Avatar
               size={'7'}
