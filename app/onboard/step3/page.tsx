@@ -248,7 +248,7 @@ export default function Step3() {
   };
 
   useEffect(() => {
-    if (merchant && (merchant.onboardingStep ?? 0) < 2) {
+    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 2) {
       const timer = setTimeout(() => {
         router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
       }, 3000);
@@ -257,22 +257,22 @@ export default function Step3() {
     }
   }, [merchant, router]);
 
-  if (merchant && (merchant.onboardingStep ?? 0) < 2) {
+  if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 2) {
     return (
-      <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }}>Connect Square</Heading>
-      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
-        <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
-        <Text>Redirecting...</Text>
+      <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+        <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>
+        <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+          <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
+          <Text>Redirecting...</Text>
+        </Flex>
       </Flex>
-    </Flex>
     )
   }
 
   return (
-    <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Connect Square</Heading>
-      <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
+    <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+      <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>
+      <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center'}}>
         <Text>
           Connect your Square account to accept credit card and mobile payments.
         </Text>
@@ -374,9 +374,9 @@ export default function Step3() {
           )}
         </Flex>
       </Flex>
-      <Flex direction={'column'} align={'end'} justify={'end'} width={'100%'}>
+      <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
       <Button
-        disabled={!merchant}
+        disabled={!merchant || !merchant.square || !merchant.square.access_token}
         size={'4'}
         variant='ghost'
         style={{ width: '250px', cursor: !merchant ? 'default' : 'pointer', fontWeight: 'bold' }}

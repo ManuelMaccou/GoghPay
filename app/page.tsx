@@ -155,7 +155,7 @@ export default function Home() {
   useEffect(() => {
     if (appUser && appUser.merchant) {
       if (merchant && merchant.status === 'onboarding') {
-        router.replace('/onboard');
+        router.replace(`/onboard/step${merchant.onboardingStep || '1'}`);
       } else {
         router.replace('/account/sales')
       }

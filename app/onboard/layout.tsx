@@ -20,7 +20,7 @@ export default function OnboardLayout({
 
   return (
     <Flex
-      direction={{ initial: "column", md: "row" }}
+      direction={{ initial: "column", sm: "row" }}
       position="relative"
       minHeight="100vh"
       width="100%"
@@ -33,8 +33,8 @@ export default function OnboardLayout({
         justify="center"
         align="center"
         px="4"
-        width={{ initial: "100%", md: "30%" }}
-        height={{ initial: "120px", md: "100vh" }}
+        width={{ initial: "100%", sm: "30%" }}
+        height={{ initial: "120px", sm: "100vh" }}
         style={{ textAlign: 'center' }}
       >
         <Heading size="8" align={"center"} style={{ color: "white" }}>

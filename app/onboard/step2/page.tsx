@@ -66,7 +66,7 @@ export default function Step2() {
   };
 
   useEffect(() => {
-    if (merchant && (merchant.onboardingStep ?? 0) < 1) {
+    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 1) {
       const timer = setTimeout(() => {
         router.push(`/onboard/step1`);
       }, 3000);
@@ -75,22 +75,22 @@ export default function Step2() {
     }
   }, [merchant, router]);
 
-  if (merchant && (merchant.onboardingStep ?? 0) < 1) {
+  if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 1) {
     return (
-      <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }}>Connect Square</Heading>
-      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
-        <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
-        <Text>Redirecting...</Text>
+      <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+        <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>
+        <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+          <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
+          <Text>Redirecting...</Text>
+        </Flex>
       </Flex>
-    </Flex>
     )
   }
 
   return (
-    <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Connect Square</Heading>
-      <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
+    <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+      <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>
+      <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center'}}>
         <Text>First, let&apos;s confirm you have the right Square POS app installed on your phone. 
           If the icon is grey and looks like the one below, you&apos;re all set. 
           If you have a different app, click the link below to install the correct one. 
@@ -103,9 +103,9 @@ export default function Step2() {
             />
             <Text>Download Square POS</Text>
             <Flex direction={'row'} gap={'4'} align={'center'}>
-            <Link href="https://apps.apple.com/us/app/square-point-of-sale-pos/id335393788" target="_blank">iPhone</Link>
+            <Link href="https://apps.apple.com/us/app/square-point-of-sale-pos/id335393788" target="_blank" rel="noopener noreferrer">iPhone</Link>
             <Separator orientation="vertical" />
-            <Link href="https://play.google.com/store/apps/details?id=com.squareup" target="_blank">Android</Link>
+            <Link href="https://play.google.com/store/apps/details?id=com.squareup" target="_blank" rel="noopener noreferrer">Android</Link>
             </Flex>
             
           </Flex>
@@ -120,7 +120,7 @@ export default function Step2() {
             </Flex>
           </Text>
         </Flex>
-        <Flex direction={'column'} align={'end'} justify={'end'} width={'100%'}>
+        <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
         <Button
           disabled={!merchant || !isChecked}
           size={'4'}

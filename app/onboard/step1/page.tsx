@@ -87,9 +87,9 @@ export default function Step1() {
   };
 
   return (
-    <Flex direction={'column'} justify={'between'} width={'100%'} height={'100vh'} py={'9'}>
-      <Heading size={{ initial: "5", md: "8" }} align={'center'}>Branding</Heading>
-      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', md: '500px'}} style={{ alignSelf: 'center'}}>
+    <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+      <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Branding</Heading>
+      <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center'}}>
         <Text align={'left'} mb={'-3'}>Business name</Text>
         <TextField.Root
           size={'3'}
@@ -106,7 +106,7 @@ export default function Step1() {
             <Text mb={'-3'} align={'left'}>Your logo</Text>
             {merchant.branding?.logo ? (
               <Flex direction={'row'} align={'center'} gap={'5'}>
-                <Flex direction={'column'} align={'center'} p={'7'} style={{border: '1px dashed black'}}>
+                <Flex direction={'column'} align={'center'} p={'7'} flexGrow={'1'} style={{border: '1px dashed black'}}>
                   <UploadImage
                     merchantId={merchant._id}
                     fieldToUpdate="branding.logo"
@@ -140,7 +140,7 @@ export default function Step1() {
         )}
       </Flex>
       
-      <Flex direction={'column'} align={'end'} justify={'end'} width={'100%'}>
+      <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
         <Button
           disabled={!merchant || (!isLogoUploaded && !merchant.branding?.logo) || !newMerchantName}
           size={'4'}
