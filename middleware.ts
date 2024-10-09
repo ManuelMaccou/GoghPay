@@ -38,7 +38,7 @@ export async function middleware(req: NextRequest) {
         },
       });
     } catch (error) {
-      // Log the error to the console for debugging purposes
+      // Log the error to the console for debugging purposes.
       console.error("Authentication error:", {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,

@@ -17,7 +17,7 @@ interface HeaderProps {
   merchant: boolean | undefined;
   embeddedWallet: ConnectedWallet | null;
   authenticated: boolean;
-  currentUser?: User;
+  currentUser?: User | null;
   walletForPurchase?: string | null;
 }
 
