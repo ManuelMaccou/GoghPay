@@ -442,8 +442,8 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                           <RocketIcon />
                         </Callout.Icon>
                         <Callout.Text size={'3'}>
-                          Set at least one milestone or welcome reward, then you're all done.
-                          We'll contact you when your account is activated.
+                          Set at least one milestone or welcome reward, then you`&apos;`re all done.
+                          We`&apos;`ll contact you when your account is activated.
                         </Callout.Text>
                       </Callout.Root>
                     )}

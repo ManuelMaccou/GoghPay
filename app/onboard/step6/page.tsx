@@ -40,8 +40,8 @@ export default function Step6() {
     <Flex direction={'column'} justify={'center'} maxWidth={'500px'} gap={'4'}>
       <Heading align={'center'}>Almost done!</Heading>
       <Text align={'center'} style={{marginTop: 'auto', marginBottom: 'auto'}}>
-        Next you'll configure the rewards and discounts you want to share with your most loyal customers. 
-        Once you set at least one milestone or welcome reward, you'll be all set.
+        Next you`&apos;`ll configure the rewards and discounts you want to share with your most loyal customers. 
+        Once you set at least one milestone or welcome reward, you`&apos;`ll be all set.
       </Text>
       <Text align={'center'}><Strong>Welcome to Gogh!</Strong></Text>
       <Button mt={'5'} onClick={() => router.push('/rewards/manage')}>Configure rewards</Button>

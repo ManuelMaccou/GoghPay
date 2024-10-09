@@ -162,7 +162,7 @@ export default function Home() {
     } else if (appUser && !appUser.merchant) {
       router.replace('/myrewards')
     }
-  }, [appUser, router]);
+  }, [appUser, router, merchant]);
 
   return (
     <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>

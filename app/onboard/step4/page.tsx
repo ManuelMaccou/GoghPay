@@ -159,13 +159,13 @@ export default function Step4() {
     if (merchant && merchant.taxes) {
       setTaxes(merchant.taxes);
     }
-  }, [merchant?.taxes]);
+  }, [merchant]);
 
   useEffect(() => {
     if (merchant?.name) {
       setTaxAmount(merchant.taxes?.find(tax => tax.default === true)?.rate || null);
     }
-  }, [merchant?.name]);
+  }, [merchant?.name, merchant?.taxes]);
 
   if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 3) {
     return (
