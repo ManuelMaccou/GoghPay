@@ -1,16 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
 import { parseTransactionDetailsFromQuery } from '../route';
 import * as Sentry from '@sentry/nextjs';
 import { cookies } from 'next/headers';
 import { PaymentType, SaleFormData, DiscountType, MilestoneType } from '@/app/types/types';
 
-vi.mock('next/headers', () => ({
-  cookies: vi.fn(),
+jest.mock('next/headers', () => ({
+  cookies: jest.fn(),
 }));
 
-vi.mock('@sentry/nextjs', () => ({
-  captureMessage: vi.fn(),
-  captureException: vi.fn(),
+jest.mock('@sentry/nextjs', () => ({
+  captureMessage: jest.fn(),
+  captureException: jest.fn(),
 }));
 
 const fixedDate = '2024-10-10T02:01:52.920Z';
@@ -94,7 +93,7 @@ describe('parseTransactionDetailsFromQuery', () => {
     });
 
     const mockCookieStore = {
-      get: vi.fn().mockReturnValue({ value: JSON.stringify(saleFormDataMock) }),
+      get: jest.fn().mockReturnValue({ value: JSON.stringify(saleFormDataMock) }),
     };
     (cookies as any).mockReturnValue(mockCookieStore);
 
@@ -202,7 +201,7 @@ describe('parseTransactionDetailsFromQuery', () => {
     });
 
     const mockCookieStore = {
-      get: vi.fn().mockReturnValue(null),
+      get: jest.fn().mockReturnValue(null),
     };
     (cookies as any).mockReturnValue(mockCookieStore);
 
