@@ -4,7 +4,7 @@ import { Schema } from 'mongoose';
 const paymentTypes = ['Venmo', 'Zelle', 'Square', 'ManualEntry', 'Cash'];
 
 const PaymentMethodSchema = new mongoose.Schema({
-  types: [{ type: String, enum: paymentTypes, required: true }],
+  types: [{ type: String, enum: paymentTypes}],
   venmoQrCodeImage: { type: String },
   zelleQrCodeImage: { type: String },
 }, { timestamps: true });
@@ -19,21 +19,21 @@ const SquareSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const BrandingSchema = new mongoose.Schema({
-  primary_color: { type: String, default: "#FFFFFF", required: true },
-  seconday_color: { type: String, default: "#000000", required: true },
-  logo: { type: String, required: true },
+  primary_color: { type: String, default: "#FFFFFF" },
+  seconday_color: { type: String, default: "#000000" },
+  logo: { type: String },
 });
 
 const taxSchema = new mongoose.Schema({
-  rate: { type: Number, required: true },
-  name: { type: String, required: true },
-  default: { type: Boolean, required: true },
+  rate: { type: Number },
+  name: { type: String },
+  default: { type: Boolean },
 }, { timestamps: true });
 
 const RewardsTierSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  discount: { type: Number, required: true }, // Can be dollars or percent off
-  milestone: { type: Number, required: true },  // Milestone can be dollars or visits
+  name: { type: String },
+  discount: { type: Number }, // Can be dollars or percent off
+  milestone: { type: Number },  // Milestone can be dollars or visits
 }, { timestamps: true });
 
 const RewardsSchema = new mongoose.Schema({
@@ -55,8 +55,8 @@ const RewardsSchema = new mongoose.Schema({
 
 const merchantSchema = new mongoose.Schema({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  name: { type: String, required: true },
-  merchantId: { type: String, required: true },
+  name: { type: String },
+  merchantId: { type: String },
   walletAddress: { type: String },
   storeImage: { type: String },
   privyId: { type: String },

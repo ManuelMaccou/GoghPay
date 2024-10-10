@@ -26,7 +26,7 @@ export const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) 
 
     if (!dataParam) {
       console.error("No data parameter found in the URL.");
-      Sentry.captureMessage('No data parameter found in Square iOS response. ')
+      Sentry.captureMessage('No data parameter found in Square iOS response.')
       return null;
     }
 

@@ -1,11 +1,11 @@
 import { Payment } from "square";
 
-enum DiscountType {
+export enum DiscountType {
   Dollar = 'dollar',
   Percent = 'percent',
 }
 
-enum MilestoneType {
+export enum MilestoneType {
   DollarsSpent = 'dollars_spent',
   NumberOfVisits = 'number_of_visits',
 }
@@ -63,11 +63,11 @@ export interface Merchant {
   privyId?: string;
   stripeConnectedAccountId?: string;
   promo?: boolean;
-  admin: boolean;
-  taxes: Tax[];
+  admin?: boolean;
+  taxes?: Tax[];
   shopify?: Shopify;
   square?: Square;
-  paymentMethods: PaymentMethod;
+  paymentMethods?: PaymentMethod;
   rewards?: Rewards;
   branding?: Branding;
   code?: string;
@@ -196,7 +196,7 @@ export interface RewardsCustomer {
 }
 
 export interface PaymentMethod {
-  types: PaymentType[];
+  types?: PaymentType[];
   venmoQrCodeImage?: string;
   zelleQrCodeImage?: string;
 }

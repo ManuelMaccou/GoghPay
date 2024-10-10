@@ -1019,7 +1019,7 @@ function SellContent() {
                 )}
 
                 {newSaleFormData && selectedPaymentMethod === 'Zelle' && (
-                  newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage ? (
+                  newSaleFormData.sellerMerchant?.paymentMethods?.zelleQrCodeImage ? (
                     <AlertDialog.Root open={showZelleDialog} onOpenChange={setShowZelleDialog}>
                       <AlertDialog.Trigger>
                         <Button style={{ display: 'none' }} />
@@ -1076,7 +1076,7 @@ function SellContent() {
                          
                           <Avatar.Root>
                             <Avatar.Image 
-                            src={ newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage }
+                            src={ newSaleFormData.sellerMerchant?.paymentMethods?.zelleQrCodeImage }
                             alt="Zelle QR code"
                             style={{objectFit: "contain", maxWidth: '100%'}}
                             />
@@ -1106,7 +1106,7 @@ function SellContent() {
                         </Flex>
                       </AlertDialog.Content>
                     </AlertDialog.Root>
-                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage && (
+                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods?.zelleQrCodeImage && (
                     <Callout.Root color='red' mx={'4'}>
                       <Callout.Icon>
                         <InfoCircledIcon />

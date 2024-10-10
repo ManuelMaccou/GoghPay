@@ -68,22 +68,30 @@ const saleFormDataMock: SaleFormData = {
 
 describe('parseTransactionDetailsFromQuery', () => {
 
-  it('should return null and log error if no data parameter is found', () => {
+  it('should log error if no metadata parameter is found', () => {
     const searchParams = new URLSearchParams();
     const result = parseTransactionDetailsFromQuery(searchParams);
 
-    expect(result).toBeNull();
-    expect(Sentry.captureMessage).toHaveBeenCalledWith('No data parameter found in Square iOS response.');
+    expect(result).toEqual({
+      clientTransactionId: null,
+      transactionId: null,
+      error: null,
+      saleFormData: null,
+      goghTransactionId: "",
+    });
+    expect(Sentry.captureMessage).toHaveBeenCalledWith('No metadata found in query parameters');
   });
 
-  it('should return parsed transaction details if data parameter is valid', () => {
-    const data = JSON.stringify({
-      transaction_id: '123',
-      client_transaction_id: '456',
-      status: 'success',
-      state: JSON.stringify({ cookieName: 'testCookie', goghTransactionId: '789' }),
+  it('should return parsed transaction details if metadata parameter is valid', () => {
+    const metadata = {
+      cookieName: 'testCookie',
+      goghTransactionId: '789',
+    };
+    const searchParams = new URLSearchParams({
+      'com.squareup.pos.CLIENT_TRANSACTION_ID': '456',
+      'com.squareup.pos.SERVER_TRANSACTION_ID': '123',
+      'com.squareup.pos.REQUEST_METADATA': encodeURIComponent(JSON.stringify(metadata)),
     });
-    const searchParams = new URLSearchParams({ data: encodeURI(data) });
 
     const mockCookieStore = {
       get: vi.fn().mockReturnValue({ value: JSON.stringify(saleFormDataMock) }),
@@ -93,9 +101,9 @@ describe('parseTransactionDetailsFromQuery', () => {
     const result = parseTransactionDetailsFromQuery(searchParams);
 
     expect(result).toEqual({
-      transactionId: '123',
       clientTransactionId: '456',
-      error: undefined,
+      transactionId: '123',
+      error: null,
       saleFormData: {
         product: 'Test Product',
         price: '100.00',
@@ -150,24 +158,32 @@ describe('parseTransactionDetailsFromQuery', () => {
     });
   });
 
-
-  it('should handle errors during parsing and log them', () => {
-    const searchParams = new URLSearchParams({ data: '%E0%A4%A' }); // Invalid URI component
+  it('should handle errors during metadata parsing and log them', () => {
+    const searchParams = new URLSearchParams({
+      'com.squareup.pos.REQUEST_METADATA': '%E0%A4%A', // Invalid URI component
+    });
 
     const result = parseTransactionDetailsFromQuery(searchParams);
 
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      clientTransactionId: null,
+      transactionId: null,
+      error: null,
+      saleFormData: null,
+      goghTransactionId: "",
+    });
     expect(Sentry.captureException).toHaveBeenCalled();
   });
 
-  it('should log error if cookie name is not included in state', () => {
-    const data = JSON.stringify({
-      transaction_id: '123',
-      client_transaction_id: '456',
-      status: 'success',
-      state: JSON.stringify({ goghTransactionId: '789' }),
+  it('should log error if cookie name is not included in metadata', () => {
+    const metadata = {
+      goghTransactionId: '789',
+    };
+    const searchParams = new URLSearchParams({
+      'com.squareup.pos.CLIENT_TRANSACTION_ID': '456',
+      'com.squareup.pos.SERVER_TRANSACTION_ID': '123',
+      'com.squareup.pos.REQUEST_METADATA': encodeURIComponent(JSON.stringify(metadata)),
     });
-    const searchParams = new URLSearchParams({ data: encodeURI(data) });
 
     parseTransactionDetailsFromQuery(searchParams);
 
@@ -175,13 +191,15 @@ describe('parseTransactionDetailsFromQuery', () => {
   });
 
   it('should log error if sale data cookie is not retrieved from storage', () => {
-    const data = JSON.stringify({
-      transaction_id: '123',
-      client_transaction_id: '456',
-      status: 'success',
-      state: JSON.stringify({ cookieName: 'testCookie', goghTransactionId: '789' }),
+    const metadata = {
+      cookieName: 'testCookie',
+      goghTransactionId: '789',
+    };
+    const searchParams = new URLSearchParams({
+      'com.squareup.pos.CLIENT_TRANSACTION_ID': '456',
+      'com.squareup.pos.SERVER_TRANSACTION_ID': '123',
+      'com.squareup.pos.REQUEST_METADATA': encodeURIComponent(JSON.stringify(metadata)),
     });
-    const searchParams = new URLSearchParams({ data: encodeURI(data) });
 
     const mockCookieStore = {
       get: vi.fn().mockReturnValue(null),

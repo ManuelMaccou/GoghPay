@@ -326,7 +326,7 @@ function IntegrationsContent() {
 
   useEffect(() => {
     if (!merchant?.paymentMethods) return;
-    if (!merchant.paymentMethods.zelleQrCodeImage) return;
+    if (!merchant.paymentMethods?.zelleQrCodeImage) return;
     
     setZelleQrCode(merchant.paymentMethods.zelleQrCodeImage)
   }, [merchant])

@@ -17,7 +17,7 @@ interface TransactionDetails {
   goghTransactionId: string;
 }
 
-const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
+export const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
   const clientTransactionId = searchParams.get("com.squareup.pos.CLIENT_TRANSACTION_ID");
   const transactionId = searchParams.get("com.squareup.pos.SERVER_TRANSACTION_ID");
   const error = searchParams.get("com.squareup.pos.ERROR_CODE");
