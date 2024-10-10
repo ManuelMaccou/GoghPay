@@ -94,7 +94,7 @@ function SellContent() {
   useEffect(() => {
     if (appUser) {
       const walletAddress = appUser.smartAccountAddress || appUser.walletAddress;
-      setWalletForPurchase(walletAddress);
+      setWalletForPurchase(walletAddress || null);
     }
   }, [appUser]);
 

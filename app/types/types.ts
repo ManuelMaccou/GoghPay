@@ -46,13 +46,13 @@ export interface User {
   privyId?: string;
   squareCustomerId?: string;
   shopifyCustomerId?: string;
-  walletAddress: string;
+  walletAddress?: string;
   name?: string;
   email?: string;
   merchant?: boolean;
-  creationType: string;
-  smartAccountAddress: string;
-  coinbaseAddress: string;
+  creationType?: string;
+  smartAccountAddress?: string;
+  coinbaseAddress?: string;
 }
 
 export interface Merchant {
