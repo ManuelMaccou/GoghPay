@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const paymentProviders = ['Zelle', 'Venmo']
 
 const QrCodeImageSchema = new mongoose.Schema({
-  paymentProvider: { type: String, enum: paymentProviders, required: true },
+  //paymentProvider: { type: String, enum: paymentProviders},
   contentType: { type: String, required: true },
   data: { type: Buffer, required: true },
 }, { timestamps: true });

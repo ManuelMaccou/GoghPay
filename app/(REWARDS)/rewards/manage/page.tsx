@@ -304,6 +304,95 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     }
   };
 
+  useEffect(() => {
+    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+      const timer = setTimeout(() => {
+        router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [merchant, router]);
+
+  if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+    return (
+      <Flex
+      direction={{ initial: "column", sm: "row" }}
+      position="relative"
+      minHeight="100vh"
+      width="100%"
+      style={{
+        background: "linear-gradient(to bottom, #45484d 0%,#000000 100%)",
+      }}
+    >
+      <Flex
+        direction="row"
+        justify="center"
+        align="center"
+        px="4"
+        width={{ initial: "100%", sm: "30%" }}
+        height={{ initial: "120px", sm: "100vh" }}
+        style={{ textAlign: 'center' }}
+      >
+        <Heading size="8" align={"center"} style={{ color: "white" }}>
+          Welcome to Gogh
+        </Heading>
+      </Flex>
+      <Flex
+        direction={"column"}
+        justify={"center"}
+        align={"center"}
+        px={"4"}
+        flexGrow={"1"}
+        style={{
+          background: "white",
+        }}
+      >
+        {ready && authenticated ? (
+          isFetchingMerchant ? (
+            <Spinner />
+          ) : merchant ? (
+            <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+              <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Configure rewards</Heading>
+              <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+                <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
+                <Text>Redirecting...</Text>
+              </Flex>
+            </Flex>
+          ) : (
+            <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To join the Gogh family of small businesses, please reach out. We
+                would love to hear from you.
+              </Text>
+              <Button asChild>
+                <Link
+                  href="mailto:hello@ongogh.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contact Us
+                </Link>
+              </Button>
+            </Flex>
+          )
+        ) : ready && !authenticated ? (
+          <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To continue, please log in.
+              </Text>
+              <Button asChild>
+                <Link href="/">Log in</Link>
+              </Button>
+            </Flex>
+        ) : <Spinner /> }
+      </Flex>
+    </Flex>
+  )
+}
+
   return (
     <Flex 
       direction='column'
@@ -316,14 +405,17 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     >
       <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
         <Heading size={'8'} style={{color: "white"}}>Manage rewards</Heading>
-        <Header
-          color={"white"}
-          merchant={currentUser?.merchant}
-          embeddedWallet={embeddedWallet}
-          authenticated={authenticated}
-          walletForPurchase={walletForPurchase}
-          currentUser={currentUser}
-        />
+        {(!merchant || (merchant?.status !== "onboarding")) && (
+          <Header
+            color={"white"}
+            merchant={currentUser?.merchant}
+            embeddedWallet={embeddedWallet}
+            authenticated={authenticated}
+            walletForPurchase={walletForPurchase}
+            currentUser={currentUser}
+          />
+        )}
+        
       </Flex>
       <Flex
         flexGrow={'1'}
@@ -341,23 +433,22 @@ export default function ManageRewards({ params }: { params: { merchantId: string
         {ready && authenticated ? (
           currentUser && !isFetchingMerchant && merchant ? (
             !addNewMilestone ? (
-
-              currentRewardsTiers.length === 0 && !isLoading ? (
-                <>
-                  <Text size={'5'} align={'center'}>
-                    Incentivize your customers to spend more and visit often with automated rewards. 
-                    You&apos;ll configure your reward milestones once and discounts will be automatically applied 
-                    at checkout for in-person sales. Rewards for online sales coming soon.
-                  </Text>
-                  <Button style={{width: '250px'}} onClick={() => setAddNewMilestone(true)}>
-                    Get Started
-                  </Button>
-                </>
-              ) : currentRewardsTiers.length > 0 && !isLoading ? (
+              !isLoading ? (
                 <>
                   <Flex direction={'column'} width={'100%'} gap={'4'}>
+                    {merchant && merchant.status === 'onboarding' && (
+                      <Callout.Root color="green">
+                        <Callout.Icon>
+                          <RocketIcon />
+                        </Callout.Icon>
+                        <Callout.Text size={'3'}>
+                          Set at least one milestone or welcome reward, then you&apos;re all done.
+                          We&apos;ll contact you when your account is activated.
+                        </Callout.Text>
+                      </Callout.Root>
+                    )}
                     <Heading>Welcome reward</Heading>
-                    <Text>Offer a small discount for their next purchase when they join your rewards program.</Text>
+                    <Text>Offer a small discount on their next purchase when they join your rewards program.</Text>
                     <Flex direction={'row'} gap={'4'}>
                       <TextField.Root
                         size={'3'}
