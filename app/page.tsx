@@ -11,6 +11,7 @@ import styles from './components/styles.module.css';
 import { createSmartAccount } from './utils/createSmartAccount';
 import { useUser } from './contexts/UserContext';
 import { useMerchant } from './contexts/MerchantContext';
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -60,6 +61,7 @@ export default function Home() {
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
           setAppUser(response.data.user);
         } catch (error: unknown) {
+          Sentry.captureException(error);
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
           } else if (isError(error)) {
@@ -94,6 +96,7 @@ export default function Home() {
         setAppUser(userData.user);
         setIsRedirecting(true);
       } catch (error: unknown) {
+        Sentry.captureException(error);
         if (isError(error)) {
           console.error('Error fetching user:', error.message);
         } else {
@@ -143,6 +146,7 @@ export default function Home() {
           throw new Error('Failed to create smart account');
         }        
       } catch (error) {
+        Sentry.captureException(error);
         console.error('Error adding smart account:', error);
       } 
     };

@@ -292,11 +292,13 @@ export default function ManageRewards({ params }: { params: { merchantId: string
       if (response.ok) {
         setMerchant(data.merchant);
       } else {
+        Sentry.captureException(new Error(`Failed to set welcome reward: ${response.statusText} (Status: ${data.message})`));
         console.error('Failed to set welcome reward:', response.status, data.message);
         setWelcomeRewardMessage(`Failed to set welcome reward. ${data.message}`);
       }
 
     } catch (error) {
+      Sentry.captureException(error)
       console.error('Error setting default tax:', error);
       setWelcomeRewardMessage('Failed to set welcome reward. Please try again.');
     } finally {
