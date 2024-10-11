@@ -4,7 +4,7 @@ import { debounce } from 'lodash';
 import { useRouter } from 'next/navigation';
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
+import { ContactMethod, Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
 import { Button, Callout, Card, Flex, Heading, Spinner, Text, Separator } from "@radix-ui/themes";
@@ -52,6 +52,18 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   const [secondaryColor, setSecondaryColor] = useState<string>("#000000");
   const [complementaryColor, setcomplementaryColor] = useState<string>("#000000");
   const [secondaryColorWithTransparency, setSecondaryColorWithTransparency] = useState<string>("#000000");
+
+  const [preferredContact, setPreferredContact] = useState<ContactMethod>(ContactMethod.Phone);
+  type LoginMethod = "google" | "sms" | "email" | "farcaster" | "discord" | "twitter" | "github" | "spotify" | "instagram" | "tiktok" | "linkedin" | "apple" | "telegram" | "wallet";
+
+  let privyLoginMethods: LoginMethod[] = ['sms'];
+  if (preferredContact === ContactMethod.Email) {
+    privyLoginMethods = ['google', 'email']
+  } else if (preferredContact === ContactMethod.Phone) {
+    privyLoginMethods = ['sms']
+  } else if (preferredContact === ContactMethod.Either) {
+    privyLoginMethods = ['google', 'email', 'sms']
+  };
   
 
   const [code, setCode] = useState<string | null>(null);
@@ -68,7 +80,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
 
   const handleLogin = () => {
-    login({ loginMethods: ['google', 'email'] });
+    login({ loginMethods: privyLoginMethods });
   };
 
   const { login } = useLogin({
@@ -90,6 +102,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
             privyId: user.id,
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
+            phone: user.phone,
             creationType: 'privy',
             smartAccountAddress: smartAccountAddress,
           };
@@ -197,6 +210,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         },
         body: JSON.stringify({
           email: currentUser?.email,
+          phone: currentUser?.phone,
           merchantId: merchant?._id,
           goghUserId: currentUser?._id, // saved in Square as a referenceID
           privyId: currentUser?.privyId,
@@ -377,6 +391,10 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           if (data?.branding) {
             setPrimaryColor(() => data.branding?.primary_color || "#FFFFFF"); // Use functional update
             setSecondaryColor(() => data.branding?.secondary_color || "#000000"); // Use functional update
+          }
+
+          if (data?.preferredContactMethod) {
+            setPreferredContact(data?.preferredContactMethod)
           }
 
         } catch (err) {

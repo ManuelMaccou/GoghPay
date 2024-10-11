@@ -105,6 +105,7 @@ const Login: React.FC<LoginProps> = ({ variant = 'outline', size = '3', width = 
             privyId: user.id,
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
+            phone: user.phone,
             creationType: 'privy',
             smartAccountAddress: smartAccountAddress,
           };
