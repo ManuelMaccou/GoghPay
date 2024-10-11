@@ -9,6 +9,7 @@ import { Avatar, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Text 
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -93,6 +94,7 @@ export default function ManageRewards() {
           }
         }
       } catch (error: unknown) {
+        Sentry.captureException(error);
         if (isError(error)) {
           console.error("Failed to fetch user rewards:", error.message);
           setError(`Failed to fetch rewards: ${error.message}`);

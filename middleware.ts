@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrivyClient } from '@privy-io/server-auth';
+import * as Sentry from '@sentry/nextjs';
 
 // Initialize the PrivyClient with the app ID and secret
 const privy = new PrivyClient(process.env.NEXT_PUBLIC_PRIVY_APP_ID!, process.env.PRIVY_SECRET!);
@@ -13,6 +14,7 @@ export async function middleware(req: NextRequest) {
       // If there is no Authorization header or it doesn't start with 'Bearer ', return an unauthorized response.
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         console.error("No authentication token provided or invalid format:", { authHeader });
+        Sentry.captureException(new Error(`No authentication token provided or invalid format. Auth Header: ${authHeader}`));
         return NextResponse.json({ message: "No authentication token provided." }, { status: 401 });
       }
 
@@ -38,7 +40,7 @@ export async function middleware(req: NextRequest) {
         },
       });
     } catch (error) {
-      // Log the error to the console for debugging purposes.
+      Sentry.captureException(error);
       console.error("Authentication error:", {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,

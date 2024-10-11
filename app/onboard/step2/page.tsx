@@ -55,9 +55,11 @@ export default function Step2() {
         setMerchant(updatedMerchant.merchant);
         console.log("updated merchant:", updatedMerchant.merchant);
         router.push('/onboard/step3');
-      } else (
-        console.error('Failed to update merchant', response.statusText)
-      )
+      } else {
+        console.error('Failed to update merchant:', response.statusText);
+        setErrorMessage('An unexpected error happened. Please try again later.');
+        Sentry.captureException(new Error(`Failed to update merchant: ${response.statusText} (Status: ${response.status})`));
+      }
     } catch (error) {
       console.error('An unexpected error happened:', error);
       setErrorMessage('An unexpected error happened. Please try again later.');

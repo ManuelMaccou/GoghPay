@@ -105,6 +105,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           }
 
         } catch (error: unknown) {
+          Sentry.captureException(error);
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
           } else if (isError(error)) {
@@ -170,6 +171,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
         console.error(`Failed to update Gogh user: ${errorMessage}`);
+        Sentry.captureException(new Error (`Failed to update Gogh user: ${errorMessage}`));
       }
 
     } catch (err) {
@@ -253,6 +255,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
         const errorMessage = await response.text();
         console.error(`Failed to create Square customer: ${errorMessage}`);
+        Sentry.captureException(new Error(`Failed to create Square customer: ${errorMessage}`))
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
       }
     } catch (err) {
@@ -308,7 +311,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         setErrorCheckingSquareDirectory(
           'Failed to check in. Please re-scan QR code and try again.'
         );
-        Sentry.captureMessage(`Error searching Square directory: ${errorMessage}`);
+        Sentry.captureException(new Error(`Error searching Square directory: ${errorMessage}`));
         console.error(`Error searching Square directory: ${errorMessage}`);
       }
     } catch (err) {
@@ -475,6 +478,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
             },
           });
           console.error('Failed to create new reward:', response.statusText);
+          Sentry.captureException(new Error(`Failed to create a new reward: ${response.status}`));
         }
       } catch (error: unknown) {
         Sentry.captureException(error);
@@ -521,6 +525,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           }
         } else {
           console.error('Failed to fetch rewards:', response.statusText);
+          Sentry.captureException(new Error(`Failed to fetch rewards: ${response.statusText}`))
         }
       } catch (error: unknown) {
         Sentry.captureException(error);
