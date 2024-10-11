@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import NotificationMessage from "@/app/components/Notification";
 import UploadImage from "@/app/components/UploadImage";
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -174,6 +175,7 @@ function IntegrationsContent() {
         setRevokeError('Failed to revoke Square access');
       }
     } catch (error) {
+      Sentry.captureException(error)
       console.error('Error revoking Square access:', error);
       setRevokeError('Failed to revoke Square access');
     }
@@ -246,6 +248,7 @@ function IntegrationsContent() {
         setSquareLocationName(selectedLocation.name);
       }
     } catch (error) {
+      Sentry.captureException(error)
       console.error('Error updating selected location:', error);
       setError('Failed to update selected location');
     }
@@ -281,6 +284,7 @@ function IntegrationsContent() {
         }
 
       } catch (err) {
+        Sentry.captureException(err)
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);
         } else {
@@ -317,6 +321,7 @@ function IntegrationsContent() {
         }
 
       } catch (error) {
+        Sentry.captureException(error)
         console.error('Error fetching user:', error);
       } finally {
         setIsFetchingLocations(false);
