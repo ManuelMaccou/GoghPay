@@ -2,6 +2,7 @@ import React from 'react';
 import { ConnectedWallet, getEmbeddedConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { Box, Card, Flex, Text, Badge, Button, Spinner } from '@radix-ui/themes';
 import { AvatarIcon } from '@radix-ui/react-icons';
+import { useUser } from '../contexts/UserContext';
 
 interface MobileHeaderProps {
   walletForPurchase?: string | null;
@@ -10,6 +11,7 @@ interface MobileHeaderProps {
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({ walletForPurchase }) => {
   const {user, authenticated, ready} = usePrivy();
+  const { appUser } = useUser();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
@@ -21,7 +23,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ walletForPurchase })
             <AvatarIcon />
             <Box>
               <Text as="div" size="2" color="gray">
-                {user?.email?.address || user?.google?.name}
+                {appUser?.name || user?.email?.address || user?.google?.name}
               </Text>
             </Box>
           </Flex>

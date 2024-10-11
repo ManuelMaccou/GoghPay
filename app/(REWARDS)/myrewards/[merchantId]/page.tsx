@@ -102,7 +102,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
             privyId: user.id,
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
-            phone: user.phone,
+            phone: user.phone?.number,
             creationType: 'privy',
             smartAccountAddress: smartAccountAddress,
           };
@@ -297,18 +297,51 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   const findExistingSquareCustomer = useCallback(async () => {
     console.log("is finding existing customer")
 
-    if (!currentUser || !currentUser?.email) return
+    let encodedEmail
+    let encodedPhone
+    if (!currentUser) return
+    if (currentUser.email) {
+      encodedEmail = encodeURIComponent(currentUser.email);
+    }
+
+    if (currentUser.phone) {
+      encodedPhone = encodeURIComponent(currentUser.phone);
+    }
+
+    if (!encodedEmail && !encodedPhone) return;
 
     try {
-      const encodedEmail = encodeURIComponent(currentUser.email);
       const accessToken = await getAccessToken();
-      const response = await fetch(`/api/square/user?email=${encodedEmail}&merchantId=${merchant?._id}&privyId=${currentUser.privyId}`, {
+
+      // Construct the query string dynamically
+      const queryParams = new URLSearchParams();
+      
+      if (encodedEmail) {
+        queryParams.append('email', encodedEmail);
+      }
+      
+      if (encodedPhone) {
+        queryParams.append('phone', encodedPhone);
+      }
+
+      if (merchant?._id) {
+        queryParams.append('merchantId', merchant._id);
+      }
+
+      if (currentUser.privyId) {
+        queryParams.append('privyId', currentUser.privyId);
+      }
+
+      const url = `/api/square/user?${queryParams.toString()}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`, 
         },
       });
+
       if (response.ok) {
         if (response.status === 204) {
           await createNewSquareCustomer();
@@ -351,10 +384,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     console.log('ischeckingsquaredirectory:', isCheckingSquareDirectory)
     // Run the API sync only if `currentUser` is available and has not been synced yet
     if (!currentUser) return;
-    if (currentUser && !currentUser?.email) {
-      setErrorCheckingSquareDirectory('Please log in using an email address to participate in Rewards')
-      return;
-    }
 
     if (currentUser?.squareCustomerId) {
       setIsCheckingSquareDirectory(false);
@@ -720,8 +749,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
                       ) : (
                         <Heading style={{color: secondaryColor}}>{merchant?.name}</Heading>
                       )}
-                     
-                      
                      
                         {usersCurrentRewardsTier && (
                           <Flex direction={'column'} justify={'center'} width={'100%'}>
