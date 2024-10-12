@@ -85,8 +85,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-      console.log('login successful');
-
       const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
       let smartAccountAddress;
@@ -97,7 +95,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         };
 
         try {
-          console.log('smart account address:', smartAccountAddress);
           const userPayload = {
             privyId: user.id,
             walletAddress: user.wallet?.address,
@@ -108,10 +105,14 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           };
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
-          console.log('New user created:', response.data);
           if (response.status >= 200 && response.status < 300) {
-            console.log('New user created:', response.data);
-            setAppUser(response.data.user);
+
+            console.log('new app user:', response.data.user)
+            const newUser = response.data.user
+
+            await findExistingSquareCustomer(newUser)
+
+            setAppUser(newUser);
           } else {
             setErrorCheckingSquareDirectory('There was an issue logging in. Please try again.');
             console.error('Unexpected response status:', response.status, response.statusText);
@@ -136,7 +137,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   });
 
   useEffect(() => {
-
     if (appUser && !currentUser) {
       setCurrentUser(appUser);
     }
@@ -150,9 +150,10 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   }, [appUser]);
 
 
-  const updateGoghUserWithSquareId = useCallback(async (squareCustomerId: string) => {
+  const updateGoghUserWithSquareId = useCallback(async (squareCustomerId: string, appUser: User) => {
     try {
       const accessToken = await getAccessToken();
+      console.log('privy id at update gogh user:', appUser?.privyId)
       const response = await fetch('/api/user/update', {
         method: 'PATCH',
         headers: {
@@ -161,24 +162,18 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         },
         body: JSON.stringify({
           squareCustomerId: squareCustomerId,
-          privyId: currentUser?.privyId,
+          privyId: appUser?.privyId,
         }),
       });
 
-      const data = await response.json();
-
       if (response.ok) {
+        const data = await response.json();
         setAppUser(data.updatedUser);
       } else {
         const errorMessage = await response.text();
-        const apiError = new ApiError(
-          `Adding Square user Id to Gogh user - ${response.statusText} - ${data.message || 'Unknown Error'}`,
-          response.status,
-          data
-        );
-        Sentry.captureException(apiError, {
+        Sentry.captureException(new Error(`Adding Square user Id to Gogh user - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
           extra: {
-            privyId: currentUser?.privyId ?? 'unknown privyId'
+            privyId: appUser?.privyId ?? 'unknown privyId'
           }
         });
 
@@ -197,9 +192,9 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         console.error('Error syncing Square customer with Gogh');
       }
     }
-  }, [setAppUser, currentUser]);
+  }, [setAppUser, appUser]);
 
-  const createNewSquareCustomer = useCallback(async () => {
+  const createNewSquareCustomer = useCallback(async (appUser: User) => {
     try {
       const accessToken = await getAccessToken();
       const response = await fetch('/api/square/user', {
@@ -209,11 +204,11 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           'Authorization': `Bearer ${accessToken}`, 
         },
         body: JSON.stringify({
-          email: currentUser?.email,
-          phone: currentUser?.phone,
+          email: appUser?.email,
+          phone: appUser?.phone,
           merchantId: merchant?._id,
-          goghUserId: currentUser?._id, // saved in Square as a referenceID
-          privyId: currentUser?.privyId,
+          goghUserId: appUser?._id, // saved in Square as a referenceID
+          privyId: appUser?.privyId,
           note: "Gogh rewards"
         }),
       });
@@ -227,17 +222,20 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
       );
 
       if (response.ok) {
-        await updateGoghUserWithSquareId(data.newSquareCustomer?.id)
+        
+        console.log('new square customer created')
+
+        await updateGoghUserWithSquareId(data.newSquareCustomer?.id, appUser)
 
       } else if (response.status === 503) {
         Sentry.captureException(apiError, {
           extra: {
             responseStatus: response?.status ?? 'unknown',
             responseMessage: data?.message || 'Unknown Error',
-            email: currentUser?.email ?? 'unknown email',
+            email: appUser?.email ?? 'unknown email',
             merchantId: merchant?._id ?? 'unknown merchant Id',
-            goghUserId: currentUser?._id ?? 'unknown userId',
-            privyId: currentUser?.privyId ?? 'unknown',
+            goghUserId: appUser?._id ?? 'unknown userId',
+            privyId: appUser?.privyId ?? 'unknown',
             },
         });
 
@@ -247,10 +245,10 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           extra: {
             responseStatus: response?.status ?? 'unknown',
             responseMessage: data?.message || 'Unknown Error',
-            email: currentUser?.email ?? 'unknown email',
+            email: appUser?.email ?? 'unknown email',
             merchantId: merchant?._id ?? 'unknown merchant Id',
-            goghUserId: currentUser?._id ?? 'unknown userId',
-            privyId: currentUser?.privyId ?? 'unknown',
+            goghUserId: appUser?._id ?? 'unknown userId',
+            privyId: appUser?.privyId ?? 'unknown',
             },
         });
 
@@ -260,10 +258,10 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           extra: {
             responseStatus: response?.status ?? 'unknown',
             responseMessage: data?.message || 'Unknown Error',
-            email: currentUser?.email ?? 'unknown email',
+            email: appUser?.email ?? 'unknown email',
             merchantId: merchant?._id ?? 'unknown merchant Id',
-            goghUserId: currentUser?._id ?? 'unknown userId',
-            privyId: currentUser?.privyId ?? 'unknown',
+            goghUserId: appUser?._id ?? 'unknown userId',
+            privyId: appUser?.privyId ?? 'unknown',
             },
         });
 
@@ -277,10 +275,10 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           extra: {
             message: err instanceof Error ? err.message : 'Unknown error',
             stack: err instanceof Error ? err.stack : undefined,
-            email: currentUser?.email ?? 'unknown email',
+            email: appUser?.email ?? 'unknown email',
             merchantId: merchant?._id ?? 'unknown merchant Id',
-            goghUserId: currentUser?._id ?? 'unknown userId',
-            privyId: currentUser?.privyId ?? 'unknown',
+            goghUserId: appUser?._id ?? 'unknown userId',
+            privyId: appUser?.privyId ?? 'unknown',
             },
         });
 
@@ -292,20 +290,22 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
       }
     }
-  }, [currentUser, merchant?._id, updateGoghUserWithSquareId]);
+  }, [currentUser, appUser, merchant?._id, updateGoghUserWithSquareId]);
 
-  const findExistingSquareCustomer = useCallback(async () => {
-    console.log("is finding existing customer")
+  const findExistingSquareCustomer = useCallback(async (appUser: User) => {
+    console.log("is finding existing square customer")
 
     let encodedEmail
     let encodedPhone
-    if (!currentUser) return
-    if (currentUser.email) {
-      encodedEmail = encodeURIComponent(currentUser.email);
+    if (!appUser) return
+    if (appUser.email) {
+      encodedEmail = encodeURIComponent(appUser.email);
+      console.log('encdoedEmail:', encodedEmail);
     }
 
-    if (currentUser.phone) {
-      encodedPhone = encodeURIComponent(currentUser.phone);
+    if (appUser.phone) {
+      encodedPhone = encodeURIComponent(appUser.phone);
+      console.log('encodedPhone:', encodedPhone);
     }
 
     if (!encodedEmail && !encodedPhone) return;
@@ -328,11 +328,12 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         queryParams.append('merchantId', merchant._id);
       }
 
-      if (currentUser.privyId) {
-        queryParams.append('privyId', currentUser.privyId);
+      if (appUser.privyId) {
+        queryParams.append('privyId', appUser.privyId);
       }
 
       const url = `/api/square/user?${queryParams.toString()}`;
+      console.log('Get Square user url:', url)
 
       const response = await fetch(url, {
         method: 'GET',
@@ -344,13 +345,18 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
       if (response.ok) {
         if (response.status === 204) {
-          await createNewSquareCustomer();
+
+          console.log('creating new square customer');
+
+          await createNewSquareCustomer(appUser);
         } else {
+
           const data = await response.json();
           if (data.customers && data.customers.length > 0) {
-            await updateGoghUserWithSquareId(data.customers[0].id);
+            console.log('updateding gogh user with id:' , data.customers[0].id, 'privyId:', appUser.privyId)
+            await updateGoghUserWithSquareId(data.customers[0].id, appUser);
           } else {
-            await createNewSquareCustomer();
+            await createNewSquareCustomer(appUser);
           }
         }
       } else {
@@ -374,27 +380,27 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     } finally {
       setIsCheckingSquareDirectory(false);
     }
-  }, [currentUser, merchant, createNewSquareCustomer, updateGoghUserWithSquareId]);
+  }, [currentUser, appUser, merchant, createNewSquareCustomer, updateGoghUserWithSquareId]);
   
   useEffect(() => {
     if (!merchant?.square) {
       setIsCheckingSquareDirectory(false);
       return;
     };
-    console.log('ischeckingsquaredirectory:', isCheckingSquareDirectory)
-    // Run the API sync only if `currentUser` is available and has not been synced yet
-    if (!currentUser) return;
+    
+    if (!appUser) return;
 
-    if (currentUser?.squareCustomerId) {
+    if (appUser?.squareCustomerId) {
       setIsCheckingSquareDirectory(false);
       return;
     }
 
     if (!hasSynced && !isCheckingSquareDirectory) {
       if (!isCheckingMerchantToken && merchantTokenIsValid) {
+        console.log('ischeckingsquaredirectory')
         setIsCheckingSquareDirectory(true);
 
-        findExistingSquareCustomer().then(() => {
+        findExistingSquareCustomer(appUser).then(() => {
           setHasSynced(true);
           setIsCheckingSquareDirectory(false);
           
@@ -405,11 +411,10 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
       }
       
     }
-  }, [merchant, currentUser, hasSynced, isCheckingSquareDirectory, findExistingSquareCustomer, merchantTokenIsValid, isCheckingMerchantToken]);
+  }, [merchant, appUser, hasSynced, isCheckingSquareDirectory, findExistingSquareCustomer, merchantTokenIsValid, isCheckingMerchantToken]);
     
   useEffect(() => {
     if (merchantId) {
-      console.log('mechant ID when fetching merchant:', merchantId)
       setIsFetchingMerchant(true);
       const fetchMerchant = async () => {
         try {
@@ -481,7 +486,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
       const accessToken = await getAccessToken();
       try {
-        console.log('customerID:', currentUser._id);
         const response = await fetch(`/api/rewards/userRewards/create`, {
           method: 'POST',
           headers: {
@@ -601,12 +605,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   useEffect (() => {
     const checkMilestone = () => {
 
-      console.log('checking milestones')
-      console.log('CurrentUserMerchantRewards:', currentUserMerchantRewards);
-      console.log('CurrentUserMerchantRewards total spent:', currentUserMerchantRewards?.totalSpent);
-
       if (!merchant) return;
-      console.log('checkpoint 1')
 
       if (!currentUserMerchantRewards) {
         return null;
@@ -639,8 +638,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           break; 
         }
       }
-      console.log('Highest tier met:', highestTier);
-      console.log('Next milestone:', nextMilestone);
 
       const amountToNextTier = nextMilestone ? nextMilestone - totalSpent : 0;
 

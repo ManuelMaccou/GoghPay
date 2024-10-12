@@ -8,8 +8,8 @@ import { Customer } from 'square';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const email = searchParams.get('email');
-  const phone = searchParams.get('phone');
+  const email = searchParams.get('email') ? decodeURIComponent(searchParams.get('email')!) : null;
+  const phone = searchParams.get('phone') ? decodeURIComponent(searchParams.get('phone')!) : null;
   const merchantId = searchParams.get('merchantId');
   const privyId = searchParams.get('privyId');
 
