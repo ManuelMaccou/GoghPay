@@ -45,7 +45,6 @@ export default function MyRewards() {
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
-
   useEffect(() => {
     if (appUser) {
       const walletAddress = appUser.smartAccountAddress || appUser.walletAddress || null;
@@ -168,7 +167,6 @@ export default function MyRewards() {
         )}
 
         {ready && authenticated ? (
-          
           !isFetchingCurrentUsersRewards ? (
             currentUserRewards.length > 0 ? (
               currentUserRewards.map((reward) => (
