@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Merchant } from '../types/types';
+import { useUser } from './UserContext';
 
 interface MerchantContextType {
   merchant: Merchant | null;
@@ -16,6 +17,7 @@ const MerchantContext = createContext<MerchantContextType | undefined>(undefined
 
 // Provide the context to the app
 export const MerchantProvider = ({ children }: { children: ReactNode }) => {
+  const { appUser } = useUser();
   const { user } = usePrivy();
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [isFetchingMerchant, setIsFetchingMerchant] = useState<boolean>(true);
@@ -44,10 +46,11 @@ export const MerchantProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    if (user && !isMerchantFetched) {
+    if (appUser && appUser.merchant && user && !isMerchantFetched) {
+      console.log('running merchant context')
       fetchMerchantData();
     }
-  }, [user, isMerchantFetched]);
+  }, [appUser, user, isMerchantFetched]);
 
   useEffect(() => {
     if (!user) {
