@@ -70,7 +70,7 @@ export default function Step2() {
   useEffect(() => {
     if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 1) {
       const timer = setTimeout(() => {
-        router.push(`/onboard/step1`);
+        router.push(`/onboard`);
       }, 3000);
 
       return () => clearTimeout(timer);

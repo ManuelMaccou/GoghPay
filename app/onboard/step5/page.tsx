@@ -124,7 +124,7 @@ export default function Step5() {
         <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Integrate Venmo</Heading>
           {merchant ? (
            <>
-              <Text mb={'-3'} align={'left'}>Take a screenshot of your Venmo QR code and upload it here.</Text>
+              <Text mb={'-3'} align={'left'}>Take an uncropped screenshot of your Venmo QR code and upload it here.</Text>
               {merchant.paymentMethods?.venmoQrCodeImage ? (
                 <Flex direction={{initial: 'column', sm: 'row'}} align={'center'} gap={'5'}>
                   <Flex direction={'column'} align={'center'} p={'7'} flexGrow={'1'} style={{border: '1px dashed black'}}>
@@ -182,7 +182,7 @@ export default function Step5() {
         <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Integrate Zelle</Heading>
           {merchant ? (
             <>
-              <Text mb={'-3'} align={'left'}>Take a screenshot of your Zelle QR code and upload it here.</Text>
+              <Text mb={'-3'} align={'left'}>Take an uncropped screenshot of your Zelle QR code and upload it here.</Text>
               
               {merchant.paymentMethods?.zelleQrCodeImage ? (
                 <Flex direction={{initial: 'column', sm: 'row'}} align={'center'} gap={'5'} justify={'between'}>

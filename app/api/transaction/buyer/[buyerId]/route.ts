@@ -24,6 +24,5 @@ export async function GET(req: NextRequest, context: { params: Params }) {
     return new Response(null, { status: 204 });
   }
 
-  console.log("Buyer transactions found:", totalTransactions);
   return NextResponse.json({ totalTransactions }, { status: 200 });
 }

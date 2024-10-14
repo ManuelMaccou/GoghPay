@@ -29,7 +29,7 @@ interface Reward {
   };
 }
 
-export default function ManageRewards() {
+export default function MyRewards() {
   const [currentUser, setCurrentUser] = useState<User>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [isFetchingCurrentUsersRewards, setIsFetchingCurrentUsersRewards] = useState<boolean>(true);
@@ -44,7 +44,6 @@ export default function ManageRewards() {
   const { ready, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-
 
   useEffect(() => {
     if (appUser) {
@@ -109,6 +108,17 @@ export default function ManageRewards() {
   
     fetchCurrentUsersRewards();
   }, [ready, authenticated, appUser]);
+
+  useEffect(() => {
+    if (ready && !authenticated) {
+      const timer = setTimeout(() => {
+        router.push('/');
+      }, 3000);
+    
+
+      return () => clearTimeout(timer);
+    }
+  }, [ready, authenticated, router]);
   
   return (
     <Flex
@@ -157,7 +167,6 @@ export default function ManageRewards() {
         )}
 
         {ready && authenticated ? (
-          
           !isFetchingCurrentUsersRewards ? (
             currentUserRewards.length > 0 ? (
               currentUserRewards.map((reward) => (
@@ -234,9 +243,10 @@ export default function ManageRewards() {
 
           
         ) : ready && !authenticated && (
-          <Button variant="solid" style={{ width: '250px', color: "black", backgroundColor: 'white' }} size={'4'}  onClick={() => router.push("/")}>
-            Please log in
-          </Button>
+          <Flex direction={'column'} align={'center'} justify={'center'}>
+            <Text size={'4'} align={'center'} style={{color: 'white'}}>Please log in first</Text>
+            <Text size={'4'} align={'center'}  style={{color: 'white'}}>Redirecting...</Text>
+          </Flex>
         )}
         
       </Flex>

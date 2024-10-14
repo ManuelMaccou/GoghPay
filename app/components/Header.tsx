@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ConnectedWallet, useLogout, usePrivy } from "@privy-io/react-auth";
+import { useUser } from '../contexts/UserContext';
 import { useBalance } from '../contexts/BalanceContext';
 import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link, SegmentedControl } from '@radix-ui/themes';
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
@@ -27,6 +28,7 @@ function isError(error: any): error is Error {
 
 export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
   const { user, ready } = usePrivy();
+  const { appUser } = useUser();
   const { balance, isBalanceLoading } = useBalance();
   const router = useRouter();
   const pathname = usePathname()
@@ -103,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                           <AvatarIcon />
                           <Box>
                             <Text as="div" size="2" color="gray">
-                              {user?.email?.address || user?.google?.name}
+                              {appUser?.name || user?.email?.address || user?.google?.name}
                             </Text>
                           </Box>
                         </Flex>

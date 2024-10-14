@@ -59,6 +59,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
             privyId: user.id,
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
+            phone: user.phone?.number,
             creationType: 'privy',
             smartAccountAddress: smartAccountAddress,
           };

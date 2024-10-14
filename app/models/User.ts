@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   coinbaseAddress: { type: String },
   name: { type: String },
   email: { type: String },
+  phone: { type: String },
   merchant: { type: Boolean },
   creationType: { type: String }, // stripe, privy
 }, { timestamps: true });

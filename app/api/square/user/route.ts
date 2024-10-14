@@ -4,15 +4,17 @@ import { v4 as uuidv4 } from 'uuid';
 import Merchant from '@/app/models/Merchant';
 import { decrypt } from '@/app/lib/encrypt-decrypt';
 import * as Sentry from '@sentry/nextjs';
+import { Customer } from 'square';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const email = searchParams.get('email');
+  const email = searchParams.get('email') ? decodeURIComponent(searchParams.get('email')!) : null;
+  const phone = searchParams.get('phone') ? decodeURIComponent(searchParams.get('phone')!) : null;
   const merchantId = searchParams.get('merchantId');
   const privyId = searchParams.get('privyId');
 
-  if (!email) {
-    return new NextResponse('Missing email', { status: 400 });
+  if (!phone && !email) {
+    return new NextResponse('Missing contact info', { status: 400 });
   }
 
   if (!merchantId) {
@@ -38,45 +40,74 @@ export async function GET(request: NextRequest) {
   
   try {
     const client = createSquareClient(decryptedAccessToken);
-    
-    const response = await client.customersApi.searchCustomers({
-      query: {
-        filter: {
-          emailAddress: {
-            exact: email
-          }
-        }
+  
+    let response;
+    let customers: Customer[] = [];
+  
+    // First, try to search by phone if provided
+    if (phone) {
+      response = await client.customersApi.searchCustomers({
+        query: {
+          filter: {
+            phoneNumber: {
+              exact: phone,
+            },
+          },
+        },
+      });
+  
+      // Check if the response and the customers array exists
+      if (response?.result?.customers && response.result.customers.length > 0) {
+        customers = response.result.customers;
       }
-    });
-
-    if (response.result.errors) {
+    }
+  
+    // If no customers were found by phone, and email is provided, search by email
+    if (customers.length === 0 && email) {
+      response = await client.customersApi.searchCustomers({
+        query: {
+          filter: {
+            emailAddress: {
+              exact: email,
+            },
+          },
+        },
+      });
+  
+      // Check if we found any customers with the email
+      if (response?.result?.customers && response.result.customers.length > 0) {
+        customers = response.result.customers;
+      }
+    }
+  
+    // Handle errors from Square API
+    if (response?.result?.errors) {
       console.error('Error searching customers:', response.result.errors);
       return new NextResponse(JSON.stringify({ error: response.result.errors }), { status: 500 });
     }
-
-    const customers = response.result.customers;
-
-    if (customers && customers.length > 0) {
-      // Convert BigInt values to strings for JSON serialization
+  
+    // If customers were found, return the sanitized result
+    if (customers.length > 0) {
       const sanitizedCustomers = customers.map(({ version, ...rest }) => rest);
-
       return new NextResponse(JSON.stringify({ customers: sanitizedCustomers }), { status: 200 });
     } else {
+      // If no customers were found, return 204 status
       return new NextResponse(null, { status: 204 });
     }
-
+  
   } catch (error) {
     Sentry.captureException(error);
     console.error('Error with Square API:', error);
     return new NextResponse('Internal server error', { status: 500 });
   }
+  
 }
 
 export async function POST(req: NextRequest) {
 
   console.log("creating new square user");
 
-  const { email, merchantId, goghUserId, privyId, note } = await req.json();
+  const { email, phone, merchantId, goghUserId, privyId, note } = await req.json();
   const idempotencyKey = uuidv4();
 
   if (!merchantId) {
@@ -106,6 +137,7 @@ export async function POST(req: NextRequest) {
     const response = await client.customersApi.createCustomer({
       idempotencyKey: idempotencyKey,
       emailAddress: email,
+      phoneNumber: phone,
       referenceId: goghUserId,
       note,
     });

@@ -5,6 +5,12 @@ enum DiscountType {
   Percent = 'percent',
 }
 
+export enum ContactMethod {
+  Email = 'email',
+  Phone = 'phone',
+  Either = 'either',
+}
+
 enum MilestoneType {
   DollarsSpent = 'dollars_spent',
   NumberOfVisits = 'number_of_visits',
@@ -55,6 +61,7 @@ export interface User {
   walletAddress: string;
   name?: string;
   email?: string;
+  phone?: string;
   merchant?: boolean;
   creationType: string;
   smartAccountAddress: string;
@@ -65,6 +72,7 @@ export interface Merchant {
   _id: string;
   status?: MerchantStatus;
   name: string;
+  preferredContactMethod: ContactMethod;
   walletAddress?: string;
   storeImage?: string;
   privyId?: string;
@@ -197,7 +205,8 @@ export interface RewardsCustomer {
   userInfo: {
     _id: string,
     name: string,
-    email: string,
+    email?: string,
+    phone?: string,
     squareCustomerId: string,
     privyId: string,
   }
