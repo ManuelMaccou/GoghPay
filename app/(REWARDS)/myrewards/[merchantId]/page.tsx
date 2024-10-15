@@ -80,7 +80,15 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
 
   const handleLogin = () => {
-    login({ loginMethods: privyLoginMethods });
+    login({
+      loginMethods: privyLoginMethods,
+      disableSignup: true 
+    });
+  };
+
+  const handleSignup = () => {
+    login({ loginMethods: privyLoginMethods
+     });
   };
 
   const { login } = useLogin({
@@ -688,7 +696,16 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
                   color: primaryColor,
                 }} 
                 onClick={handleLogin}>
-                Contiue
+                Log in
+              </Button>
+
+              <Button style={{
+                  width: "250px",
+                  backgroundColor: secondaryColor,
+                  color: primaryColor,
+                }} 
+                onClick={handleSignup}>
+                Create an account
               </Button>
             </Flex>
           ) : (

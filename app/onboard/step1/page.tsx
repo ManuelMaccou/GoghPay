@@ -2,12 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 import { useMerchant } from '@/app/contexts/MerchantContext';
-import { Avatar, Button, Callout, Flex, Heading, Link, Text, TextField } from "@radix-ui/themes";
+import { Avatar, Button, Callout, Flex, Heading, Link, RadioCards, Separator, Text, TextField } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import UploadImage from '@/app/components/UploadImage';
 import { useEffect, useState } from 'react';
 import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
+import { ContactMethod } from '@/app/types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -19,6 +22,7 @@ export default function Step1() {
   const { user } = usePrivy();
 
   const [newMerchantName, setNewMerchantName] = useState<string | null>(null);
+  const [preferredContactMethod, setPreferredContactMethod] = useState<ContactMethod | null>(null);
   const [isLogoUploaded, setIsLogoUploaded] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorMessageWithLogin, setErrorMessageWithLogin] = useState<boolean>(false);
@@ -32,6 +36,20 @@ export default function Step1() {
   const handleMerchantNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMerchantName(e.target.value);
   };
+
+  const handleRadioCardChange = (value: string) => {
+    if (value === '1') {
+      setPreferredContactMethod(ContactMethod.Phone)
+    } else if (value === '2') {
+      setPreferredContactMethod(ContactMethod.Email)
+    } else if (value === '3') {
+      setPreferredContactMethod(ContactMethod.Either)
+    }
+  };
+
+  useEffect(() => {
+    console.log('preferred:', preferredContactMethod)
+  }, [preferredContactMethod])
 
   const handleFinishStep1 = async () => {
     if (!merchant) {
@@ -50,6 +68,11 @@ export default function Step1() {
       return;
     }
 
+    if (!preferredContactMethod) {
+      setErrorMessage("Please select a preferred contact method.")
+      return;
+    }
+
     const accessToken = await getAccessToken();
 
     try {
@@ -62,6 +85,7 @@ export default function Step1() {
         body: JSON.stringify({
           privyId: user?.id,
           name: newMerchantName,
+          preferredContactMethod,
           onboardingStep: 1,
         }),
       });
@@ -90,13 +114,12 @@ export default function Step1() {
 
   return (
     <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
-      <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Branding</Heading>
+      <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Branding and Communications</Heading>
       <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center'}}>
         <Text align={'left'} mb={'-3'}>Business name</Text>
         <TextField.Root
           size={'3'}
           placeholder="Your business name"
-
           type="text"
           value={newMerchantName || ''}
           onChange={handleMerchantNameChange}
@@ -140,6 +163,33 @@ export default function Step1() {
         ) : (
           <Button loading></Button>
         )}
+        <Flex direction={'column'} gap={'3'}>
+          <Text align={'left'}>Which would you like to collect from your customers?</Text>
+          <RadioCards.Root defaultValue="1" columns={{ initial: '1', sm: '3' }} onValueChange={handleRadioCardChange}>
+            <RadioCards.Item value="1">
+              <Flex direction="row" width="100%" gap={'4'} align={'center'} height={'35px'}>
+                <FontAwesomeIcon icon={faPhone} />
+                <Text>Phone number</Text>
+              </Flex>
+            </RadioCards.Item>
+            <RadioCards.Item value="2">
+              <Flex direction="row" width="100%" gap={'4'} align={'center'} height={'35px'}>
+                <FontAwesomeIcon icon={faEnvelope} />
+                <Text>Email address</Text>
+              </Flex>
+            </RadioCards.Item>
+            <RadioCards.Item value="3">
+              <Flex direction="row" width="100%" gap={'4'} align={'center'} height={'35px'}>
+                <Flex direction={'row'} gap={'3'} justify={'center'} align={'center'}>
+                  <FontAwesomeIcon icon={faPhone} />
+                  <Text weight={'bold'} size={'4'}>/</Text>
+                  <FontAwesomeIcon icon={faEnvelope} />
+                </Flex>
+                <Text>Either</Text>
+              </Flex>
+            </RadioCards.Item>
+          </RadioCards.Root>
+        </Flex>
       </Flex>
       
       <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
