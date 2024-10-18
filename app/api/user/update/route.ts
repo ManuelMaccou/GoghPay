@@ -21,6 +21,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     const allowedFields = [
+      'phone',
+      'email',
       'coinbaseAddress',
       'smartAccountAddress',
       'squareCustomerId',

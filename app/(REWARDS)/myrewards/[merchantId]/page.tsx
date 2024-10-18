@@ -4,21 +4,24 @@ import { debounce } from 'lodash';
 import { useRouter } from 'next/navigation';
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { ContactMethod, Merchant, RewardsTier, User, UserReward } from "@/app/types/types";
-import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
+import { ContactMethod, Merchant, RewardsTier, User as TypeUser, UserReward } from "@/app/types/types";
+import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets, useLinkAccount } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
-import { Button, Callout, Card, Flex, Heading, Spinner, Text, Separator } from "@radix-ui/themes";
+import { Avatar as AvatarImage, Button, Callout, Card, Flex, Heading, Spinner, Text, Separator, Box } from "@radix-ui/themes";
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
-import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { useSearchParams } from "next/navigation";
 import * as Sentry from '@sentry/nextjs';
 import { ApiError } from '@/app/utils/ApiError';
 import { getModifiedColor, hexToRgba } from '@/app/utils/getComplementaryColor';
+import { EmailWithMetadata, GoogleOAuthWithMetadata, LinkedAccountWithMetadata, PhoneWithMetadata, User } from '@privy-io/server-auth';
+
+type LinkMethod = EmailWithMetadata | PhoneWithMetadata | GoogleOAuthWithMetadata;
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -26,7 +29,7 @@ function isError(error: any): error is Error {
 
 function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }) {  
   const router = useRouter();
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated, user, unlinkEmail, unlinkGoogle, unlinkPhone } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   
@@ -34,8 +37,11 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
   const [error, setError] = useState<string | null>(null);
   const [errorCheckingSquareDirectory, setErrorCheckingSquareDirectory] = useState<string | null>(null);
+  const [linkPhoneError, setLinkPhoneError] = useState<string | null>(null);
+  const [linkEmailError, setLinkEmailError] = useState<string | null>(null);
+  const [linkGmailError, setLinkGmailError] = useState<string | null>(null);
 
-  const [currentUser, setCurrentUser] = useState<User>();
+  const [currentUser, setCurrentUser] = useState<TypeUser>();
   const [isFetchingMerchant, setIsFetchingMerchant] = useState<boolean>(true);
   const [merchantTokenIsValid, setMerchantTokenIsValid] = useState<boolean>(false);
   const [isCheckingMerchantToken, setIsCheckingMerchantToken] = useState<boolean>(true);
@@ -53,15 +59,18 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   const [complementaryColor, setcomplementaryColor] = useState<string>("#000000");
   const [secondaryColorWithTransparency, setSecondaryColorWithTransparency] = useState<string>("#000000");
 
-  const [preferredContact, setPreferredContact] = useState<ContactMethod>(ContactMethod.Phone);
+  const [preferredContact, setPreferredContact] = useState<ContactMethod | null>(null);
   type LoginMethod = "google" | "sms" | "email" | "farcaster" | "discord" | "twitter" | "github" | "spotify" | "instagram" | "tiktok" | "linkedin" | "apple" | "telegram" | "wallet";
+
+  const [showLinkEmail, setShowLinkEmail] = useState<boolean>(false);
+  const [showLinkPhone, setShowLinkPhone] = useState<boolean>(false);
 
   let privyLoginMethods: LoginMethod[] = ['sms'];
   if (preferredContact === ContactMethod.Email) {
     privyLoginMethods = ['google', 'email']
   } else if (preferredContact === ContactMethod.Phone) {
     privyLoginMethods = ['sms']
-  } else if (preferredContact === ContactMethod.Either) {
+  } else if (preferredContact === ContactMethod.Either || !preferredContact) {
     privyLoginMethods = ['google', 'email', 'sms']
   };
   
@@ -80,8 +89,141 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
 
   const handleLogin = () => {
-    login({ loginMethods: privyLoginMethods });
+    login({
+      loginMethods: ['email', 'google', 'sms'],
+      disableSignup: true 
+    });
   };
+
+  const handleSignup = () => {
+    login({ loginMethods: privyLoginMethods
+     });
+  };
+
+  const handleUnlinkAccount = async (linkMethod: LoginMethod, user: User) => {
+    if (linkMethod === 'google') {
+      if (user.google?.email) unlinkGoogle(user.google.subject)
+    }
+    if (linkMethod === 'email') {
+      if (user.email?.address) unlinkEmail(user.email.address)
+    }
+    if (linkMethod === 'sms') {
+      if (user.phone?.number) unlinkPhone(user.phone.number)
+    }
+  }
+
+
+  const handleLinkSuccess = async (user: any, linkMethod: string) => {
+    try {
+      setErrorCheckingSquareDirectory(null);
+      setLinkEmailError(null);
+      setLinkGmailError(null);
+      setLinkPhoneError(null);
+
+      const accessToken = await getAccessToken();
+      const requestBody: { email?: string; phone?: string; privyId: string }  = {
+        privyId: user.id,
+      };
+
+      switch (linkMethod) {
+        case 'email':
+          requestBody.email = user.email?.address;
+          break;
+        case 'sms':
+          requestBody.phone = user.phone?.number;
+          break;
+        case 'google':
+          requestBody.email = user.google?.email;
+          break;
+        default:
+          console.error('Unknown link method:', linkMethod);
+          return;
+      }
+
+      console.log('request body:', requestBody);
+
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAppUser(data.updatedUser);
+        setShowLinkEmail(false)
+        setShowLinkPhone(false)
+      } else {
+        await handleUnlinkAccount(linkMethod, user)
+        const errorMessage = await response.text();
+        Sentry.captureException(
+          new Error(`Linking ${linkMethod} to existing user - ${response.statusText || 'Unknown Error'}, ${response.status}`),
+          {
+            extra: {
+              privyId: appUser?.privyId ?? 'unknown privyId',
+            },
+          }
+        );
+
+        // Set specific error messages
+        setLinkError(linkMethod);
+        console.error(`Failed to link ${linkMethod}: ${errorMessage}`);
+      }
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error(`Error linking ${linkMethod}:`, err);
+  
+      // Set specific error messages
+      setLinkError(linkMethod);
+    }
+  };
+
+  const setLinkError = (accountType: string) => {
+    switch (accountType) {
+      case 'email':
+        setLinkEmailError('There was an error linking your email address. Please try again.');
+        break;
+      case 'google':
+        setLinkGmailError('There was an error linking your Google address. Please try again.');
+        break;
+      case 'sms':
+        setLinkPhoneError('There was an error linking your phone number. Please try again.');
+        break;
+      default:
+        console.error('Unknown linked account type:', accountType);
+    }
+  };
+
+  const { linkEmail, linkGoogle, linkPhone } = useLinkAccount({
+    onSuccess: (user, linkMethod) => handleLinkSuccess(user, linkMethod),
+    onError: (error, details) => {
+      console.error(error, details);
+      Sentry.captureException(error, { extra: details });
+  
+      // Handle errors based on `linkMethod.type`
+      if (details?.linkMethod) {
+        setLinkError(details.linkMethod);
+      } else { 
+        console.error('Unknown error type during linking:', details);
+      }
+    }
+  });
+
+
+  useEffect(() => {
+    if (!ready || !authenticated || !user) return;
+    console.log('preferred contact:', preferredContact)
+    if (preferredContact === ContactMethod.Phone && !user?.phone?.number) {
+      setShowLinkPhone(true);
+    }
+
+    if (preferredContact === ContactMethod.Email && (!user?.google?.email && !user.email?.address)) {
+      setShowLinkEmail(true);
+    }
+  }, [ready, authenticated, user, preferredContact])
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
@@ -150,7 +292,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   }, [appUser]);
 
 
-  const updateGoghUserWithSquareId = useCallback(async (squareCustomerId: string, appUser: User) => {
+  const updateGoghUserWithSquareId = useCallback(async (squareCustomerId: string, appUser: TypeUser) => {
     try {
       const accessToken = await getAccessToken();
       console.log('privy id at update gogh user:', appUser?.privyId)
@@ -192,9 +334,9 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         console.error('Error syncing Square customer with Gogh');
       }
     }
-  }, [setAppUser, appUser]);
+  }, [setAppUser]);
 
-  const createNewSquareCustomer = useCallback(async (appUser: User) => {
+  const createNewSquareCustomer = useCallback(async (appUser: TypeUser) => {
     try {
       const accessToken = await getAccessToken();
       const response = await fetch('/api/square/user', {
@@ -290,9 +432,9 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         setErrorCheckingSquareDirectory('Failed to check in. Please re-scan QR code and try again.');
       }
     }
-  }, [currentUser, appUser, merchant?._id, updateGoghUserWithSquareId]);
+  }, [merchant?._id, updateGoghUserWithSquareId]);
 
-  const findExistingSquareCustomer = useCallback(async (appUser: User) => {
+  const findExistingSquareCustomer = useCallback(async (appUser: TypeUser) => {
     console.log("is finding existing square customer")
 
     let encodedEmail
@@ -380,7 +522,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     } finally {
       setIsCheckingSquareDirectory(false);
     }
-  }, [currentUser, appUser, merchant, createNewSquareCustomer, updateGoghUserWithSquareId]);
+  }, [merchant, createNewSquareCustomer, updateGoghUserWithSquareId]);
   
   useEffect(() => {
     if (!merchant?.square) {
@@ -667,175 +809,284 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
   const sortedMilestoneTiers = merchant?.rewards?.tiers ? [...merchant.rewards.tiers].sort((a, b) => a.milestone - b.milestone) : [];
 
-  return (
-    <>
-      {ready ? (
-        !authenticated ? (
-          !isFetchingMerchant ? (
-            <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{backgroundColor: primaryColor }}>
-              <Avatar.Root>
-                <Avatar.Image 
-                  className="MerchantLogo"
-                  src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
-                  alt="Merchant Logo"
-                  style={{objectFit: "contain", maxWidth: '200px'}}
-                  />
-              </Avatar.Root>
-
-              <Button style={{
-                  width: "250px",
-                  backgroundColor: secondaryColor,
-                  color: primaryColor,
-                }} 
-                onClick={handleLogin}>
-                Contiue
-              </Button>
-            </Flex>
-          ) : (
-            <Flex justify={'center'} align={'center'} height={'100vh'}>
-              <Spinner />
-            </Flex>
-          )
-        ) : ( !isFetchingMerchant && !isFetchingCurrentUserRewards && isCheckingSquareDirectory === false && !errorCheckingSquareDirectory ) ? (
-          <>
-            <Flex 
-              direction='column'
-              minHeight='100vh'
-              style={{
-                background: primaryColor
-              }}
-            >
-              <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
-                <Header
-                  color={secondaryColor}
-                  merchant={currentUser?.merchant}
-                  embeddedWallet={embeddedWallet}
-                  authenticated={authenticated}
-                  walletForPurchase={walletForPurchase}
-                  currentUser={currentUser}
-                />
-              </Flex>
-              <Flex
-                flexGrow={'1'}
-                pb={'7'}
-                direction={'column'}
-                gap={'5'}
-                align={'center'}
-                justify={'between'}
-               
-              >
-                <Flex direction={'column'} width={'100%'}>
-                  <Flex justify={'center'} style={{marginRight: '20px', marginLeft: '20px'}}>
-                    <Flex direction={'column'} align={'center'} gap={'4'} px={'2'}>
-                      {merchant?.branding?.logo ? (
-                        <Flex height={'120px'} width={'80vw'} position={'relative'} direction={'column'} align={'center'} justify={'center'}
-                          style={{maxHeight: '100px'}}
-                        >
-                          <Image
-                            priority
-                            src={merchant.branding.logo}
-                            alt={merchant.name}
-                            fill
-                            sizes="(max-width: 200px) 50vw"
-                            style={{
-                              objectFit: 'contain',
-                             // padding: '10px 50px',
-                            }}
-                          />
-                        </Flex>
-                      ) : (
-                        <Heading style={{color: secondaryColor}}>{merchant?.name}</Heading>
-                      )}
-                     
-                        {usersCurrentRewardsTier && (
-                          <Flex direction={'column'} justify={'center'} width={'100%'}>
-                            <Text weight={'bold'} align={'center'} size={'6'} style={{color: secondaryColor}}>Earning{' '}{usersCurrentRewardsTier.discount}% off</Text>
-                          </Flex>
-                        )}
-
-                        {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id ? (
-                          <Flex direction={'row'} 
-                          width={'100%'} 
-                          justify={'between'} align={'center'}>
-                            <Text wrap={'wrap'} size={'5'} style={{color: secondaryColor}}>
-                              Remaining until<br></br> next upgrade:
-                            </Text>
-                            <Text size={'5'} style={{color: secondaryColor}}>${amountToNextRewardsTier}</Text>
-                          </Flex>
-                        
-                        ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id && (  
-                          <Flex 
-                            direction={'column'} 
-                            align={'center'} justify={'center'}
-                            p={'3'}
-                            style={{backgroundColor: complementaryColor, borderRadius: '5px'}}
-                          >
-                            <Text weight={'bold'} size={'4'} align={'center'}
-                              style={{color: secondaryColor}}
-                            >
-                              You&apos;re earning the max discount!
-                            </Text>
-                          </Flex>
-                        )}
-                    </Flex>
-                  </Flex>
-                  <Flex direction={'column'} py={'5'} px={'3'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
-                    {sortedMilestoneTiers.map((tier) => (
-                      <Flex key={tier._id}
-                        ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
-                        style={{
-                          padding: '16px',
-                          backgroundColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : "",
-                          borderStyle: 'solid',
-                          borderColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : secondaryColorWithTransparency,
-                          borderWidth: '1px',
-                          borderRadius: '8px',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'} width={'100%'}>
-                          <Text size={'5'} weight="bold" style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
-                            {tier.name}
-                          </Text>
-                          <Text size={'5'} style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
-                            {tier.discount}% off
-                          </Text>
-                        </Flex>
-                      </Flex>
-                    ))}
-                  </Flex>
-                </Flex>
-              </Flex>
-            </Flex>
-          </>
-        ) : isCheckingSquareDirectory === false && errorCheckingSquareDirectory ? (
-          <Flex direction={'column'} gap={'4'} height={'100vh'} style={{
-              background: primaryColor
-            }}
-          >
-            <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
-                <Header
-                  color={secondaryColor}
-                  merchant={currentUser?.merchant}
-                  embeddedWallet={embeddedWallet}
-                  authenticated={authenticated}
-                  walletForPurchase={walletForPurchase}
-                  currentUser={currentUser}
-                />
-              </Flex>
-            <Text size={'7'} weight={'bold'} align={'center'} style={{color: secondaryColor}}>Oops!</Text>
-            <Text align={'center'} style={{color: secondaryColor}}>{errorCheckingSquareDirectory}</Text>
-          </Flex>
-        ) : <Flex justify={'center'} align={'center'} height={'100vh'}>
-              <Spinner />
-            </Flex>
-      ) : (
+  if (!ready) {
+    return (
+      <Flex justify={'center'} align={'center'} height={'100vh'}>
+        <Spinner />
+      </Flex>
+    );
+  }
+  
+  if (!authenticated) {
+    if (isFetchingMerchant) {
+      return (
         <Flex justify={'center'} align={'center'} height={'100vh'}>
           <Spinner />
         </Flex>
-      )}
-    </>
-  )
+      );
+    }
+    
+    return (
+      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
+        <Avatar.Root>
+          <Avatar.Image
+            className="MerchantLogo"
+            src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
+            alt="Merchant Logo"
+            style={{ objectFit: "contain", maxWidth: '200px' }}
+          />
+        </Avatar.Root>
+  
+        <Button style={{  width: "250px", backgroundColor: secondaryColor, color: primaryColor }}
+          onClick={handleLogin}
+        >
+          Log in
+        </Button>
+  
+        <Button style={{ width: "250px", backgroundColor: secondaryColor, color: primaryColor }} 
+          onClick={handleSignup}
+        >
+          Create an account
+        </Button>
+      </Flex>
+    );
+  }
+
+  if (showLinkEmail && merchant) {
+    return (
+      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
+        <Avatar.Root>
+          <Avatar.Image
+            className="MerchantLogo"
+            src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
+            alt="Merchant Logo"
+            style={{ objectFit: "contain", maxWidth: '200px' }}
+          />
+        </Avatar.Root>
+        <Text align={'center'} size={'5'} style={{color: secondaryColor}}>Add your email to receive rewards from</Text>
+        <Text align={'center'} size={'5'} mt={'-5'} style={{color: secondaryColor}}>{merchant?.name}</Text>
+        <Flex justify={'center'} align={'center'} direction={'column'} gap={'4'} mt={'6'} style={{borderStyle: 'solid', borderRadius: '5px', borderColor: secondaryColor, borderWidth: '1px', padding: '35px'}}>
+          <Text size={'5'} mx={'3'} align={'center'} style={{color: secondaryColor, backgroundColor: primaryColor, marginTop: '-50px', paddingRight: '10px', paddingLeft: '10px'}}>Fastest</Text>
+          <Button style={{ width: "250px", height: "fit-content", backgroundColor: secondaryColor, color: primaryColor }}
+            onClick={linkGoogle}
+          >
+            <Flex direction={'row'} align={'center'} gap={'3'} my={'2'}>
+              <AvatarImage
+                src="/logos/googleicon.png"
+                fallback="G"
+                style={{objectFit: 'contain'}}
+              />
+              <Text size={'3'}>Continue with Google</Text>
+            </Flex>
+          </Button>
+        </Flex>
+        <Text size={'4'} style={{color: secondaryColor}}>----or----</Text>
+        
+        <Button style={{ width: "250px", fontSize: '16px', backgroundColor: secondaryColor, color: primaryColor }} 
+          onClick={linkEmail}
+        >
+          Manually enter email
+        </Button>
+
+        {linkEmailError && (
+          <Callout.Root style={{backgroundColor: secondaryColor}}>
+            <Callout.Icon>
+              <InfoCircledIcon />
+            </Callout.Icon>
+            <Callout.Text>
+              {linkEmailError}
+            </Callout.Text>
+          </Callout.Root>
+        )}
+        {linkGmailError && (
+          <Callout.Root style={{backgroundColor: secondaryColor}}>
+            <Callout.Icon>
+              <InfoCircledIcon style={{color: primaryColor}} />
+            </Callout.Icon>
+            <Callout.Text  style={{color: primaryColor}}>
+              {linkGmailError}
+            </Callout.Text>
+          </Callout.Root>
+        )}
+        
+      </Flex>
+    );
+  }
+
+  if (showLinkPhone && merchant) {
+    return (
+      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
+        <Avatar.Root>
+          <Avatar.Image
+            className="MerchantLogo"
+            src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
+            alt="Merchant Logo"
+            style={{ objectFit: "contain", maxWidth: '200px' }}
+          />
+        </Avatar.Root>
+        <Text align={'center'} size={'5'} style={{color: secondaryColor}}>Link your phone to receive rewards from</Text>
+        <Text align={'center'} size={'5'} style={{color: secondaryColor}} mt={'-5'}>{merchant?.name}</Text>
+        <Button style={{ width: "250px", backgroundColor: secondaryColor, color: primaryColor }} onClick={linkPhone}>
+          Add phone
+        </Button>
+        {linkPhoneError && (
+          <Callout.Root>
+            <Callout.Icon>
+              <InfoCircledIcon />
+            </Callout.Icon>
+            <Callout.Text>
+              {linkPhoneError}
+            </Callout.Text>
+          </Callout.Root>
+        )}
+      </Flex>
+    );
+  }
+
+  if (!isFetchingMerchant && !isFetchingCurrentUserRewards && !isCheckingSquareDirectory && !errorCheckingSquareDirectory) {
+    return (
+      <Flex 
+        direction='column'
+        minHeight='100vh'
+        style={{
+          background: primaryColor
+        }}
+      >
+        <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
+          <Header
+            color={secondaryColor}
+            merchant={currentUser?.merchant}
+            embeddedWallet={embeddedWallet}
+            authenticated={authenticated}
+            walletForPurchase={walletForPurchase}
+            currentUser={currentUser}
+          />
+        </Flex>
+        <Flex
+          flexGrow={'1'}
+          pb={'7'}
+          direction={'column'}
+          gap={'5'}
+          align={'center'}
+          justify={'between'}
+          
+        >
+          <Flex direction={'column'} width={'100%'}>
+            <Flex justify={'center'} style={{marginRight: '20px', marginLeft: '20px'}}>
+              <Flex direction={'column'} align={'center'} gap={'4'} px={'2'}>
+                {merchant?.branding?.logo ? (
+                  <Flex height={'120px'} width={'80vw'} position={'relative'} direction={'column'} align={'center'} justify={'center'}
+                    style={{maxHeight: '100px'}}
+                  >
+                    <Image
+                      priority
+                      src={merchant.branding.logo}
+                      alt={merchant.name}
+                      fill
+                      sizes="(max-width: 200px) 50vw"
+                      style={{
+                        objectFit: 'contain',
+                        // padding: '10px 50px',
+                      }}
+                    />
+                  </Flex>
+                ) : (
+                  <Heading style={{color: secondaryColor}}>{merchant?.name}</Heading>
+                )}
+                
+                  {usersCurrentRewardsTier && (
+                    <Flex direction={'column'} justify={'center'} width={'100%'}>
+                      <Text weight={'bold'} align={'center'} size={'6'} style={{color: secondaryColor}}>Earning{' '}{usersCurrentRewardsTier.discount}% off</Text>
+                    </Flex>
+                  )}
+
+                  {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id ? (
+                    <Flex direction={'row'} 
+                    width={'100%'} 
+                    justify={'between'} align={'center'}>
+                      <Text wrap={'wrap'} size={'5'} style={{color: secondaryColor}}>
+                        Remaining until<br></br> next upgrade:
+                      </Text>
+                      <Text size={'5'} style={{color: secondaryColor}}>${amountToNextRewardsTier}</Text>
+                    </Flex>
+                  
+                  ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id && (  
+                    <Flex 
+                      direction={'column'} 
+                      align={'center'} justify={'center'}
+                      p={'3'}
+                      style={{backgroundColor: complementaryColor, borderRadius: '5px'}}
+                    >
+                      <Text weight={'bold'} size={'4'} align={'center'}
+                        style={{color: secondaryColor}}
+                      >
+                        You&apos;re earning the max discount!
+                      </Text>
+                    </Flex>
+                  )}
+              </Flex>
+            </Flex>
+            <Flex direction={'column'} py={'5'} px={'3'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
+              {sortedMilestoneTiers.map((tier) => (
+                <Flex key={tier._id}
+                  ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : "",
+                    borderStyle: 'solid',
+                    borderColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : secondaryColorWithTransparency,
+                    borderWidth: '1px',
+                    borderRadius: '8px',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'} width={'100%'}>
+                    <Text size={'5'} weight="bold" style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
+                      {tier.name}
+                    </Text>
+                    <Text size={'5'} style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
+                      {tier.discount}% off
+                    </Text>
+                  </Flex>
+                </Flex>
+              ))}
+            </Flex>
+          </Flex>
+        </Flex>
+      </Flex>
+    );
+  }
+
+  if (!isCheckingSquareDirectory && errorCheckingSquareDirectory) {
+    return (
+      <Flex direction={'column'} gap={'4'} height={'100vh'} style={{ background: primaryColor }}>
+        <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
+          <Header
+            color={secondaryColor}
+            merchant={currentUser?.merchant}
+            embeddedWallet={embeddedWallet}
+            authenticated={authenticated}
+            walletForPurchase={walletForPurchase}
+            currentUser={currentUser}
+          />
+        </Flex>
+        <Text size={'7'} weight={'bold'} align={'center'} style={{ color: secondaryColor }}>Oops!</Text>
+        <Text align={'center'} style={{ color: secondaryColor }}>{errorCheckingSquareDirectory}</Text>
+        <Button size={'4'} onClick={() => router.back}>
+          <ArrowLeftIcon />
+          Go back
+        </Button>
+      </Flex>
+    );
+  }
+
+  
+
+  return (
+    <Flex justify={'center'} align={'center'} height={'100vh'}>
+      <Spinner />
+    </Flex>
+  );
 };
 
 
