@@ -4,11 +4,10 @@ import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { Merchant, Tax, Transaction, User } from "@/app/types/types";
 import { format } from 'date-fns';
-import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Callout, Dialog, Flex, Heading, Link, RadioGroup, Select, Spinner, Strong, Table, Text, VisuallyHidden } from "@radix-ui/themes";
-
+import * as Sentry from '@sentry/nextjs';
 import axios from "axios";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
@@ -45,14 +44,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-
-      let smartAccountAddress;
-
       if (isNewUser) {
-        if (embeddedWallet) {
-          smartAccountAddress = await createSmartAccount(embeddedWallet);
-        };
-        
         try {
           const userPayload = {
             privyId: user.id,
@@ -60,7 +52,6 @@ export default function Taxes({ params }: { params: { userId: string } }) {
             email: user.email?.address || user.google?.email,
             phone: user.phone?.number,
             creationType: 'privy',
-            smartAccountAddress: smartAccountAddress,
           };
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
@@ -108,6 +99,56 @@ export default function Taxes({ params }: { params: { userId: string } }) {
       router.push('/');
     }
   })
+
+  useEffect(() => {
+    if (!user) return;
+    if (!currentUser) return;
+
+    const updateUserWithSmartWalletAddress = async (smartWallet: any) => {
+      try {
+        const accessToken = await getAccessToken();
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartWallet?.address,
+            privyId: user.id,
+          }),
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentUser(data.updatedUser);
+        } else {
+          const errorMessage = await response.text();
+          Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
+            extra: {
+              privyId: user?.id ?? 'unknown privyId'
+            }
+          });
+  
+          console.error(`Failed to update user with smart wallet address: ${errorMessage}`);
+          Sentry.captureException(new Error (`Failed to update user with smart wallet address: ${errorMessage}`));
+        }
+  
+      } catch (err) {
+        Sentry.captureException(err);
+        if (isError(err)) {
+          console.error(`Failed to update user with smart wallet address: ${err.message}`);
+        } else {
+          console.error('Failed to update user with smart wallet address');
+        }
+      }
+
+    }
+    const smartWallet = user.linkedAccounts.find((account) => account.type === 'smart_wallet');
+    if (!currentUser.smartAccountAddress && smartWallet) {
+      updateUserWithSmartWalletAddress(smartWallet)
+    }
+  }, [currentUser, user?.linkedAccounts])
 
   const handleAddTax = async (newTax: { name: string, rate: string }) => {
     if (!merchant) return;

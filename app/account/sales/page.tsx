@@ -3,7 +3,6 @@
 import { Merchant, User, Transaction } from "@/app/types/types";
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
-import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, useLogout, usePrivy, useWallets } from "@privy-io/react-auth";
 import { ArrowLeftIcon, ArrowTopRightIcon, ExclamationTriangleIcon, HeartFilledIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Table, Text } from "@radix-ui/themes";
@@ -12,6 +11,7 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -46,14 +46,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-
-      let smartAccountAddress;
-
       if (isNewUser) {
-        if (embeddedWallet) {
-          smartAccountAddress = await createSmartAccount(embeddedWallet);
-        };
-        
         try {
           const userPayload = {
             privyId: user.id,
@@ -61,7 +54,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
             email: user.email?.address || user.google?.email,
             phone: user.phone?.number,
             creationType: 'privy',
-            smartAccountAddress: smartAccountAddress,
           };
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
@@ -103,6 +95,56 @@ export default function Sales({ params }: { params: { userId: string } }) {
       console.error("Privy login error:", error);
     },
   });
+
+  useEffect(() => {
+    if (!user) return;
+    if (!currentUser) return;
+
+    const updateUserWithSmartWalletAddress = async (smartWallet: any) => {
+      try {
+        const accessToken = await getAccessToken();
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartWallet?.address,
+            privyId: user.id,
+          }),
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentUser(data.updatedUser);
+        } else {
+          const errorMessage = await response.text();
+          Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
+            extra: {
+              privyId: user?.id ?? 'unknown privyId'
+            }
+          });
+  
+          console.error(`Failed to update user with smart wallet address: ${errorMessage}`);
+          Sentry.captureException(new Error (`Failed to update user with smart wallet address: ${errorMessage}`));
+        }
+  
+      } catch (err) {
+        Sentry.captureException(err);
+        if (isError(err)) {
+          console.error(`Failed to update user with smart wallet address: ${err.message}`);
+        } else {
+          console.error('Failed to update user with smart wallet address');
+        }
+      }
+
+    }
+    const smartWallet = user.linkedAccounts.find((account) => account.type === 'smart_wallet');
+    if (!currentUser?.smartAccountAddress && smartWallet) {
+      updateUserWithSmartWalletAddress(smartWallet)
+    }
+  }, [currentUser, user?.linkedAccounts])
   
   const router = useRouter();
   const visitingUser = params.userId
@@ -151,49 +193,6 @@ export default function Sales({ params }: { params: { userId: string } }) {
       fetchUser();
     }
   }, [authenticated, ready, user, visitingUser]);
-
-  useEffect(() => {
-    if (!embeddedWallet) return;
-    if (!currentUser) return;
-    if (currentUser.smartAccountAddress) return;
-
-    const addSmartAccountAddress = async () => {
-      const accessToken = await getAccessToken();
-      try {
-       const smartAccountAddress = await createSmartAccount(embeddedWallet);
-
-        if (!smartAccountAddress) {
-          throw new Error('Failed to create smart account.');
-        }
-
-        const response = await fetch('/api/user/update', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`, 
-          },
-          body: JSON.stringify({
-            smartAccountAddress: smartAccountAddress,
-            privyId: user?.id
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create smart account');
-        }
-        console.log('successfully added smart account')
-        
-      } catch (error) {
-        console.error('Error adding smart account:', error);
-      } finally {
-       
-      }
-    };
-
-    if (user && embeddedWallet && currentUser && !currentUser.smartAccountAddress) {
-      addSmartAccountAddress();
-    }
-  }, [user, currentUser, embeddedWallet]);
 
   useEffect(() => {
     if (!ready || !authenticated) {

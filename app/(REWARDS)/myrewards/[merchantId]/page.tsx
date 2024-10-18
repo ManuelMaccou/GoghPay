@@ -11,7 +11,6 @@ import { Avatar as AvatarImage, Button, Callout, Card, Flex, Heading, Spinner, T
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
-import { createSmartAccount } from "@/app/utils/createSmartAccount";
 import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 import { ArrowLeftIcon, InfoCircledIcon } from '@radix-ui/react-icons';
@@ -225,17 +224,61 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     }
   }, [ready, authenticated, user, preferredContact])
 
+  useEffect(() => {
+    if (!user) return;
+    if (!appUser) return;
+
+    const updateUserWithSmartWalletAddress = async (smartWallet: any) => {
+      try {
+        const accessToken = await getAccessToken();
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartWallet?.address,
+            privyId: user.id,
+          }),
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          setAppUser(data.updatedUser);
+        } else {
+          const errorMessage = await response.text();
+          Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
+            extra: {
+              privyId: user?.id ?? 'unknown privyId'
+            }
+          });
+  
+          console.error(`Failed to update user with smart wallet address: ${errorMessage}`);
+          Sentry.captureException(new Error (`Failed to update user with smart wallet address: ${errorMessage}`));
+        }
+  
+      } catch (err) {
+        Sentry.captureException(err);
+        if (isError(err)) {
+          console.error(`Failed to update user with smart wallet address: ${err.message}`);
+        } else {
+          console.error('Failed to update user with smart wallet address');
+        }
+      }
+
+    }
+    const smartWallet = user.linkedAccounts.find((account) => account.type === 'smart_wallet');
+    if (!appUser.smartAccountAddress && smartWallet) {
+      updateUserWithSmartWalletAddress(smartWallet)
+    }
+  }, [appUser, user?.linkedAccounts])
+
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
       const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
-      let smartAccountAddress;
-
       if (isNewUser) {
-        if (embeddedWallet) {
-          smartAccountAddress = await createSmartAccount(embeddedWallet);
-        };
-
         try {
           const userPayload = {
             privyId: user.id,
@@ -243,7 +286,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
             email: user.email?.address || user.google?.email,
             phone: user.phone?.number,
             creationType: 'privy',
-            smartAccountAddress: smartAccountAddress,
           };
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);

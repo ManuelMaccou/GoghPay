@@ -17,11 +17,6 @@ import { CheckIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/navigation';
 import { Chain, createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
-import { ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner } from 'permissionless';
-import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
-import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
-import { signerToSafeSmartAccount } from 'permissionless/accounts';
-
 
 interface PurchaseParams {
   merchantId: string | null;
