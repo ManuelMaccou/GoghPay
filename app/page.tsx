@@ -45,9 +45,13 @@ export default function Home() {
 
       if (isNewUser) {
         setIsNewUser(true);
+
+        // Removing temporarily
+        /*
         if (embeddedWallet) {
           smartAccountAddress = await createSmartAccount(embeddedWallet);
         };
+        */
 
         try {
           const userPayload = {

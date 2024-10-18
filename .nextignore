@@ -1,0 +1,5 @@
+# Ignore unused code during Next.js build
+app/account/transfer/page.tsx
+app/buy/page.tsx
+app/checkout/success/crypto/page.tsx
+app/utils/createSmartAccount.ts
