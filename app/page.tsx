@@ -119,7 +119,7 @@ export default function Home() {
     if (!appUser?.smartAccountAddress && smartWallet) {
       updateUserWithSmartWalletAddress(smartWallet)
     }
-  }, [appUser, user?.linkedAccounts])
+  }, [appUser, setAppUser, user, getAccessToken])
 
   useEffect(() => {
     if (!ready) return;

@@ -272,7 +272,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     if (!appUser.smartAccountAddress && smartWallet) {
       updateUserWithSmartWalletAddress(smartWallet)
     }
-  }, [appUser, user?.linkedAccounts])
+  }, [setAppUser, appUser, user])
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {

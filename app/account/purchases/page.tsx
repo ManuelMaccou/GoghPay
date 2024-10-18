@@ -141,7 +141,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
     if (!currentUser?.smartAccountAddress && smartWallet) {
       updateUserWithSmartWalletAddress(smartWallet)
     }
-  }, [currentUser, user?.linkedAccounts])
+  }, [currentUser, setCurrentUser, user])
 
   const getPaymentTypeInfo = (paymentType: string) => {
     const types: { [key: string]: { label: string; color: string } } = {

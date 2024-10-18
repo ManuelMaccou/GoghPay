@@ -148,7 +148,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
     if (!currentUser.smartAccountAddress && smartWallet) {
       updateUserWithSmartWalletAddress(smartWallet)
     }
-  }, [currentUser, user?.linkedAccounts])
+  }, [currentUser, setCurrentUser, user])
 
   const handleAddTax = async (newTax: { name: string, rate: string }) => {
     if (!merchant) return;

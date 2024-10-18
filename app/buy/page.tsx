@@ -277,7 +277,7 @@ function BuyContent() {
     if (!currentUser.smartAccountAddress && smartWallet) {
       updateUserWithSmartWalletAddress(smartWallet)
     }
-  }, [currentUser, user?.linkedAccounts])
+  }, [currentUser, setCurrentUser, user, getAccessToken])
 
   useEffect(() => {
     const currentURL = window.location.href;
