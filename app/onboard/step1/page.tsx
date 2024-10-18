@@ -33,16 +33,21 @@ export default function Step1() {
     }
   }, [merchant?.name]);
 
+  useEffect(() => {
+    if (merchant?.preferredContactMethod)
+      setPreferredContactMethod(merchant.preferredContactMethod)
+  }, [merchant?.preferredContactMethod])
+
   const handleMerchantNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMerchantName(e.target.value);
   };
 
   const handleRadioCardChange = (value: string) => {
-    if (value === '1') {
+    if (value === 'phone') {
       setPreferredContactMethod(ContactMethod.Phone)
-    } else if (value === '2') {
+    } else if (value === 'email') {
       setPreferredContactMethod(ContactMethod.Email)
-    } else if (value === '3') {
+    } else if (value === 'either') {
       setPreferredContactMethod(ContactMethod.Either)
     }
   };
@@ -76,6 +81,7 @@ export default function Step1() {
     const accessToken = await getAccessToken();
 
     try {
+      console.log('preferred contact:', preferredContactMethod)
       const response = await fetch(`/api/merchant/update`, {
         method: 'PATCH',
         headers: {
@@ -165,20 +171,20 @@ export default function Step1() {
         )}
         <Flex direction={'column'} gap={'3'}>
           <Text align={'left'}>Which would you like to collect from your customers?</Text>
-          <RadioCards.Root defaultValue="1" columns={{ initial: '1', sm: '3' }} onValueChange={handleRadioCardChange}>
-            <RadioCards.Item value="1">
+          <RadioCards.Root defaultValue={merchant ? merchant.preferredContactMethod : 'phone'}  columns={{ initial: '1', sm: '3' }} onValueChange={handleRadioCardChange}>
+            <RadioCards.Item value="phone">
               <Flex direction="row" width="100%" gap={'4'} align={'center'} height={'35px'}>
                 <FontAwesomeIcon icon={faPhone} />
                 <Text>Phone number</Text>
               </Flex>
             </RadioCards.Item>
-            <RadioCards.Item value="2">
+            <RadioCards.Item value="email">
               <Flex direction="row" width="100%" gap={'4'} align={'center'} height={'35px'}>
                 <FontAwesomeIcon icon={faEnvelope} />
                 <Text>Email address</Text>
               </Flex>
             </RadioCards.Item>
-            <RadioCards.Item value="3">
+            <RadioCards.Item value="either">
               <Flex direction="row" width="100%" gap={'4'} align={'center'} height={'35px'}>
                 <Flex direction={'row'} gap={'3'} justify={'center'} align={'center'}>
                   <FontAwesomeIcon icon={faPhone} />
@@ -190,19 +196,6 @@ export default function Step1() {
             </RadioCards.Item>
           </RadioCards.Root>
         </Flex>
-      </Flex>
-      
-      <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
-        <Button
-          disabled={!merchant || (!isLogoUploaded && !merchant.branding?.logo) || !newMerchantName}
-          size={'4'}
-          variant='ghost'
-          style={{ width: '250px', cursor: !merchant || !isLogoUploaded || !newMerchantName ? 'default' : 'pointer', fontWeight: 'bold' }}
-          onClick={handleFinishStep1}
-        >
-          Next
-          <ArrowRightIcon height={'20'} width={'20'} />
-        </Button>
       </Flex>
 
       {errorMessage && (
@@ -225,6 +218,19 @@ export default function Step1() {
           </Callout.Text>
         </Callout.Root>
       )}
+
+      <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
+        <Button
+          disabled={!merchant || (!isLogoUploaded && !merchant.branding?.logo) || !newMerchantName}
+          size={'4'}
+          variant='ghost'
+          style={{ width: '250px', cursor: !merchant || !isLogoUploaded || !newMerchantName ? 'default' : 'pointer', fontWeight: 'bold' }}
+          onClick={handleFinishStep1}
+        >
+          Next
+          <ArrowRightIcon height={'20'} width={'20'} />
+        </Button>
+      </Flex>
       
     </Flex>
   );

@@ -22,6 +22,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const allowedFields = [
+      'preferredContactMethod',
       'walletAddress',
       'taxes',
       'square.location_id',
