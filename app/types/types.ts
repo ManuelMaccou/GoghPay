@@ -64,7 +64,7 @@ export interface User {
   phone?: string;
   merchant?: boolean;
   creationType: string;
-  smartAccountAddress: string;
+  smartAccountAddress?: string;
   coinbaseAddress: string;
 }
 
