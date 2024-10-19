@@ -18,8 +18,6 @@
   z-index: -1; /* Send the image to the back */
 }
 
-
-
 .overlay {
   background-color: rgba(0, 0, 0, 0.7);
   position: fixed;
