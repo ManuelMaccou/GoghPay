@@ -17,9 +17,7 @@ function isError(error: any): error is Error {
 }
 
 export default function Home() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isFetchingUser, setIsFetchingUser] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +69,18 @@ export default function Home() {
     },
   });
 
+  const handleLogin = () => {
+    login({
+      loginMethods: ['email', 'google', 'sms'],
+      disableSignup: true 
+    });
+  };
+
+  const handleSignup = () => {
+    login({ loginMethods: ['sms']
+     });
+  };
+
   useEffect(() => {
     if (!user) return;
     if (!appUser) return;
@@ -92,7 +102,7 @@ export default function Home() {
   
         if (response.ok) {
           const data = await response.json();
-          setAppUser(data.updatedUser);
+          setAppUser(data.user);
         } else {
           const errorMessage = await response.text();
           Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
@@ -121,6 +131,7 @@ export default function Home() {
     }
   }, [appUser, setAppUser, user, getAccessToken])
 
+  /*
   useEffect(() => {
     if (!ready) return;
     if (isNewUser) return;
@@ -158,8 +169,10 @@ export default function Home() {
       setIsLoading(false);
     }
   }, [authenticated, ready, user, isNewUser, setAppUser]);
+  */
 
   useEffect(() => {
+    if (!ready || !authenticated) return
     if (appUser && appUser.merchant) {
       if (merchant && merchant.status === 'onboarding') {
         if (merchant.onboardingStep) {
@@ -174,7 +187,7 @@ export default function Home() {
     } else if (appUser && !appUser.merchant) {
       router.replace('/myrewards')
     }
-  }, [appUser, router, merchant]);
+  }, [ready, authenticated, appUser, router, merchant]);
 
   return (
     <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
@@ -204,11 +217,11 @@ export default function Home() {
           }} 
         />
 
-        {isLoading || (!ready && (
+        {!ready && (
           <Flex direction={'column'} justify={'center'} align={'center'}>
             <Spinner style={{color: 'white'}} />
           </Flex>
-        ))}
+        )}
 
         {isRedirecting && (
           <>
@@ -216,12 +229,24 @@ export default function Home() {
           </>
         )}
 
-        {ready && (
-          <Flex direction={'column'} justify={'center'} align={'center'}>
-            <Button variant='solid' size={'4'} style={{color: 'black', backgroundColor: 'white', width: "300px"}} onClick={login} loading={authenticated || isLoading}>
-              Log in/Sign up
-            </Button>
-          </Flex>
+        {ready && !authenticated && (
+          <Flex direction={'column'} justify={'end'} align={'end'} gap={'7'}>
+          <Button size={'4'} style={{width: "250px", backgroundColor: 'white'}}
+            onClick={handleLogin}
+          >
+            <Text size={'5'} style={{color: 'black'}}>
+              Log in
+            </Text>
+          </Button>
+    
+          <Button size={'4'} style={{ width: "250px", backgroundColor: 'white' }} 
+            onClick={handleSignup}
+          >
+            <Text size={'5'} style={{color: 'black'}}>
+              Create an account
+            </Text>
+          </Button>
+        </Flex>
         )}
       </Flex>
     </Flex>

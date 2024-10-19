@@ -152,7 +152,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
       if (response.ok) {
         const data = await response.json();
-        setAppUser(data.updatedUser);
+        setAppUser(data.user);
         setShowLinkEmail(false)
         setShowLinkPhone(false)
       } else {
@@ -204,7 +204,9 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   
       // Handle errors based on `linkMethod.type`
       if (details?.linkMethod) {
-        setLinkError(details.linkMethod);
+        if (error !== 'exited_link_flow') {
+          setLinkError(details.linkMethod);
+        }
       } else { 
         console.error('Unknown error type during linking:', details);
       }
@@ -245,7 +247,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   
         if (response.ok) {
           const data = await response.json();
-          setAppUser(data.updatedUser);
+          setAppUser(data.user);
         } else {
           const errorMessage = await response.text();
           Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
@@ -352,7 +354,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
       if (response.ok) {
         const data = await response.json();
-        setAppUser(data.updatedUser);
+        setAppUser(data.user);
       } else {
         const errorMessage = await response.text();
         Sentry.captureException(new Error(`Adding Square user Id to Gogh user - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
@@ -933,9 +935,9 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
         {linkEmailError && (
           <Callout.Root style={{backgroundColor: secondaryColor}}>
             <Callout.Icon>
-              <InfoCircledIcon />
+              <InfoCircledIcon style={{color: primaryColor}}/>
             </Callout.Icon>
-            <Callout.Text>
+            <Callout.Text style={{color: primaryColor}}>
               {linkEmailError}
             </Callout.Text>
           </Callout.Root>
@@ -972,11 +974,11 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
           Add phone
         </Button>
         {linkPhoneError && (
-          <Callout.Root>
+          <Callout.Root style={{backgroundColor: secondaryColor}}>
             <Callout.Icon>
-              <InfoCircledIcon />
+              <InfoCircledIcon style={{color: primaryColor}}/>
             </Callout.Icon>
-            <Callout.Text>
+            <Callout.Text style={{color: primaryColor}}>
               {linkPhoneError}
             </Callout.Text>
           </Callout.Root>
