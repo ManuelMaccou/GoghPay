@@ -198,7 +198,7 @@ export default function Home() {
         className={styles.fullBackgroundImage}
         fill
         sizes="100vw"
-        style={{ objectFit: "cover" }} 
+        style={{objectFit: "cover"}} 
       />
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
