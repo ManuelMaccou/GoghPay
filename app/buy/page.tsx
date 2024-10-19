@@ -250,7 +250,7 @@ function BuyContent() {
   
         if (response.ok) {
           const data = await response.json();
-          setCurrentUser(data.updatedUser);
+          setCurrentUser(data.user);
         } else {
           const errorMessage = await response.text();
           Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
