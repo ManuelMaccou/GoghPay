@@ -307,18 +307,43 @@ export default function VintageLand() {
   }, [ready, authenticated, appUser, user, router])
 
   return (
-    <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
-      <Image
-        src="/bg_m.jpg"
-        alt="background image"
-        priority
-        className={styles.fullBackgroundImage}
-        fill
-        sizes="100vw"
-        style={{ objectFit: "cover" }} 
-      />
+    
    
-      <Flex direction={'column'} justify={'center'} align={'center'} width={'100%'}>
+    <Flex direction={'column'} justify={'center'} align={'center'} height={'100vh'} width={'100%'} 
+      style={{backgroundColor: '#EC2078', position: 'relative', overflow: 'hidden', zIndex: 1}}
+    >
+      <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '100%', overflow: 'hidden', lineHeight: 0, zIndex: -1 }}>
+        <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 540 960" width="100%" height="100%" version="1.1">
+          <path d="M0 536L30 532.8C60 529.7 120 523.3 180 520C240 516.7 300 516.3 360 522.7C420 529 480 542 510 548.5L540 555L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#fa7268"/>
+          <path d="M0 607L30 598.3C60 589.7 120 572.3 180 579.7C240 587 300 619 360 619.2C420 619.3 480 587.7 510 571.8L540 556L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#f85b6a"/>
+          <path d="M0 715L30 719C60 723 120 731 180 725.7C240 720.3 300 701.7 360 690.2C420 678.7 480 674.3 510 672.2L540 670L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#f3426f"/>
+          <path d="M0 832L30 831C60 830 120 828 180 824.2C240 820.3 300 814.7 360 815.3C420 816 480 823 510 826.5L540 830L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#ec2078"/>
+        </svg>
+      </div>
+      {ready && !authenticated && (
+        <Flex height={'100%'} direction={'column'} position={'relative'} gap={'9'} align={'center'} justify={'center'}>
+        
+          <Image
+            src="/logos/lffvl-logo-white.png"
+            alt="Vintage Land logo"
+            priority
+            width={800}
+            height={324}
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 50vw, 33vw"
+            style={{width: '300px', height: 'auto', justifySelf: 'center', alignSelf: 'center'}}
+          />
+       
+          <Image
+            src="/logos/vl-avatar.png"
+            alt="Vintage Land avatar"
+            priority
+            height={552}
+            width={510}
+            style={{width: '200px', height: 'auto', justifySelf: 'center', alignSelf: 'center'}}
+          />
+        
+        </Flex>
+         )}
         {isLoading || (!ready && (
           <Flex direction={'column'} justify={'center'} align={'center'}>
             <Spinner style={{color: 'white'}} />
@@ -336,7 +361,7 @@ export default function VintageLand() {
         )}
 
         {ready && !authenticated && (
-          <Flex direction={'column'} justify={'end'} align={'end'} gap={'7'} height={'100vh'} style={{marginBottom: '250px'}}>
+          <Flex direction={'column'} justify={'end'} align={'end'} gap={'7'} style={{marginBottom: '50px'}}>
             <Button size={'4'} style={{width: "250px", backgroundColor: 'white'}}
               onClick={handleLogin}
             >
@@ -357,16 +382,34 @@ export default function VintageLand() {
         {ready && authenticated && appUser && !isRedirecting && (
           showForm && (
             <>
-              <Flex mb={'7'} direction={'column'} justify={'center'} align={'center'} style={{backgroundColor: 'white', borderRadius: '10px', padding: '25px', width: '95%'}}>
-                <Text mb={'5'} weight={'bold'} size="7">
-                  Welcome!
-                </Text>
+              <Flex mb={'7'} direction={'column'} justify={'center'} align={'center'}>
+                <Flex direction={'column'} gap={'2'}>
+                  <Image
+                    src="/logos/vl-avatar.png"
+                    alt="Vintage Land avatar"
+                    priority
+                    height={552}
+                    width={510}
+                    style={{width: '150px', height: 'auto', justifySelf: 'center', alignSelf: 'center'}}
+                  />
+                  <Text weight={'bold'} size="7" align={'center'} style={{color: 'white'}}>
+                    Welcome to
+                  </Text>
+                  <Text mb={'5'} weight={'bold'} size="7" align={'center'} style={{color: 'white'}}>
+                    Vintage Land
+                  </Text>
+                </Flex>
                 {(!user?.email?.address && !user?.google?.email) && (
                   <>
-                    <Text mt={'5'} mb={'6'} align={'center'} size={'6'}>Add your email for more rewards.</Text>
-                    <Flex justify={'center'} align={'center'} direction={'column'} gap={'4'} my={'6'} style={{borderStyle: 'solid', borderRadius: '5px', borderColor: '#e0e0e0', borderWidth: '1px', padding: '50px'}}>
-                      <Text size={'5'} mx={'3'} align={'center'} style={{color: 'black', backgroundColor: 'white', marginTop: '-65px', paddingRight: '10px', paddingLeft: '10px'}}>Fastest</Text>
-                      <Button disabled={!appUser} variant='outline' style={{ width: "250px", paddingTop: '40px', paddingBottom: '40px' }}
+                    <Text mt={'5'} mb={'6'} align={'center'} size={'6'} weight={'bold'}
+                      style={{color: 'white'}}
+                    >
+                      Add your email for more rewards.
+                    </Text>
+                    <Flex justify={'between'} align={'center'} direction={'column'} my={'6'} height={'300px'}
+                      style={{backgroundColor: 'rgba(224, 224, 224, 0.5)', borderColor: 'rgba(224, 224, 224, 0.5)', borderStyle: 'solid', borderRadius: '5px', borderWidth: '1px', padding: '50px'}}
+                    >
+                      <Button disabled={!appUser} variant='solid' style={{ width: "250px", paddingTop: '40px', paddingBottom: '40px', backgroundColor: 'white' }}
                         onClick={linkGoogle}
                       >
                         <Flex direction={'row'} align={'center'} gap={'3'} my={'2'}>
@@ -375,18 +418,18 @@ export default function VintageLand() {
                             fallback="G"
                             style={{objectFit: 'contain'}}
                           />
-                          <Text size={'3'}>Continue with Google</Text>
+                          <Text size={'3'} style={{color: 'black'}}>Continue with Google</Text>
                         </Flex>
                       </Button>
-                    </Flex>
-                    <Text mb={'8'} size={'4'}>----or----</Text>
                     
-                    <Button disabled={!appUser} mb={'3'} style={{ width: "250px", fontSize: '16px' }} 
-                      onClick={linkEmail}
-                    >
-                      Manually enter email
-                    </Button>
-      
+                      <Text size={'4'}>----or----</Text>
+                      
+                      <Button disabled={!appUser} highContrast variant='outline' style={{ width: "250px", fontSize: '16px' }} 
+                        onClick={linkEmail}
+                      >
+                        Manually enter email
+                      </Button>
+                    </Flex>
                     {linkEmailError && (
                       <Callout.Root>
                         <Callout.Icon>
@@ -431,7 +474,6 @@ export default function VintageLand() {
             </>
           )
         )}
-      </Flex>
     </Flex>
   );
 };
