@@ -398,7 +398,7 @@ export default function VintageLand() {
                     <Text mt={'5'} mb={'6'} align={'center'} size={'6'} weight={'bold'}
                       style={{color: 'white'}}
                     >
-                      Add your email for more rewards.
+                      Add your email for more discounts.
                     </Text>
                     <Flex justify={'between'} gap={'5'} align={'center'} direction={'column'} my={'6'} py={'5'}
                       style={{backgroundColor: 'rgba(224, 224, 224, 0.5)', borderColor: 'rgba(224, 224, 224, 0.5)', borderStyle: 'solid', borderRadius: '5px', borderWidth: '1px', padding: '50px'}}
