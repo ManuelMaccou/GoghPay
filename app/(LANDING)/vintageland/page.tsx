@@ -392,12 +392,6 @@ export default function VintageLand() {
                     width={510}
                     style={{width: '150px', height: 'auto', justifySelf: 'center', alignSelf: 'center'}}
                   />
-                  <Text weight={'bold'} size="7" align={'center'} style={{color: 'white'}}>
-                    Welcome to
-                  </Text>
-                  <Text mb={'5'} weight={'bold'} size="7" align={'center'} style={{color: 'white'}}>
-                    Vintage Land
-                  </Text>
                 </Flex>
                 {(!user?.email?.address && !user?.google?.email) && (
                   <>
@@ -406,7 +400,7 @@ export default function VintageLand() {
                     >
                       Add your email for more rewards.
                     </Text>
-                    <Flex justify={'between'} align={'center'} direction={'column'} my={'6'} height={'300px'}
+                    <Flex justify={'between'} gap={'5'} align={'center'} direction={'column'} my={'6'} py={'5'}
                       style={{backgroundColor: 'rgba(224, 224, 224, 0.5)', borderColor: 'rgba(224, 224, 224, 0.5)', borderStyle: 'solid', borderRadius: '5px', borderWidth: '1px', padding: '50px'}}
                     >
                       <Button disabled={!appUser} variant='solid' style={{ width: "250px", paddingTop: '40px', paddingBottom: '40px', backgroundColor: 'white' }}
@@ -429,7 +423,15 @@ export default function VintageLand() {
                       >
                         Manually enter email
                       </Button>
+                      
                     </Flex>
+                    <Button variant='ghost' 
+                      onClick={() => router.push('/myrewards')}
+                    >
+                      <Text size={'5'} style={{color: 'white'}}>
+                        skip
+                      </Text>
+                    </Button>
                     {linkEmailError && (
                       <Callout.Root>
                         <Callout.Icon>
