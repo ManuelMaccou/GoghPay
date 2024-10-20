@@ -81,10 +81,13 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
   const merchantId = params.merchantId
 
   useEffect(() => {
+    if (!merchant) return;
     const codeParam = searchParams.get('code');
 
-    setCode(codeParam);
-  }, [searchParams]);
+    if (codeParam && codeParam === merchant.code) {
+      setCode(codeParam);
+    }
+  }, [searchParams, merchant]);
 
 
   const handleLogin = () => {
@@ -755,7 +758,9 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
         if (response.ok) {
           if (response.status === 204) {
-            await createNewRewards();
+            if (code) {
+              await createNewRewards();
+            }
           } else {
             const userRewardsData = await response.json();
             setCurrentUserMerchantRewards(userRewardsData);
