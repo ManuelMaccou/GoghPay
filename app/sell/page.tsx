@@ -18,6 +18,7 @@ import { useDeviceType } from '../contexts/DeviceType';
 import { useSearchParams } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import { setSaleDataCookie } from '../actions/setSaleDataCookie';
+import { useMerchant } from '../contexts/MerchantContext';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -27,6 +28,8 @@ function SellContent() {
   const { appUser} = useUser();
   const { ready, authenticated, user, login } = usePrivy();
   const deviceType = useDeviceType();
+
+  const { isFetchingMerchant } = useMerchant();
 
   const [currentUser, setCurrentUser] = useState<User>();
 
@@ -876,6 +879,94 @@ function SellContent() {
       });
     }
   };
+
+  useEffect(() => {
+    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+      const timer = setTimeout(() => {
+        router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [merchant, router]);
+
+  if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+    return (
+      <Flex
+      direction={{ initial: "column", sm: "row" }}
+      position="relative"
+      minHeight="100vh"
+      width="100%"
+      style={{
+        background: "linear-gradient(to bottom, #45484d 0%,#000000 100%)",
+      }}
+    >
+      <Flex
+        direction="row"
+        justify="center"
+        align="center"
+        px="4"
+        width={{ initial: "100%", sm: "30%" }}
+        height={{ initial: "120px", sm: "100vh" }}
+        style={{ textAlign: 'center' }}
+      >
+        <Heading size="8" align={"center"} style={{ color: "white" }}>
+          Welcome to Gogh
+        </Heading>
+      </Flex>
+      <Flex
+        direction={"column"}
+        justify={"center"}
+        align={"center"}
+        px={"4"}
+        flexGrow={"1"}
+        style={{
+          background: "white",
+        }}
+      >
+        {ready && authenticated ? (
+          isFetchingMerchant ? (
+            <Spinner />
+          ) : merchant ? (
+            <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+              <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+                <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
+                <Text>Redirecting...</Text>
+              </Flex>
+            </Flex>
+          ) : (
+            <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To join the Gogh family of small businesses, please reach out. We
+                would love to hear from you.
+              </Text>
+              <Button asChild>
+                <Link
+                  href="mailto:hello@ongogh.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contact Us
+                </Link>
+              </Button>
+            </Flex>
+          )
+        ) : ready && !authenticated ? (
+          <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To continue, please log in.
+              </Text>
+              <Button asChild>
+                <Link href="/">Log in</Link>
+              </Button>
+            </Flex>
+        ) : <Spinner /> }
+      </Flex>
+    </Flex>
+  )
+}
 
   return (
     <Flex
