@@ -8,7 +8,6 @@ import axios from 'axios';
 import { Button, Flex, Text, Spinner } from "@radix-ui/themes";
 import { User } from './types/types';
 import styles from './components/styles.module.css';
-import { createSmartAccount } from './utils/createSmartAccount';
 import { useUser } from './contexts/UserContext';
 import { useMerchant } from './contexts/MerchantContext';
 import * as Sentry from '@sentry/nextjs';
@@ -18,9 +17,7 @@ function isError(error: any): error is Error {
 }
 
 export default function Home() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isFetchingUser, setIsFetchingUser] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,13 +38,8 @@ export default function Home() {
     onComplete: async (user, isNewUser) => {
       const embeddedWallet = getEmbeddedConnectedWallet(wallets);
 
-      let smartAccountAddress;
-
       if (isNewUser) {
         setIsNewUser(true);
-        if (embeddedWallet) {
-          smartAccountAddress = await createSmartAccount(embeddedWallet);
-        };
 
         try {
           const userPayload = {
@@ -56,7 +48,6 @@ export default function Home() {
             email: user.email?.address || user.google?.email,
             phone: user.phone?.number,
             creationType: 'privy',
-            smartAccountAddress: smartAccountAddress,
           };
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
@@ -78,6 +69,69 @@ export default function Home() {
     },
   });
 
+  const handleLogin = () => {
+    login({
+      loginMethods: ['email', 'google', 'sms'],
+      disableSignup: true 
+    });
+  };
+
+  const handleSignup = () => {
+    login({ loginMethods: ['sms']
+     });
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    if (!appUser) return;
+
+    const updateUserWithSmartWalletAddress = async (smartWallet: any) => {
+      try {
+        const accessToken = await getAccessToken();
+        const response = await fetch('/api/user/update', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`, 
+          },
+          body: JSON.stringify({
+            smartAccountAddress: smartWallet?.address,
+            privyId: user.id,
+          }),
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          setAppUser(data.user);
+        } else {
+          const errorMessage = await response.text();
+          Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
+            extra: {
+              privyId: user?.id ?? 'unknown privyId'
+            }
+          });
+  
+          console.error(`Failed to update user with smart wallet address: ${errorMessage}`);
+          Sentry.captureException(new Error (`Failed to update user with smart wallet address: ${errorMessage}`));
+        }
+  
+      } catch (err) {
+        Sentry.captureException(err);
+        if (isError(err)) {
+          console.error(`Failed to update user with smart wallet address: ${err.message}`);
+        } else {
+          console.error('Failed to update user with smart wallet address');
+        }
+      }
+
+    }
+    const smartWallet = user.linkedAccounts.find((account) => account.type === 'smart_wallet');
+    if (!appUser?.smartAccountAddress && smartWallet) {
+      updateUserWithSmartWalletAddress(smartWallet)
+    }
+  }, [appUser, setAppUser, user, getAccessToken])
+
+  /*
   useEffect(() => {
     if (!ready) return;
     if (isNewUser) return;
@@ -116,48 +170,10 @@ export default function Home() {
       setIsLoading(false);
     }
   }, [authenticated, ready, user, isNewUser, setAppUser]);
+  */
 
   useEffect(() => {
-    if (!embeddedWallet) return;
-    if (!currentUser) return;
-    if (currentUser.smartAccountAddress) return;
-
-    const addSmartAccountAddress = async () => {
-      const accessToken = await getAccessToken();
-      try {
-       const smartAccountAddress = await createSmartAccount(embeddedWallet);
-
-        if (!smartAccountAddress) {
-          throw new Error('Failed to create smart account.');
-        }
-
-        const response = await fetch('/api/user/update', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`, 
-          },
-          body: JSON.stringify({
-            smartAccountAddress: smartAccountAddress,
-            privyId: user?.id
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create smart account');
-        }        
-      } catch (error) {
-        Sentry.captureException(error);
-        console.error('Error adding smart account:', error);
-      } 
-    };
-
-    if (user && embeddedWallet && currentUser && !currentUser.smartAccountAddress) {
-      addSmartAccountAddress();
-    }
-  }, [user, currentUser, embeddedWallet, getAccessToken]);
-
-  useEffect(() => {
+    if (!ready || !authenticated) return
     if (appUser && appUser.merchant) {
       if (merchant && merchant.status === 'onboarding') {
         if (merchant.onboardingStep) {
@@ -172,7 +188,7 @@ export default function Home() {
     } else if (appUser && !appUser.merchant) {
       router.replace('/myrewards')
     }
-  }, [appUser, router, merchant]);
+  }, [ready, authenticated, appUser, router, merchant]);
 
   return (
     <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
@@ -183,7 +199,7 @@ export default function Home() {
         className={styles.fullBackgroundImage}
         fill
         sizes="100vw"
-        style={{ objectFit: "cover" }} 
+        style={{objectFit: "cover"}} 
       />
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
@@ -202,11 +218,11 @@ export default function Home() {
           }} 
         />
 
-        {isLoading || (!ready && (
+        {!ready && (
           <Flex direction={'column'} justify={'center'} align={'center'}>
             <Spinner style={{color: 'white'}} />
           </Flex>
-        ))}
+        )}
 
         {isRedirecting && (
           <>
@@ -214,12 +230,24 @@ export default function Home() {
           </>
         )}
 
-        {ready && (
-          <Flex direction={'column'} justify={'center'} align={'center'}>
-            <Button variant='solid' size={'4'} style={{color: 'black', backgroundColor: 'white', width: "300px"}} onClick={login} loading={authenticated || isLoading}>
-              Log in/Sign up
-            </Button>
-          </Flex>
+        {ready && !authenticated && (
+          <Flex direction={'column'} justify={'end'} align={'end'} gap={'7'}>
+          <Button size={'4'} style={{width: "250px", backgroundColor: 'white'}}
+            onClick={handleLogin}
+          >
+            <Text size={'5'} style={{color: 'black'}}>
+              Log in
+            </Text>
+          </Button>
+    
+          <Button size={'4'} style={{ width: "250px", backgroundColor: 'white' }} 
+            onClick={handleSignup}
+          >
+            <Text size={'5'} style={{color: 'black'}}>
+              Create an account
+            </Text>
+          </Button>
+        </Flex>
         )}
       </Flex>
     </Flex>

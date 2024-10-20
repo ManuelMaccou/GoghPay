@@ -208,29 +208,13 @@ export default function MyRewards() {
               ))
             ) : (
               <>
-              <Flex direction={'column'}>
-              <Text size={'4'} align={'center'} style={{color: 'white'}}>No rewards yet.</Text>
-                <Flex 
-                  position={'relative'}
-                  direction={'column'}
-                  width={'80vw'}
-                  minHeight={'120px'}
-                  align={'center'}
-                  justify={'center'}
-                  p={'9'}
+              <Flex direction={'column'} justify={'center'} align={'center'} px={'4'} height={'50%'}>
+                <Text 
+                  size={'6'} align={'center'} style={{color: 'white'}}
                 >
-                  <Image
-                    priority
-                    src={'/norewards.png'}
-                    alt={'No rewards'}
-                    fill
-                    sizes="(max-width: 200px) 50vw,"
-                    style={{
-                      objectFit: 'contain',
-                      padding: '10px 50px',
-                    }}
-                  />
-                </Flex>
+                  You&apos;re ready to start earning your first rewards!
+                  Visit a participating merchant to start.
+                </Text>
               </Flex>
               </>
             )

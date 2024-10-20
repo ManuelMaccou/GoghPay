@@ -7,6 +7,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.ongogh.com',
       },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
     ],
   },
   async headers() {
