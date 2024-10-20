@@ -25,10 +25,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <script src="https://js.stripe.com/v3/" async></script>
-        <script src="https://crypto-js.stripe.com/crypto-onramp-outer.js" async></script>
-      </head>
       <body className={inter.className}>
         <PrivyUserProvider>
           <UserProvider>
