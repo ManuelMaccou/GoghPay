@@ -22,8 +22,11 @@ export default function VintageLand() {
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
+  const [showNameField, setShowNameField] = useState<boolean>(true);
+  const [userName, setUserName] = useState<string | undefined>(undefined);
   const [linkPhoneError, setLinkPhoneError] = useState<string | null>(null);
   const [linkEmailError, setLinkEmailError] = useState<string | null>(null);
   const [linkGmailError, setLinkGmailError] = useState<string | null>(null);
@@ -80,6 +83,62 @@ export default function VintageLand() {
     login({ loginMethods: ['sms']
      });
   };
+
+  const handleUserNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    const sanitizedInput = input.replace(/[^a-zA-Z\s]/g, '');
+
+    if (sanitizedInput !== input) {
+      setNameError('Only letters and spaces are allowed.');
+    } else {
+      setNameError(null);
+    }
+
+    setUserName(sanitizedInput);
+  };
+
+  const handleUpdateUserName = async () => {
+    try {
+      const accessToken = await getAccessToken();
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`, 
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          name: userName,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAppUser(data.user);
+        setShowNameField(false)
+      } else {
+        setShowNameField(false)
+        const responseErrorMessage = await response.text();
+        Sentry.captureException(new Error(`Updating user name - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
+          extra: {
+            privyId: user?.id ?? 'unknown privyId'
+          }
+        });
+
+        console.error(`Failed to update user name: ${responseErrorMessage}`);
+        Sentry.captureException(new Error (`Failed to update user name: ${responseErrorMessage}`));
+      }
+
+    } catch (err) {
+      setShowNameField(false)
+      Sentry.captureException(err);
+      if (isError(err)) {
+        console.error(`Failed to update user name: ${err.message}`);
+      } else {
+        console.error('Failed to update user name');
+      }
+    }
+  }
 
   const { linkEmail, linkGoogle, linkPhone } = useLinkAccount({
     onSuccess: (user, linkMethod) => handleLinkSuccess(user, linkMethod),
@@ -298,8 +357,9 @@ export default function VintageLand() {
 
     const noEmail = !user.email?.address && !user.google?.email;
     const noPhone = !user.phone?.number;
+    const noName = !appUser.name;
 
-    if (noEmail || noPhone) {
+    if (noEmail || noPhone || noName) {
       setShowForm(true);
     } else {
       router.push('myrewards')
@@ -393,9 +453,35 @@ export default function VintageLand() {
                     style={{width: '150px', height: 'auto', justifySelf: 'center', alignSelf: 'center'}}
                   />
                 </Flex>
-                {(!user?.email?.address && !user?.google?.email) && (
+                {showNameField ? (
                   <>
-                    <Text mt={'5'} mb={'6'} align={'center'} size={'6'} weight={'bold'}
+                    <Text mt={'5'} mb={'3'} weight={'bold'} size={'6'} align={'center'} as='label' style={{color: 'white'}}>What is your name?</Text>
+                    <TextField.Root
+                      size={'3'}
+                      value={userName}
+                      style={{width: '250px'}}
+                      onChange={handleUserNameChange}
+                    />
+                    {nameError && (
+                      <Callout.Root>
+                        <Callout.Text size={'5'} style={{color: 'white'}}>
+                          {nameError}
+                        </Callout.Text>
+                      </Callout.Root>
+                      )}
+                    <Button 
+                      mt={'5'}
+                      disabled={!userName && !nameError}
+                      size={'3'}
+                      style={{width: '250px'}}
+                      onClick={handleUpdateUserName}
+                    >
+                      Continue
+                    </Button>
+                  </>
+                ) : (!user?.email?.address && !user?.google?.email) && (
+                  <>
+                    <Text mt={'5'} mb={'6'} mx={'3'} align={'center'} size={'6'} weight={'bold'}
                       style={{color: 'white'}}
                     >
                       Add your email for more discounts.
@@ -456,8 +542,8 @@ export default function VintageLand() {
                 )}
                 {!user?.phone?.number && (
                   <>
-                    <Text align={'center'} size={'5'}>Add your phone number for more rewards.</Text>
-                    <Button my={'5'} size={'3'} style={{ width: "250px"}} onClick={linkPhone}>
+                    <Text align={'center'} size={'5'}>Add your phone number for more discounts.</Text>
+                    <Button my={'5'} mx={'3'} size={'3'} style={{ width: "250px"}} onClick={linkPhone}>
                       Add phone
                     </Button>
                     {linkPhoneError && (
