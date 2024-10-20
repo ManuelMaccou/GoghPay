@@ -5,7 +5,7 @@
 
 
 
-// THIS SHOULD BE REMOVED OR MODIFIED FOR PAYING IN CRYPTO AT RETAIL STORES
+// THIS SHOULD BE REMOVED OR MODIFIED FOR PAYING IN CRYPTO AT RETAIL STORES.
 
 import { PrivyClient } from '@privy-io/server-auth';
 import { Merchant, User } from '@/app/types/types';
