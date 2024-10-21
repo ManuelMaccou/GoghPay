@@ -372,14 +372,14 @@ export default function VintageLand() {
     <Flex direction={'column'} justify={'center'} align={'center'} height={'100vh'} width={'100%'} 
       style={{backgroundColor: '#EC2078', position: 'relative', overflow: 'hidden', zIndex: 1}}
     >
-      <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '100%', overflow: 'hidden', lineHeight: 0, zIndex: -1 }}>
-        <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 540 960" width="100%" height="100%" version="1.1">
+      <Flex width={'100%'} height={'100%'} style={{ position: 'absolute', bottom: 0, overflow: 'hidden', lineHeight: 0, zIndex: -1 }}>
+        <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 540 960" width="100%" height="100%"  preserveAspectRatio="none" version="1.1">
           <path d="M0 536L30 532.8C60 529.7 120 523.3 180 520C240 516.7 300 516.3 360 522.7C420 529 480 542 510 548.5L540 555L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#fa7268"/>
           <path d="M0 607L30 598.3C60 589.7 120 572.3 180 579.7C240 587 300 619 360 619.2C420 619.3 480 587.7 510 571.8L540 556L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#f85b6a"/>
           <path d="M0 715L30 719C60 723 120 731 180 725.7C240 720.3 300 701.7 360 690.2C420 678.7 480 674.3 510 672.2L540 670L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#f3426f"/>
           <path d="M0 832L30 831C60 830 120 828 180 824.2C240 820.3 300 814.7 360 815.3C420 816 480 823 510 826.5L540 830L540 961L510 961C480 961 420 961 360 961C300 961 240 961 180 961C120 961 60 961 30 961L0 961Z" fill="#ec2078"/>
         </svg>
-      </div>
+      </Flex>
       {ready && !authenticated && (
         <Flex height={'100%'} direction={'column'} position={'relative'} gap={'9'} align={'center'} justify={'center'}>
         
@@ -453,7 +453,7 @@ export default function VintageLand() {
                     style={{width: '150px', height: 'auto', justifySelf: 'center', alignSelf: 'center'}}
                   />
                 </Flex>
-                {showNameField ? (
+                {(showNameField && !appUser.name) ? (
                   <>
                     <Text mt={'5'} mb={'3'} weight={'bold'} size={'6'} align={'center'} as='label' style={{color: 'white'}}>What is your name?</Text>
                     <TextField.Root
