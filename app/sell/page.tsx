@@ -115,6 +115,7 @@ function SellContent() {
 
   useEffect(() => {
     if (!currentUser) return;
+    if (!merchant) return;
 
     const statusParam = searchParams.get('status');
     const messageParam = searchParams.get('message') || '';
@@ -128,6 +129,7 @@ function SellContent() {
 
       if (rewardsUpdatedParam === 'true') {
         setRewardsUpdated(true)
+        sendTextMessage(currentUser, merchant)
       }
 
       setShowNewSaleForm(true);
@@ -137,7 +139,7 @@ function SellContent() {
       setShowNewSaleForm(true);
       setSquarePosErrorMessage(messageParam);
     }
-  }, [searchParams, currentUser]);
+  }, [searchParams, currentUser, merchant]);
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
@@ -889,6 +891,37 @@ function SellContent() {
       return () => clearTimeout(timer);
     }
   }, [merchant, router]);
+
+  const sendTextMessage = async (currentUser: User, merchant: Merchant) => {
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      Sentry.captureMessage("Failed to retrieve access token");
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      params.append("to", currentUser?.phone || "");
+      params.append(
+        "body",
+        `Welcome to Gogh Rewards! Enjoy a 10% discount on your next purchase from ${merchant?.name}. View all rewards here: ${process.env.NEXT_PUBLIC_BASE_URL}/myrewards`
+      );
+      params.append("privyId", `${currentUser.privyId}`);
+  
+      await fetch("/api/comms/text", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error("Error occurred while sending text message:", error);
+    }
+  };
+  
 
   if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
     return (

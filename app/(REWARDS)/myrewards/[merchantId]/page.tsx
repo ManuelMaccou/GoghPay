@@ -13,7 +13,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
-import { ArrowLeftIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, CheckCircledIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { useSearchParams } from "next/navigation";
 import * as Sentry from '@sentry/nextjs';
 import { ApiError } from '@/app/utils/ApiError';
@@ -909,7 +909,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
             className="MerchantLogo"
             src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
             alt="Merchant Logo"
-            style={{ objectFit: "contain", maxWidth: '200px' }}
+            style={{ objectFit: "contain", maxWidth: '200px'}}
           />
         </Avatar.Root>
         <Text align={'center'} size={'5'} style={{color: secondaryColor}}>Add your email to receive rewards from</Text>
@@ -994,85 +994,82 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
   if (!isFetchingMerchant && !isFetchingCurrentUserRewards && !isCheckingSquareDirectory && !errorCheckingSquareDirectory) {
     return (
-      <Flex 
-        direction='column'
-        minHeight='100vh'
-        style={{
-          background: primaryColor
-        }}
-      >
-        <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
-          <Header
-            color={secondaryColor}
-            merchant={currentUser?.merchant}
-            embeddedWallet={embeddedWallet}
-            authenticated={authenticated}
-            walletForPurchase={walletForPurchase}
-            currentUser={currentUser}
-          />
+      <>
+        <Flex direction={'column'} height={'20vh'}  width={'100%'} style={{backgroundColor: '#091b36'}}>
+          <Flex direction={'row'} justify={'end'} align={'center'} p={'6'}>
+            <Header
+              color={secondaryColor}
+              merchant={currentUser?.merchant}
+              embeddedWallet={embeddedWallet}
+              authenticated={authenticated}
+              walletForPurchase={walletForPurchase}
+              currentUser={currentUser}
+            />
+          </Flex>
         </Flex>
         <Flex
-          flexGrow={'1'}
+          minHeight='80vh'
           pb={'7'}
           direction={'column'}
           gap={'5'}
           align={'center'}
-          justify={'between'}
-          
         >
+          {merchant?.branding?.logo ? (
+            <Flex mb={'4'} mt={'-9'} direction={'column'} align={'center'} justify={'center'}>
+              <AvatarImage
+                src={merchant.branding.logo}
+                fallback='/logos/gogh_logo_black.svg'
+                radius='full'
+                size={'8'}
+                style={{padding: '7px', objectFit: 'scale-down', borderStyle: 'solid', borderColor: 'white', borderRadius: '100%', backgroundColor: primaryColor}}
+              />
+            </Flex>
+          ) : (
+            <Heading style={{color: 'white', zIndex: '10'}}>{merchant?.name}</Heading>
+          )}
           <Flex direction={'column'} width={'100%'}>
-            <Flex justify={'center'} style={{marginRight: '20px', marginLeft: '20px'}}>
-              <Flex direction={'column'} align={'center'} gap={'4'} px={'2'}>
-                {merchant?.branding?.logo ? (
-                  <Flex height={'120px'} width={'80vw'} position={'relative'} direction={'column'} align={'center'} justify={'center'}
-                    style={{maxHeight: '100px'}}
-                  >
-                    <Image
-                      priority
-                      src={merchant.branding.logo}
-                      alt={merchant.name}
-                      fill
-                      sizes="(max-width: 200px) 50vw"
-                      style={{
-                        objectFit: 'contain',
-                        // padding: '10px 50px',
-                      }}
-                    />
+            <Flex style={{marginRight: '20px', marginLeft: '20px'}}>
+              <Flex direction={'column'} gap={'4'} px={'2'} width={'100%'}>
+                {usersCurrentRewardsTier && (
+                  <Flex direction={'column'} justify={'center'} width={'100%'}>
+                    {code && (
+                     
+                      <Callout.Root mt={'-5'} mb={'3'} color='green'>
+                        <Callout.Icon>
+                          <CheckCircledIcon />
+                        </Callout.Icon>
+                        <Callout.Text>
+                          You&apos;re checked in! Waiting for the merchant.
+                        </Callout.Text>
+                      </Callout.Root>
+               
+                    )}
+                    <Text weight={'bold'} align={'center'} size={'6'}>Earning{' '}{usersCurrentRewardsTier.discount}% off</Text>
                   </Flex>
-                ) : (
-                  <Heading style={{color: secondaryColor}}>{merchant?.name}</Heading>
                 )}
-                
-                  {usersCurrentRewardsTier && (
-                    <Flex direction={'column'} justify={'center'} width={'100%'}>
-                      <Text weight={'bold'} align={'center'} size={'6'} style={{color: secondaryColor}}>Earning{' '}{usersCurrentRewardsTier.discount}% off</Text>
-                    </Flex>
-                  )}
 
-                  {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id ? (
-                    <Flex direction={'row'} 
-                    width={'100%'} 
-                    justify={'between'} align={'center'}>
-                      <Text wrap={'wrap'} size={'5'} style={{color: secondaryColor}}>
-                        Remaining until<br></br> next upgrade:
-                      </Text>
-                      <Text size={'5'} style={{color: secondaryColor}}>${amountToNextRewardsTier}</Text>
+                {!usersCurrentRewardsTier || usersCurrentRewardsTier._id !== sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id ? (
+                  <Flex direction={'column'} width={'100%'} justify={'start'} align={'start'}>
+                    <Text align={'left'} weight={'bold'} size={'5'}>
+                      Until next upgrade:
+                    </Text>
+                    <Flex direction={'row'}>
+                      <Text size={'7'}>$</Text>
+                      <Text size={'9'}>{amountToNextRewardsTier}</Text>
                     </Flex>
+                  </Flex>
                   
-                  ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id && (  
-                    <Flex 
-                      direction={'column'} 
-                      align={'center'} justify={'center'}
-                      p={'3'}
-                      style={{backgroundColor: complementaryColor, borderRadius: '5px'}}
-                    >
-                      <Text weight={'bold'} size={'4'} align={'center'}
-                        style={{color: secondaryColor}}
-                      >
-                        You&apos;re earning the max discount!
-                      </Text>
-                    </Flex>
-                  )}
+                ) : usersCurrentRewardsTier && usersCurrentRewardsTier._id === sortedMilestoneTiers[sortedMilestoneTiers.length - 1]?._id && (  
+                  <Flex 
+                    direction={'column'} 
+                    align={'center'} justify={'center'}
+                    p={'3'}
+                  >
+                    <Text weight={'bold'} size={'4'} align={'center'}>
+                      You&apos;re earning the max discount!
+                    </Text>
+                  </Flex>
+                )}
               </Flex>
             </Flex>
             <Flex direction={'column'} py={'5'} px={'3'} overflow={'scroll'} gap={'3'} ref={rewardsContainerRef}>
@@ -1081,19 +1078,16 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
                   ref={tier._id === usersCurrentRewardsTier?._id ? targetCardRef : null}
                   style={{
                     padding: '16px',
-                    backgroundColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : "",
-                    borderStyle: 'solid',
-                    borderColor: tier._id === usersCurrentRewardsTier?._id ? complementaryColor : secondaryColorWithTransparency,
-                    borderWidth: '1px',
+                    backgroundColor: tier._id === usersCurrentRewardsTier?._id ? "#7DA7D7" : "",
                     borderRadius: '8px',
                     flexShrink: 0,
                   }}
                 >
                   <Flex direction={'column'} gap={'3'} justify={'between'} align={'center'} height={'60px'} width={'100%'}>
-                    <Text size={'5'} weight="bold" style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
+                    <Text size={'5'} weight="bold" style={{color: tier._id === usersCurrentRewardsTier?._id ? 'black' : 'grey'}}>
                       {tier.name}
                     </Text>
-                    <Text size={'5'} style={{color: tier._id === usersCurrentRewardsTier?._id ? secondaryColor : secondaryColorWithTransparency}}>
+                    <Text size={'5'} style={{color: tier._id === usersCurrentRewardsTier?._id ? 'black' : 'grey'}}>
                       {tier.discount}% off
                     </Text>
                   </Flex>
@@ -1102,7 +1096,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
             </Flex>
           </Flex>
         </Flex>
-      </Flex>
+      </>
     );
   }
 
