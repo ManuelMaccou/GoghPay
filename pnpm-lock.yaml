@@ -138,10 +138,10 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0(react@18.2.0)
       react:
-        specifier: ^18.2.0
+        specifier: ^18
         version: 18.2.0
       react-dom:
-        specifier: ^18.2.0
+        specifier: ^18
         version: 18.2.0(react@18.2.0)
       sharp:
         specifier: ^0.33.4
@@ -187,10 +187,10 @@ importers:
         specifier: ^3.0.11
         version: 3.0.11
       '@types/react':
-        specifier: ^18.3.1
+        specifier: ^18
         version: 18.3.2
       '@types/react-dom':
-        specifier: ^18.3.1
+        specifier: ^18
         version: 18.3.1
       '@types/styled-components':
         specifier: ^5.1.34
