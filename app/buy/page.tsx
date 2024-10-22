@@ -74,7 +74,6 @@ function BuyContent() {
   const {user} = usePrivy();
   const {getAccessToken} = usePrivy();
 
-  // Get params to verify signed URL
   const searchParams = useSearchParams();
   const merchantId = searchParams.get('merchantId');
   const product = searchParams.get('product');   
@@ -96,7 +95,10 @@ function BuyContent() {
     setError('Provided sales tax is invalid');
   }
 
-  const calculatedSalesTax = (salesTaxNum/100) * price;  
+  const calculatedSalesTax = (salesTaxNum/100) * price; 
+
+
+   
 
   const [selectedTip, setSelectedTip] = useState<string>('0');
   const [tipAmount, setTipAmount] = useState(0);
