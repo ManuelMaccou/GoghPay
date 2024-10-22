@@ -1,6 +1,6 @@
 import { SaleFormData } from '@/app/types/types';
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers'
+import { cookies, type UnsafeUnwrappedCookies } from 'next/headers';
 import { ApiError } from '@/app/utils/ApiError';
 import * as Sentry from '@sentry/nextjs';
 
@@ -51,7 +51,7 @@ const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
       Sentry.captureMessage("Cookie name was not included in iOS callback data");
     }
     
-    const cookieStore = cookies();
+    const cookieStore = (cookies() as unknown as UnsafeUnwrappedCookies);
   
     if (saleDataCookieName) {
       const saleFormDataCookie = cookieStore.get(saleDataCookieName);

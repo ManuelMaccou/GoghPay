@@ -2,11 +2,10 @@ import connectToDatabase from '@/app/utils/mongodb';
 import User from '@/app/models/User';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { privyId: string } }) {
-  
-  const privyId = params.privyId 
+export async function GET(request: Request, props: { params: Promise<{ privyId: string }> }) {
+  const params = await props.params;
+
+  const privyId = params.privyId
   try {
   
     if (!privyId) {

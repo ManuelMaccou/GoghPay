@@ -6,7 +6,7 @@ import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Link, Se
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { User, RewardsTier, Rewards } from "@/app/types/types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useMerchant } from "@/app/contexts/MerchantContext";
 import { useUser } from "@/app/contexts/UserContext";
 import styles from ".//styles.module.css";
@@ -18,7 +18,8 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function ManageRewards({ params }: { params: { merchantId: string } }) {  
+export default function ManageRewards(props: { params: Promise<{ merchantId: string }> }) {
+  const params = use(props.params);
   const router = useRouter();
 
   const { ready, authenticated, user, getAccessToken } = usePrivy();

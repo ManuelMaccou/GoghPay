@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   console.log('destinationPath:', destinationPath);
 
   // Parse the cookies from the request
-  const csrfToken = cookies().get('csrfToken');
+  const csrfToken = (await cookies()).get('csrfToken');
   console.log('CSRF Token in cookies:', csrfToken?.value);
 
   if (!csrfToken || state !== csrfToken.value) {

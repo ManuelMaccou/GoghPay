@@ -1,10 +1,7 @@
-import { NextApiRequest, NextApiResponse } from 'next';
 import { NextRequest, NextResponse } from 'next/server';
-import { redirect } from 'next/navigation'
 import { stripe } from '@/app/lib/stripe';
-import { Merchant } from '@/app/types/types';
 
-export async function POST(req: NextRequest, res: NextApiResponse) {
+export async function POST(req: NextRequest) {
   try {
     const { stripeConnectedAccountId, merchantId, merchantObject, product, price, finalPrice, walletAddress, redirectURL } = await req.json();
 
@@ -50,10 +47,9 @@ export async function POST(req: NextRequest, res: NextApiResponse) {
       
     } else {
       console.error('Session URL is null');
-      return new Response(JSON.stringify({ error: 'Session URL is null' }), { status: 500 });
-    }
+      return NextResponse.json({ error: 'Session URL is null' }, { status: 500 });    }
   } catch (error) {
     console.error('Failed to create Stripe checkout session', error);
-    return new Response(JSON.stringify({ error: 'Failed to create checkout session' }), { status: 500 });
+    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

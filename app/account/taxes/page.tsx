@@ -10,7 +10,7 @@ import { Badge, Box, Button, Callout, Dialog, Flex, Heading, Link, RadioGroup, S
 import * as Sentry from '@sentry/nextjs';
 import axios from "axios";
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { NewTaxForm } from "./components/taxForm";
 import React from "react";
 
@@ -18,7 +18,8 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Taxes({ params }: { params: { userId: string } }) {
+export default function Taxes(props: { params: Promise<{ userId: string }> }) {
+  const params = use(props.params);
   const { ready, authenticated, user } = usePrivy();
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
@@ -28,7 +29,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
   const [totalTaxAmount, setTotalTaxAmount] = useState<number>(0);
   const [totalTaxAmountExcludingCash, setTotalTaxAmountExcludingCash] = useState<number>(0);
   const [taxes, setTaxes] = useState<Tax[] | null>(null);
-  const [selectedTax, setSelectedTax] = useState<Tax | null>(null); 
+  const [selectedTax, setSelectedTax] = useState<Tax | null>(null);
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [newTaxMessage, setNewTaxMessage] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -301,7 +302,7 @@ export default function Taxes({ params }: { params: { userId: string } }) {
     }
     
 
-  }, [ready, authenticated, user]); 
+  }, [ready, authenticated, user]);
 
   // Fetch taxes from transactions
   useEffect(() => {

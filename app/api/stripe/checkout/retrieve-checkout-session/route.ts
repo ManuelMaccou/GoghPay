@@ -1,14 +1,13 @@
 
 import { stripe } from '@/app/lib/stripe';
-import { NextApiResponse } from 'next';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest, res: NextApiResponse) {
+export async function POST(req: NextRequest) {
   const { sessionId } = await req.json();
   console.log('sessionID in API call:', sessionId);
 
   if (!sessionId) {
-    return res.status(400).json({ error: 'Session ID is required' });
+    return NextResponse.json({ error: 'Session ID is required' });
   }
 
   try {

@@ -10,22 +10,23 @@ import { Badge, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong
 import axios from "axios";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Sales({ params }: { params: { userId: string } }) {
+export default function Sales(props: { params: Promise<{ userId: string }> }) {
+  const params = use(props.params);
   const { ready, authenticated, user } = usePrivy();
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ isFetchingCurrentUser, setIsFetchingCurrentUser ] = useState(true);
   const [currentUser, setCurrentUser] = useState<User>();
   const [ isFetchingTransactions, setIsFetchingTransactions ] = useState(true);
   const [totalTransactions, setTotalTransactions] = useState<Transaction[] | null>(null);
-  const [noPurchases, setNoPurchases] = useState(false); 
+  const [noPurchases, setNoPurchases] = useState(false);
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const { wallets } = useWallets();
 

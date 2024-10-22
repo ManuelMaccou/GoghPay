@@ -7,9 +7,9 @@ type Params = {
   privyId: string
 }
 
-export async function GET(request: Request, context: { params: Params }) {
+export async function GET(request: Request, context: { params: Promise<Params> }) {
   await connectToDatabase();
-  const privyId = context.params.privyId
+  const privyId = (await context.params).privyId
   const merchant = await Merchant.findOne({ privyId: privyId });
 
   if (!merchant) {

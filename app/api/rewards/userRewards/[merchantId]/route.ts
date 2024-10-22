@@ -4,10 +4,8 @@ import connectToDatabase from '@/app/utils/mongodb';
 import { UserReward } from '@/app/models/UserReward';
 import Merchant from '@/app/models/Merchant';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { merchantId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ merchantId: string }> }) {
+  const params = await props.params;
   const searchParams = request.nextUrl.searchParams;
   const customerId = searchParams.get('customerId');
   const privyId = searchParams.get('privyId');

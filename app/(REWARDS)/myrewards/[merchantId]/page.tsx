@@ -9,7 +9,7 @@ import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWall
 import * as Avatar from '@radix-ui/react-avatar';
 import { Avatar as AvatarImage, Button, Callout, Card, Flex, Heading, Spinner, Text, Separator, Box } from "@radix-ui/themes";
 import Image from 'next/image';
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, use } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
@@ -1126,7 +1126,7 @@ function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {
 };
 
 
-export default function MyMerchantRewards({ params }: MyMerchantRewardsProps) {
+export default function MyMerchantRewards({ params }: MyMerchantRewardsProps) {  
   return (
     <Suspense fallback={<Spinner />}>
       <MyMerchantRewardsContent params={params} />
