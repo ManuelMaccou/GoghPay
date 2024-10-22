@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
             )}*/}
     
             <Dialog.Root>
-              <Dialog.Trigger>
+              <Dialog.Trigger style={{zIndex: '10'}}>
                 <IconButton variant='ghost' style={{ marginLeft: 'auto' }}>
                   <HamburgerMenuIcon width={'35px'} height={'35px'} style={{color: color? color : 'black'}} />
                 </IconButton>
