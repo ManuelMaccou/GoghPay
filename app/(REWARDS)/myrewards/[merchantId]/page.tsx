@@ -9,7 +9,7 @@ import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWall
 import * as Avatar from '@radix-ui/react-avatar';
 import { Avatar as AvatarImage, Button, Callout, Card, Flex, Heading, Spinner, Text, Separator, Box } from "@radix-ui/themes";
 import Image from 'next/image';
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, use } from "react";
 import { useUser } from "@/app/contexts/UserContext";
 import axios from "axios";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
@@ -17,16 +17,27 @@ import { ArrowLeftIcon, CheckCircledIcon, InfoCircledIcon } from '@radix-ui/reac
 import { useSearchParams } from "next/navigation";
 import * as Sentry from '@sentry/nextjs';
 import { ApiError } from '@/app/utils/ApiError';
-import { getModifiedColor, hexToRgba } from '@/app/utils/getComplementaryColor';
-import { EmailWithMetadata, GoogleOAuthWithMetadata, LinkedAccountWithMetadata, PhoneWithMetadata, User } from '@privy-io/server-auth';
-
-type LinkMethod = EmailWithMetadata | PhoneWithMetadata | GoogleOAuthWithMetadata;
+import { hexToRgba } from '@/app/utils/getComplementaryColor';
+import { User } from '@privy-io/server-auth';
+import React from 'react';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }) {  
+interface MyMerchantRewardsContentProps {
+  params: Promise<{
+    merchantId: string;
+  }>;
+}
+
+interface MyMerchantRewardsProps {
+  params: Promise<{
+    merchantId: string;
+  }>;
+}
+
+function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {  
   const router = useRouter();
   const { ready, authenticated, user, unlinkEmail, unlinkGoogle, unlinkPhone } = usePrivy();
   const { wallets } = useWallets();
@@ -55,8 +66,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
   const [primaryColor, setPrimaryColor] = useState<string>("#FFFFFF");
   const [secondaryColor, setSecondaryColor] = useState<string>("#000000");
-  const [complementaryColor, setcomplementaryColor] = useState<string>("#000000");
-  const [secondaryColorWithTransparency, setSecondaryColorWithTransparency] = useState<string>("#000000");
 
   const [preferredContact, setPreferredContact] = useState<ContactMethod | null>(null);
   type LoginMethod = "google" | "sms" | "email" | "farcaster" | "discord" | "twitter" | "github" | "spotify" | "instagram" | "tiktok" | "linkedin" | "apple" | "telegram" | "wallet";
@@ -78,7 +87,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 
   const searchParams = useSearchParams();
 
-  const merchantId = params.merchantId
+  const { merchantId } = React.use(params);
 
   useEffect(() => {
     if (!merchant) return;
@@ -635,22 +644,6 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
     }
   }, [merchantId]);
 
-  useEffect (() => {
-    if (!merchant) return;
-
-    let complementaryColorState;
-    if (merchant.branding?.primary_color === '#000000') {
-      complementaryColorState = "#8c8c8c"
-    } else {
-      complementaryColorState = getModifiedColor(merchant.branding?.primary_color || '#000000');
-    }
-
-    setcomplementaryColor(complementaryColorState)
-
-    const transparentSecondaryColor = hexToRgba(merchant.branding?.secondary_color || '#FFFFFF', 0.6);
-    setSecondaryColorWithTransparency(transparentSecondaryColor) 
-  }, [merchant])
-
   useEffect(() => {
     const debouncedCheck = debounce(async () => {
       if (merchant) {
@@ -1133,7 +1126,7 @@ function MyMerchantRewardsContent({ params }: { params: { merchantId: string } }
 };
 
 
-export default function MyMerchantRewards({ params }: { params: { merchantId: string } }) {
+export default function MyMerchantRewards({ params }: MyMerchantRewardsProps) {  
   return (
     <Suspense fallback={<Spinner />}>
       <MyMerchantRewardsContent params={params} />

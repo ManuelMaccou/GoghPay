@@ -8,8 +8,8 @@ type Params = {
   merchantId: string;
 };
 
-export async function GET(req: NextRequest, context: { params: Params }) {
-  const merchantId = context.params.merchantId;
+export async function GET(req: NextRequest, context: { params: Promise<Params> }) {
+  const merchantId = (await context.params).merchantId;
   await connectToDatabase();
 
   const now = new Date();

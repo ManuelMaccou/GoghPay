@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
-import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
 import axios from 'axios';
 import { Button, Flex, Text, Spinner } from "@radix-ui/themes";
 import { User } from './types/types';
@@ -17,29 +17,17 @@ function isError(error: any): error is Error {
 }
 
 export default function Home() {
-  const [isFetchingUser, setIsFetchingUser] = useState<boolean>(true);
-  const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   const { appUser, setAppUser } = useUser();
   const { merchant, setMerchant } = useMerchant();
 
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
-  const {wallets} = useWallets();
   const router = useRouter();
-
-  const wallet = wallets[0];
-  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-  const chainId = wallet?.chainId;
-  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-      const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-
       if (isNewUser) {
-        setIsNewUser(true);
 
         try {
           const userPayload = {
@@ -130,46 +118,6 @@ export default function Home() {
       updateUserWithSmartWalletAddress(smartWallet)
     }
   }, [appUser, setAppUser, user, getAccessToken])
-
-  /*
-  useEffect(() => {
-    if (!ready) return;
-    if (isNewUser) return;
-    
-    const fetchUser = async () => {
-      setIsFetchingUser(true)
-      if (!user) return;
-
-      try {
-        const response = await fetch(`/api/user/me/${user.id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch user');
-        }
-        const userData = await response.json();
-        setCurrentUser(userData.user);
-        setAppUser(userData.user);
-        setIsRedirecting(true);
-      } catch (error: unknown) {
-        Sentry.captureException(error);
-        if (isError(error)) {
-          console.error('Error fetching user:', error.message);
-        } else {
-          console.error('Unknown error:', error);
-        }
-        setError('Error fetching user');
-      } finally {
-        setIsFetchingUser(false);
-        setIsLoading(false);
-      }
-    };
-
-    if (ready && authenticated && user) {
-      fetchUser();
-    } else {
-      setIsLoading(false);
-    }
-  }, [authenticated, ready, user, isNewUser, setAppUser]);
-  */
 
   useEffect(() => {
     if (!ready || !authenticated) return

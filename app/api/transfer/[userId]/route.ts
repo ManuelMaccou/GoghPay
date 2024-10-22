@@ -6,8 +6,8 @@ type Params = {
   userId: string;
 };
 
-export async function GET(req: NextRequest, context: { params: Params }) {
-  const userId = context.params.userId;
+export async function GET(req: NextRequest, context: { params: Promise<Params> }) {
+  const userId = (await context.params).userId;
   await connectToDatabase();
 
   const allTransfers = await Transfer.find({ user: userId });

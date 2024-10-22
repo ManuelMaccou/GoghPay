@@ -7,9 +7,9 @@ type Params = {
   userId: string
 }
 
-export async function GET(req: Request, context: { params: Params }) {
+export async function GET(req: Request, context: { params: Promise<Params> }) {
   const privyId = req.headers.get('x-user-id');
-  const userId = context.params.userId;
+  const userId = (await context.params).userId;
 
   if (!privyId) {
     return NextResponse.json({ error: 'User ID not provided during auth middleware' }, { status: 401 });

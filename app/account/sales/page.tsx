@@ -9,7 +9,7 @@ import { Badge, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong
 import axios from "axios";
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { checkAndRefreshToken } from "@/app/lib/refresh-tokens";
 import * as Sentry from '@sentry/nextjs';
 
@@ -17,9 +17,10 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Sales({ params }: { params: { userId: string } }) {  
+export default function Sales(props: { params: Promise<{ userId: string }> }) {
+  const params = use(props.params);
   const { ready, authenticated, user } = usePrivy();
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
@@ -145,7 +146,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
       updateUserWithSmartWalletAddress(smartWallet)
     }
   }, [currentUser, setCurrentUser, user])
-  
+
   const router = useRouter();
   const visitingUser = params.userId
 
@@ -286,8 +287,8 @@ export default function Sales({ params }: { params: { userId: string } }) {
     // Return final price without sales tax, just original price and discount
     return Number((priceAfterDiscount + (payment.tipAmount || 0)).toFixed(2));
   };
-  
-  
+
+
 
   useEffect(() => {
     const getPSTStartAndEndOfDay = () => {
@@ -369,7 +370,7 @@ export default function Sales({ params }: { params: { userId: string } }) {
       fetchTransactions();
     }
   }, [merchant]);
-  
+
 
   return (
     <>

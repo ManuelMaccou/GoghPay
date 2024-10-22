@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import QrCodeImage from '@/app/models/image';
 import connectToDatabase from '@/app/utils/mongodb';
 
-export async function GET(request: NextRequest,
-  { params }: { params: { imageId: string } }) {
-    const imageId = params.imageId;
+export async function GET(request: NextRequest, props: { params: Promise<{ imageId: string }> }) {
+  const params = await props.params;
+  const imageId = params.imageId;
 
   if (!imageId) {
     return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
