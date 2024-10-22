@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from '@sentry/nextjs';
 import twilioClient from "@/app/lib/twilio";
 
 export async function POST(request: Request) {
@@ -13,12 +13,11 @@ export async function POST(request: Request) {
 
     const userIdFromToken = request.headers.get('x-user-id');
 
-    /*
     if (!privyId || !userIdFromToken || userIdFromToken !== privyId) {
       Sentry.captureMessage(`Invalid request: Unauthorized access. User ID: ${userIdFromToken}, Privy ID: ${privyId}`);
       return NextResponse.json({ success: true }, { status: 200 });
     }
-      */
+
 
     if (!to) {
       Sentry.captureMessage("Invalid request: Missing 'to' parameter.");
