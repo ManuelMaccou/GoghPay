@@ -116,28 +116,30 @@ function SellContent() {
   useEffect(() => {
     if (!currentUser) return;
     if (!merchant) return;
+    
+    if (typeof window !== 'undefined' && searchParams) {
+      const statusParam = searchParams.get('status');
+      const messageParam = searchParams.get('message') || '';
+      const customerUpgradedParam = searchParams.get('customerUpgraded');
+      const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
 
-    const statusParam = searchParams.get('status');
-    const messageParam = searchParams.get('message') || '';
-    const customerUpgradedParam = searchParams.get('customerUpgraded');
-    const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
+      if (statusParam === 'success') {
+        if (customerUpgradedParam === 'true') {
+          setCustomerUpgraded(true)
+        }
 
-    if (statusParam === 'success') {
-      if (customerUpgradedParam === 'true') {
-        setCustomerUpgraded(true)
+        if (rewardsUpdatedParam === 'true') {
+          setRewardsUpdated(true)
+          sendTextMessage(currentUser, merchant)
+        }
+
+        setShowNewSaleForm(true);
+        setErrorMessage(null);
+
+      } else if (statusParam === 'error' && messageParam) {
+        setShowNewSaleForm(true);
+        setSquarePosErrorMessage(messageParam);
       }
-
-      if (rewardsUpdatedParam === 'true') {
-        setRewardsUpdated(true)
-        sendTextMessage(currentUser, merchant)
-      }
-
-      setShowNewSaleForm(true);
-      setErrorMessage(null);
-
-    } else if (statusParam === 'error' && messageParam) {
-      setShowNewSaleForm(true);
-      setSquarePosErrorMessage(messageParam);
     }
   }, [searchParams, currentUser, merchant]);
 

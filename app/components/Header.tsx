@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ConnectedWallet, useLogout, usePrivy } from "@privy-io/react-auth";
 import { useUser } from '../contexts/UserContext';
 import { useBalance } from '../contexts/BalanceContext';
@@ -42,7 +42,6 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
   })
 
   const navigateTo = (path: string) => {
-    console.log(`navigating to ${path}`)
     if (pathname === path) {
       router.replace(path);
     } else {
@@ -50,9 +49,9 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
     }
   };
 
-  const handleSetMenuState = (value: 'sales' | 'rewards') => {
+  const handleSetMenuState = useCallback((value: 'sales' | 'rewards') => {
     setMenuState(value);
-  };
+  }, []);
 
   useEffect(() => {
     console.log(menuState);
@@ -160,16 +159,20 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                 </VisuallyHidden>
                 {currentUser?.merchant ? (
                   <Flex direction={'column'} my={'9'}>
+                    
                     <Flex direction={'column'} mb={'5'}>
                       <SegmentedControl.Root 
-                        defaultValue={menuState}
+                        value={menuState}
                         radius="full"
-                        onValueChange={handleSetMenuState}
+                        onValueChange={(value) => handleSetMenuState(value as 'sales' | 'rewards')}
                       >
                         <SegmentedControl.Item value="sales">Sales</SegmentedControl.Item>
                         <SegmentedControl.Item value="rewards">Rewards</SegmentedControl.Item>
                       </SegmentedControl.Root>
                     </Flex>
+
+                    
+                    
                     {menuState === 'sales' ? (
                       <>
                         <Flex direction={'column'} align={'start'}>

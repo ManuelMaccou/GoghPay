@@ -37,7 +37,8 @@ interface MyMerchantRewardsProps {
   }>;
 }
 
-function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {  
+export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {  
+  const { merchantId } = React.use(params);
   const router = useRouter();
   const { ready, authenticated, user, unlinkEmail, unlinkGoogle, unlinkPhone } = usePrivy();
   const { wallets } = useWallets();
@@ -87,14 +88,15 @@ function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {
 
   const searchParams = useSearchParams();
 
-  const { merchantId } = React.use(params);
-
+ 
   useEffect(() => {
     if (!merchant) return;
-    const codeParam = searchParams.get('code');
+      if (typeof window !== 'undefined' && searchParams) {
+      const codeParam = searchParams.get('code');
 
-    if (codeParam && codeParam === merchant.code) {
-      setCode(codeParam);
+      if (codeParam && codeParam === merchant.code) {
+        setCode(codeParam);
+      }
     }
   }, [searchParams, merchant]);
 
@@ -724,6 +726,8 @@ function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {
       }
     }
 
+    
+
     const fetchCurrentUserMerchantRewards = async () => {
       if (!currentUser) return;
       setIsFetchingCurrentUserRewards(true)
@@ -771,20 +775,21 @@ function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {
         }
         setError('Error fetching user');
       } finally {
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.delete('code'); // Remove the "code" parameter
-
-        // Use replaceState to update the URL without reloading the page
-        window.history.replaceState(null, '', currentUrl.toString());
-
         setIsFetchingCurrentUserRewards(false);
       }
     };
-
     if (ready && authenticated && currentUser) {
       fetchCurrentUserMerchantRewards();
     }
   }, [authenticated, ready, currentUser, merchantId, merchant, code]);
+
+  useEffect(() => {
+    if (code && !isFetchingCurrentUserRewards) {
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('code');
+      window.history.replaceState(null, '', currentUrl.toString());
+    };
+  }, [code, isFetchingCurrentUserRewards])
 
   useEffect (() => {
     const checkMilestone = () => {
@@ -831,6 +836,10 @@ function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {
 
     checkMilestone();  
   }, [currentUserMerchantRewards, merchant])
+
+  useEffect(() => {
+    console.log(amountToNextRewardsTier)
+  }, [amountToNextRewardsTier])
 
   const rewardsContainerRef = useRef<HTMLDivElement>(null);
   const targetCardRef = useRef<HTMLDivElement>(null);
@@ -1125,7 +1134,7 @@ function MyMerchantRewardsContent({ params }: MyMerchantRewardsContentProps) {
   );
 };
 
-
+/*
 export default function MyMerchantRewards({ params }: MyMerchantRewardsProps) {  
   return (
     <Suspense fallback={<Spinner />}>
@@ -1133,3 +1142,4 @@ export default function MyMerchantRewards({ params }: MyMerchantRewardsProps) {
     </Suspense>
   );
 }
+  */
