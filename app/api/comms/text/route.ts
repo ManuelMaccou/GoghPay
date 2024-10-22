@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import * as Sentry from '@sentry/nextjs';
-//import twilioClient from "@/app/lib/twilio";
+import twilioClient from "@/app/lib/twilio";
 
 export async function POST(request: Request) {
-  //try {
-    // Parse x-www-form-urlencoded data
+  try {
     const requestBody = await request.text();
     const params = new URLSearchParams(requestBody);
     const to = params.get("to");
@@ -29,7 +28,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    /*
+
     try {
       await twilioClient.messages.create({
         body,
@@ -42,11 +41,8 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
-    // Catch any general errors and log them silently
     Sentry.captureException(error);
     console.error("Silent general error:", error);
-    // Return a success response even if there's a general server error
     return NextResponse.json({ success: true }, { status: 200 });
   }
-    */
 }

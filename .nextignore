@@ -2,4 +2,3 @@
 app/utils/createSmartAccount.ts
 app/buy/page.tsx
 app/buy/components/sendUsdcButton.tsx
-app/lib/twilio.ts
