@@ -5,7 +5,7 @@ const AdminErrorSchema = new mongoose.Schema({
   attemptedTask: { type: String, required: true },
   errorMessage: { type: String, required: true },
   errorStack: { type: String, default: null },
-  timestamp: { type: Date, default: Date.now },
+  timestamp: { type: Date },
 });
 
 const AdminError = mongoose.models.AdminError || mongoose.model('AdminError', AdminErrorSchema);
