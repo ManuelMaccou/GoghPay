@@ -52,6 +52,7 @@ export default function Taxes(props: { params: Promise<{ userId: string }> }) {
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
             phone: user.phone?.number,
+            name: user.google?.name,
             creationType: 'privy',
           };
 

@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "run-demo": "node --loader ts-node/esm app/demo/rundemo.mts",
-    "dev": "NODE_OPTIONS='--inspect' next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
+  "type": "module",
   "resolutions": {
     "@headlessui/react": "^2.1.1"
   },

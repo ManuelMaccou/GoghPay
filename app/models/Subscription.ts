@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const subscriptionSchema = new mongoose.Schema({
   merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Merchant', index: true },
   buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
-  subscribedOn: { type: Date, default: Date.now },
+  subscribedOn: { type: Date },
   subscriberStatus: { type: String, required: true } // active, unsubscribed, denied
 }, { timestamps: true });
 
