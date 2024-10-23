@@ -114,6 +114,7 @@ function IntegrationsContent() {
   const squareScopes = [
     'CUSTOMERS_READ',
     'CUSTOMERS_WRITE',
+    'DEVICE_CREDENTIAL_MANAGEMENT',
     'ITEMS_WRITE',
     'ITEMS_READ',
     'MERCHANT_PROFILE_READ',
