@@ -11,10 +11,19 @@ export async function POST(request: Request) {
     const privyId = params.get("privyId");
 
     const userIdFromToken = request.headers.get('x-user-id');
+    const serverAuthentication = request.headers.get('authorization');
 
-    if (!privyId || !userIdFromToken || userIdFromToken !== privyId) {
-      Sentry.captureMessage(`Invalid request: Unauthorized access. User ID: ${userIdFromToken}, Privy ID: ${privyId}`);
-      return NextResponse.json({ success: true }, { status: 200 });
+
+    if (serverAuthentication === `Bearer ${process.env.SERVER_AUTH}`) {
+      console.log("Request authenticated from the server.");
+    } else {
+      if (!privyId) {
+        return NextResponse.json({ message: "Missing required field: privyId" }, { status: 400 });
+      }
+
+      if (!userIdFromToken || userIdFromToken !== privyId) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
     }
 
 

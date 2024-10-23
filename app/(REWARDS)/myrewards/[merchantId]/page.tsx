@@ -301,6 +301,7 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
             phone: user.phone?.number,
+            name: user.google?.name,
             creationType: 'privy',
           };
 
@@ -1032,20 +1033,18 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
           <Flex direction={'column'} width={'100%'}>
             <Flex style={{marginRight: '20px', marginLeft: '20px'}}>
               <Flex direction={'column'} gap={'4'} px={'2'} width={'100%'}>
+              {code && (
+                <Callout.Root mt={'-5'} mb={'3'} color='green'>
+                  <Callout.Icon>
+                    <CheckCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text>
+                    You&apos;re checked in! Waiting for the merchant.
+                  </Callout.Text>
+                </Callout.Root>
+                )}
                 {usersCurrentRewardsTier && (
                   <Flex direction={'column'} justify={'center'} width={'100%'}>
-                    {code && (
-                     
-                      <Callout.Root mt={'-5'} mb={'3'} color='green'>
-                        <Callout.Icon>
-                          <CheckCircledIcon />
-                        </Callout.Icon>
-                        <Callout.Text>
-                          You&apos;re checked in! Waiting for the merchant.
-                        </Callout.Text>
-                      </Callout.Root>
-               
-                    )}
                     <Text weight={'bold'} align={'center'} size={'6'}>Earning{' '}{usersCurrentRewardsTier.discount}% off</Text>
                   </Flex>
                 )}
@@ -1081,6 +1080,9 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
                   style={{
                     padding: '16px',
                     backgroundColor: tier._id === usersCurrentRewardsTier?._id ? "#7DA7D7" : "",
+                    borderStyle: 'solid',
+                    borderColor: tier._id === usersCurrentRewardsTier?._id ? "" : "#DCDCDC",
+                    borderWidth: '1px',
                     borderRadius: '8px',
                     flexShrink: 0,
                   }}

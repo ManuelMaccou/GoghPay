@@ -6,7 +6,6 @@ import Image from "next/image";
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import axios from 'axios';
 import { Button, Flex, Text, Spinner } from "@radix-ui/themes";
-import { User } from './types/types';
 import styles from './components/styles.module.css';
 import { useUser } from './contexts/UserContext';
 import { useMerchant } from './contexts/MerchantContext';
@@ -35,6 +34,7 @@ export default function Home() {
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
             phone: user.phone?.number,
+            name: user.google?.name,
             creationType: 'privy',
           };
 
