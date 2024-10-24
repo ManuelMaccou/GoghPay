@@ -26,7 +26,7 @@ export default function VintageLand() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [showNameField, setShowNameField] = useState<boolean>(true);
-  const [userName, setUserName] = useState<string | undefined>(undefined);
+  const [userName, setUserName] = useState('');
   const [linkPhoneError, setLinkPhoneError] = useState<string | null>(null);
   const [linkEmailError, setLinkEmailError] = useState<string | null>(null);
   const [linkGmailError, setLinkGmailError] = useState<string | null>(null);
@@ -456,7 +456,10 @@ export default function VintageLand() {
                 </Flex>
                 {(showNameField && !appUser.name) ? (
                   <>
-                    <Text mt={'5'} mb={'3'} weight={'bold'} size={'6'} align={'center'} as='label' style={{color: 'white'}}>What is your name?</Text>
+                    <Text mt={'5'} mb={'3'} weight={'bold'} size={'6'} align={'center'} as='label' style={{color: 'white'}}
+                    >
+                      What is your name?
+                    </Text>
                     <TextField.Root
                       size={'3'}
                       value={userName}
@@ -480,7 +483,7 @@ export default function VintageLand() {
                       Continue
                     </Button>
                   </>
-                ) : (!user?.email?.address && !user?.google?.email) && (
+                ) : (!user?.email?.address && !user?.google?.email) ? (
                   <>
                     <Text mt={'5'} mb={'6'} mx={'3'} align={'center'} size={'6'} weight={'bold'}
                       style={{color: 'white'}}
@@ -540,10 +543,12 @@ export default function VintageLand() {
                       </Callout.Root>
                     )}
                   </>
-                )}
-                {!user?.phone?.number && (
+                ) : !user?.phone?.number && (
                   <>
-                    <Text align={'center'} size={'5'}>Add your phone number for more discounts.</Text>
+                    <Text mt={'5'} mb={'3'} mx={'3'} align={'center'} size={'6'} weight={'bold'}
+                      style={{color: 'white'}}
+                    >
+                      Add your phone number for more discounts.</Text>
                     <Button my={'5'} mx={'3'} size={'3'} style={{ width: "250px"}} onClick={linkPhone}>
                       Add phone
                     </Button>
