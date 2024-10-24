@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-    // Save the processed image or PDF (as a cropped image) to the database
+    // Save the processed image or PDF (as a cropped image) to the database.
     const newImage = new QrCodeImage({
       //paymentProvider,
       contentType,
