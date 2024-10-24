@@ -49,11 +49,17 @@ function IntegrationsContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const statusParam = searchParams.get('status');
-    const messageParam = searchParams.get('message');
-
-    setStatus(statusParam);
-    setMessage(decodeURIComponent(messageParam || ''));
+    if (typeof window !== 'undefined' && searchParams) {
+      const statusParam = searchParams.get('status');
+      const messageParam = searchParams.get('message');
+      
+      if (statusParam) {
+        setStatus(statusParam);
+      }
+      if (messageParam) {
+        setMessage(decodeURIComponent(messageParam || ''));
+      }
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -108,6 +114,7 @@ function IntegrationsContent() {
   const squareScopes = [
     'CUSTOMERS_READ',
     'CUSTOMERS_WRITE',
+    'DEVICE_CREDENTIAL_MANAGEMENT',
     'ITEMS_WRITE',
     'ITEMS_READ',
     'MERCHANT_PROFILE_READ',

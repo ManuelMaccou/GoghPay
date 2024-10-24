@@ -6,7 +6,7 @@ import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Link, Se
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { User, RewardsTier, Rewards } from "@/app/types/types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useMerchant } from "@/app/contexts/MerchantContext";
 import { useUser } from "@/app/contexts/UserContext";
 import styles from ".//styles.module.css";
@@ -18,7 +18,8 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function ManageRewards({ params }: { params: { merchantId: string } }) {  
+export default function ManageRewards(props: { params: Promise<{ merchantId: string }> }) {
+  const params = use(props.params);
   const router = useRouter();
 
   const { ready, authenticated, user, getAccessToken } = usePrivy();
@@ -41,6 +42,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   const [submittingWelcomeReward, setSubmittingWelcomeReward] = useState<boolean>(false);
   const [welcomeRewardAmount, setWelcomeRewardAmount] = useState<number | string>('');
   const [welcomeRewardMessage, setWelcomeRewardMessage] = useState<string | null>(null);
+  const [welcomeRewardError, setWelcomeRewardError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
@@ -70,6 +72,10 @@ export default function ManageRewards({ params }: { params: { merchantId: string
 
   const validateMilestone = (value: string): boolean => { 
     return /^[1-9]\d*$|^0$/.test(value);
+  };
+
+  const validateWelcomeReward = (value: string): boolean => { 
+    return /^\d+$/.test(value) && Number(value) > 0 && Number(value) <= 100;
   };
 
   // Function to check if the tier name is unique within the current rewards tiers for this merchant
@@ -226,6 +232,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setWelcomeRewardError(null)
     e.preventDefault();
     
     const milestone = Number(formData.milestone);
@@ -240,6 +247,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   };
 
   const handleModify = (tier: RewardsTier) => {
+    setWelcomeRewardError(null)
     setRewardsUpdateOperation('modify');
     if (tier._id) {
       setRewardsTierIdToUpdate(tier._id);
@@ -263,14 +271,23 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     
     updateMerchant('delete', 0, 0, undefined, tierId);
   };
+
   const handleWelcomeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setWelcomeRewardAmount(e.target.value);
   };
 
   const handleSetWelcomeReward = async () => {
+    setWelcomeRewardError(null)
     if (!merchant) return;
     setSubmittingWelcomeReward(true)
     const accessToken = await getAccessToken();
+
+    const isWelcomeRewardValid = validateWelcomeReward((welcomeRewardAmount.toString()))
+    if (!isWelcomeRewardValid) {
+      setSubmittingWelcomeReward(false)
+      setWelcomeRewardError("Please enter a positive whole number not exceeding 100.");
+      return;
+    }
 
     try {
       const response = await fetch(`/api/merchant/update`, {
@@ -283,6 +300,46 @@ export default function ManageRewards({ params }: { params: { merchantId: string
           privyId: user?.id,
           rewards: {
             welcome_reward: Number(welcomeRewardAmount),
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMerchant(data.merchant);
+      } else {
+        Sentry.captureException(new Error(`Failed to set welcome reward: ${response.statusText} (Status: ${data.message})`));
+        console.error('Failed to set welcome reward:', response.status, data.message);
+        setWelcomeRewardMessage(`Failed to set welcome reward. ${data.message}`);
+      }
+
+    } catch (error) {
+      Sentry.captureException(error)
+      console.error('Error setting default tax:', error);
+      setWelcomeRewardMessage('Failed to set welcome reward. Please try again.');
+    } finally {
+      setSubmittingWelcomeReward(false)
+    }
+  };
+
+  const handleRemoveWelcomeReward = async () => {
+    setWelcomeRewardError(null)
+    if (!merchant) return;
+
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/merchant/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          rewards: {
+            welcome_reward: 0,
           }
         }),
       });
@@ -454,7 +511,11 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                     <Flex direction={'row'} gap={'4'}>
                       <TextField.Root
                         size={'3'}
-                        placeholder={merchant.rewards?.welcome_reward ? merchant.rewards?.welcome_reward.toString() : 'Enter amount'}
+                        placeholder={
+                          merchant.rewards?.welcome_reward && merchant.rewards?.welcome_reward > 0
+                            ? merchant.rewards.welcome_reward.toString()
+                            : 'Enter amount'
+                        }
                         style={{width: '200px'}}
                         type="number"
                         inputMode="decimal"
@@ -475,10 +536,22 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                         Submit
                       </Button>
                     </Flex>
-                    {merchant.rewards?.welcome_reward && (
+                    {(merchant.rewards?.welcome_reward ?? 0) > 0 && (
+                      <Flex direction={'row'} width={'100%'} justify={'between'} align={'center'}>
                       <Callout.Root color="orange" style={{width: 'max-content', padding: '10px'}}>
                         <Callout.Text size={'3'}>
-                          Welcome reward set at {merchant.rewards.welcome_reward}%
+                          Welcome reward set to {merchant.rewards?.welcome_reward}%
+                        </Callout.Text>
+                      </Callout.Root>
+                      <Button variant="ghost" size={'4'} onClick={handleRemoveWelcomeReward}>
+                        Remove
+                      </Button>
+                      </Flex>
+                    )}
+                    {welcomeRewardError && (
+                      <Callout.Root color="red" style={{padding: '10px'}}>
+                        <Callout.Text size={'3'}>
+                        {welcomeRewardError}
                         </Callout.Text>
                       </Callout.Root>
                     )}

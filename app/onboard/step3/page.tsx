@@ -107,11 +107,13 @@ export default function Step3() {
   }, [merchant?.square]);
 
   useEffect(() => {
-    const statusParam = searchParams.get('status');
-    const messageParam = searchParams.get('message');
-
-    setStatus(statusParam);
-    setMessage(decodeURIComponent(messageParam || ''));
+    if (typeof window !== 'undefined' && searchParams) {
+      const statusParam = searchParams.get('status');
+      const messageParam = searchParams.get('message');
+      
+      setStatus(statusParam);
+      setMessage(decodeURIComponent(messageParam || ''));
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -165,6 +167,7 @@ export default function Step3() {
   const squareScopes = [
     'CUSTOMERS_READ',
     'CUSTOMERS_WRITE',
+    'DEVICE_CREDENTIAL_MANAGEMENT',
     'ITEMS_WRITE',
     'ITEMS_READ',
     'MERCHANT_PROFILE_READ',

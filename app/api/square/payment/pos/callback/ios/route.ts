@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers'
+import { cookies, type UnsafeUnwrappedCookies } from 'next/headers';
 import { SaleFormData } from '@/app/types/types';
 import { ApiError } from '@/app/utils/ApiError';
 import * as Sentry from '@sentry/nextjs';
@@ -55,7 +55,7 @@ const parseTransactionDetailsFromQuery = (searchParams: URLSearchParams) => {
       }
 
        // Get stored cookie with sale data
-      const cookieStore = cookies();
+      const cookieStore = (cookies() as unknown as UnsafeUnwrappedCookies);
 
       if (saleDataCookieName) {
         const saleFormDataCookie = cookieStore.get(saleDataCookieName);
@@ -203,6 +203,53 @@ const updateRewards = async (transactionDetails: TransactionDetails, priceAfterD
   }
 }
 
+const sendTextMessage = async (transactionDeatils: TransactionDetails) => {
+  const accessToken = process.env.SERVER_AUTH
+  try {
+    console.log('sending text API');
+    const params = new URLSearchParams();
+    params.append("to", transactionDeatils.saleFormData?.customer?.userInfo.phone || "");
+    if (transactionDeatils.saleFormData?.sellerMerchant?.rewards?.welcome_reward) {
+      params.append(
+        "body",
+        `Welcome to Gogh Rewards! Enjoy a ${transactionDeatils.saleFormData?.sellerMerchant?.rewards?.welcome_reward}% discount on your next purchase from ${transactionDeatils.saleFormData?.sellerMerchant?.name}. View all rewards here: ${process.env.NEXT_PUBLIC_BASE_URL}/myrewards`
+      );
+    } else {
+      params.append(
+        "body",
+        `Welcome to Gogh Rewards! You've enrolled in rewards from ${transactionDeatils.saleFormData?.sellerMerchant?.name}. View all rewards here: ${process.env.NEXT_PUBLIC_BASE_URL}/myrewards`
+      );
+    }
+    // You should be able to leave this out since it will be authed from the server.
+    //params.append("privyId", `${transactionDeatils.saleFormData?.sellerMerchant?.privyId}`);
+
+    console.log('send text body:', params.toString())
+
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/comms/text`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+  } catch (error) {
+    Sentry.captureException(error);
+    console.error("Error occurred while sending text message:", error);
+  }
+};
+
+const silentlySendTextMessage = (transactionDetails: TransactionDetails) => {
+  (async () => {
+    try {
+      await sendTextMessage(transactionDetails);
+    } catch (error) {
+      // Ensure it fails silently
+      console.error("Failed to send text message, but continuing:", error);
+    }
+  })();
+}
+
 const fetchAndUpdatePaymentDetails = async (
   transactionDetails:TransactionDetails,
   statusToSave: string,
@@ -259,7 +306,14 @@ const fetchAndUpdatePaymentDetails = async (
     }
     
     if (transactionDetails.saleFormData?.customer?.userInfo._id) {
-      const rewardsUpdateResponse = await updateRewards(transactionDetails, priceAfterDiscount)
+      const rewardsUpdateResponse = await updateRewards(transactionDetails, priceAfterDiscount);
+
+      console.log('sending text to iOS')
+
+      if (!transactionDetails.saleFormData.customer.purchaseCount) {
+        silentlySendTextMessage(transactionDetails)
+      }
+
       finalSquarePaymentResults.rewardsUpdatedInGogh = rewardsUpdateResponse.success;
 
       if (rewardsUpdateResponse.customerUpgraded) {

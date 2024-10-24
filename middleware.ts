@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrivyClient } from '@privy-io/server-auth';
 import * as Sentry from '@sentry/nextjs';
 
-// Initialize the PrivyClient with the app ID and secret
+// Initialize the PrivyClient with the app ID and secret.
 const privy = new PrivyClient(process.env.NEXT_PUBLIC_PRIVY_APP_ID!, process.env.PRIVY_SECRET!);
 
 export async function middleware(req: NextRequest) {
@@ -66,6 +66,7 @@ export const config = {
     '/api/rewards/userRewards/customers',
     '/api/rewards/userRewards/update',
     '/api/square/payment/creditCard',
+    '/api/comms/text/'
   ]
 };
 

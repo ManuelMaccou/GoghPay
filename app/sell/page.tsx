@@ -115,29 +115,34 @@ function SellContent() {
 
   useEffect(() => {
     if (!currentUser) return;
+    if (!merchant) return;
 
-    const statusParam = searchParams.get('status');
-    const messageParam = searchParams.get('message') || '';
-    const customerUpgradedParam = searchParams.get('customerUpgraded');
-    const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
+    if (typeof window !== 'undefined' && searchParams) {
+      const statusParam = searchParams.get('status');
+      const messageParam = searchParams.get('message') || '';
+      const customerUpgradedParam = searchParams.get('customerUpgraded');
+      const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
+      console.log('rewardsUpdated:', rewardsUpdated);
+      console.log('rewardsUpdatedParam:', rewardsUpdatedParam);
 
-    if (statusParam === 'success') {
-      if (customerUpgradedParam === 'true') {
-        setCustomerUpgraded(true)
+      if (statusParam === 'success') {
+        if (customerUpgradedParam === 'true') {
+          setCustomerUpgraded(true)
+        }
+
+        if (rewardsUpdatedParam === 'true') {
+          setRewardsUpdated(true)
+        }
+
+        setShowNewSaleForm(true);
+        setErrorMessage(null);
+
+      } else if (statusParam === 'error' && messageParam) {
+        setShowNewSaleForm(true);
+        setSquarePosErrorMessage(messageParam);
       }
-
-      if (rewardsUpdatedParam === 'true') {
-        setRewardsUpdated(true)
-      }
-
-      setShowNewSaleForm(true);
-      setErrorMessage(null);
-
-    } else if (statusParam === 'error' && messageParam) {
-      setShowNewSaleForm(true);
-      setSquarePosErrorMessage(messageParam);
     }
-  }, [searchParams, currentUser]);
+  }, [searchParams, currentUser, merchant, rewardsUpdated]);
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
@@ -735,6 +740,9 @@ function SellContent() {
     const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
 
     if (newSaleFormData.customer) {
+      if (newSaleFormData.sellerMerchant && !newSaleFormData.customer.purchaseCount) {
+        silentlySendTextMessage(newSaleFormData.customer, newSaleFormData.sellerMerchant)
+      }
       try {
         const response = await fetch(`/api/rewards/userRewards/update`, {
           method: 'POST',
@@ -889,6 +897,55 @@ function SellContent() {
       return () => clearTimeout(timer);
     }
   }, [merchant, router]);
+
+  const sendTextMessage = async (customer: RewardsCustomer, merchant: Merchant) => {
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        Sentry.captureMessage("Failed to retrieve access token");
+        return;
+      }
+  
+      const params = new URLSearchParams();
+      params.append("to", customer?.userInfo?.phone || "");
+      if (merchant.rewards?.welcome_reward) {
+        params.append(
+          "body",
+          `Welcome to Gogh Rewards! Enjoy a ${merchant.rewards?.welcome_reward}% discount on your next purchase from ${merchant.name}. View all rewards here: ${process.env.NEXT_PUBLIC_BASE_URL}/myrewards`
+        );
+      } else {
+        params.append(
+          "body",
+          `Welcome to Gogh Rewards! You've enrolled in rewards from ${merchant.name}. View all rewards here: ${process.env.NEXT_PUBLIC_BASE_URL}/myrewards`
+        );
+      }
+      params.append("privyId", `${currentUser?.privyId}`);
+  
+      await fetch("/api/comms/text", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error("Error occurred while sending text message:", error);
+    }
+  };
+  
+  const silentlySendTextMessage = (customer: RewardsCustomer, merchant: Merchant) => {
+    (async () => {
+      try {
+        await sendTextMessage(customer, merchant);
+      } catch (error) {
+        // Log the error but ensure it fails silently
+        console.error("Failed to send text message:", error);
+      }
+    })();
+  };
+  
 
   if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
     return (
