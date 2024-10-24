@@ -19,7 +19,7 @@ export default function Home() {
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
 
   const { appUser, setAppUser } = useUser();
-  const { merchant, setMerchant } = useMerchant();
+  const { merchant } = useMerchant();
 
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
   const router = useRouter();
@@ -120,8 +120,11 @@ export default function Home() {
   }, [appUser, setAppUser, user, getAccessToken])
 
   useEffect(() => {
-    if (!ready || !authenticated) return
-    if (appUser && appUser.merchant) {
+    if (!ready || !authenticated || !appUser) return
+    console.log('merchant:', merchant)
+    if (appUser.merchant) {
+      if (!merchant) return;
+      
       if (merchant && merchant.status === 'onboarding') {
         if (merchant.onboardingStep) {
           router.replace(`/onboard/step${merchant.onboardingStep}`);
