@@ -29,7 +29,7 @@ const SquarePaymentButton: React.FC<SquarePaymentProps> = ({
       version: "1.3",
       notes,
       options: {
-        supported_tender_types: ["CREDIT_CARD", "CASH", "OTHER", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
+        supported_tender_types: ["CREDIT_CARD", "SQUARE_GIFT_CARD", "CARD_ON_FILE"],
       },
     };
 
