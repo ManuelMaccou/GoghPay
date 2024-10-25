@@ -855,7 +855,7 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
   }, [merchant?.rewards?.tiers]); 
 
   useEffect(() => {
-    // Scroll to the specific card when the component mounts or updates
+    // Scroll to the specific card when the component mounts or updates.
     if (targetCardRef.current) {
       targetCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
