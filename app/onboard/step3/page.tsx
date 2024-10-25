@@ -7,7 +7,7 @@ import { AlertDialog, Button, Callout, Flex, Heading, Link, RadioGroup, Spinner,
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { use, useEffect, useState } from 'react';
-import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import Cookies from "js-cookie";
 import crypto from 'crypto';
 import { useSearchParams } from "next/navigation";
@@ -379,18 +379,28 @@ export default function Step3() {
           )}
         </Flex>
       </Flex>
-      <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
-      <Button
-        disabled={!merchant || !merchant.square || !merchant.square.access_token}
-        size={'4'}
-        variant='ghost'
-        style={{ width: '250px', cursor: !merchant ? 'default' : 'pointer', fontWeight: 'bold' }}
-          onClick={handleFinishStep3}
+      <Flex direction={'row'} justify={'between'} mx={'4'}>
+        <Button
+          disabled={!merchant}
+          size={'4'}
+          variant='ghost'
+          style={{ fontWeight: 'bold' }}
+          onClick={() => router.push('/onboard/step2')}
         >
-          Next
-          <ArrowRightIcon height={'20'} width={'20'} />
+          <ArrowLeftIcon height={'20'} width={'20'} />
+          Back
         </Button>
-      </Flex>
+        <Button
+          disabled={!merchant || !merchant.square || !merchant.square.access_token}
+          size={'4'}
+          variant='ghost'
+          style={{ cursor: !merchant ? 'default' : 'pointer', fontWeight: 'bold' }}
+            onClick={handleFinishStep3}
+          >
+            Next
+            <ArrowRightIcon height={'20'} width={'20'} />
+          </Button>
+        </Flex>
       {errorMessage && (
         <Callout.Root color='red' mx={'4'}>
           <Callout.Icon>

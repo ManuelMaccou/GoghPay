@@ -6,7 +6,7 @@ import { Button, Callout, Checkbox, Flex, Heading, Link, Separator, Text, TextFi
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { useEffect, useState } from 'react';
-import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { Tax } from '@/app/types/types';
 
 function isError(error: any): error is Error {
@@ -239,12 +239,22 @@ export default function Step4() {
         </Text>
       </Flex>
       
-      <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
+      <Flex direction={'row'} justify={'between'} mx={'4'}>
+        <Button
+          disabled={!merchant}
+          size={'4'}
+          variant='ghost'
+          style={{ fontWeight: 'bold' }}
+          onClick={() => router.push('/onboard/step3')}
+        >
+          <ArrowLeftIcon height={'20'} width={'20'} />
+          Back
+        </Button>
         <Button
           disabled={!merchant || (!taxes?.length && !isChecked)}
           size={'4'}
           variant='ghost'
-          style={{ width: '250px', cursor: !merchant?.taxes && !isChecked ? 'default' : 'pointer', fontWeight: 'bold' }}
+          style={{ cursor: !merchant?.taxes && !isChecked ? 'default' : 'pointer', fontWeight: 'bold' }}
           onClick={handleFinishStep4}
         >
           Next

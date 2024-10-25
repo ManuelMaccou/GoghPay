@@ -1004,10 +1004,10 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
             style={{ objectFit: "contain", maxWidth: '200px' }}
           />
         </Avatar.Root>
-        <Text align={'center'} size={'5'} style={{color: secondaryColor}}>Link your phone to receive rewards from</Text>
+        <Text align={'center'} size={'5'} style={{color: secondaryColor}}>Link your phone number to receive rewards from</Text>
         <Text align={'center'} size={'5'} style={{color: secondaryColor}} mt={'-5'}>{merchant?.name}</Text>
         <Button style={{ width: "250px", backgroundColor: secondaryColor, color: primaryColor }} onClick={linkPhone}>
-          Add phone
+          Continue
         </Button>
         {linkPhoneError && (
           <Callout.Root style={{backgroundColor: secondaryColor}}>

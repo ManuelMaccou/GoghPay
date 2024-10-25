@@ -7,7 +7,7 @@ import { Avatar, Button, Callout, Checkbox, Flex, Heading, Link, Separator, Text
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { useEffect, useState } from 'react';
-import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 
 export default function Step2() {
   const router = useRouter();
@@ -122,17 +122,27 @@ export default function Step2() {
             </Flex>
           </Text>
         </Flex>
-        <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
-        <Button
-          disabled={!merchant || !isChecked}
-          size={'4'}
-          variant='ghost'
-          style={{ width: '250px', cursor: !merchant || !isChecked ? 'default' : 'pointer', fontWeight: 'bold' }}
-            onClick={handleFinishStep2}
+        <Flex direction={'row'} justify={'between'} mx={'4'}>
+          <Button
+            disabled={!merchant}
+            size={'4'}
+            variant='ghost'
+            style={{ fontWeight: 'bold' }}
+            onClick={() => router.push('/onboard/step1')}
           >
-            Next
-            <ArrowRightIcon height={'20'} width={'20'} />
+            <ArrowLeftIcon height={'20'} width={'20'} />
+            Back
           </Button>
+          <Button
+            disabled={!merchant || !isChecked}
+            size={'4'}
+            variant='ghost'
+            style={{ cursor: !merchant || !isChecked ? 'default' : 'pointer', fontWeight: 'bold' }}
+              onClick={handleFinishStep2}
+            >
+              Next
+              <ArrowRightIcon height={'20'} width={'20'} />
+            </Button>
         </Flex>
       {errorMessage && (
         <Callout.Root color='red' mx={'4'}>

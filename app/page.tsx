@@ -122,7 +122,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!ready || !authenticated || !appUser) return
-    console.log('merchant:', merchant)
+    setIsRedirecting(true)
     if (appUser.merchant) {
       if (!merchant) return;
       
@@ -134,7 +134,7 @@ export default function Home() {
         }
        
       } else {
-        router.replace('/account/sales')
+        router.replace('/sell')
       }
     } else if (appUser && !appUser.merchant) {
       router.replace('/myrewards')
