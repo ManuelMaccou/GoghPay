@@ -277,7 +277,7 @@ export default function Step3() {
   return (
     <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
       <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>
-      <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center'}}>
+      <Flex direction={'column'} justify={'center'} align={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center'}}>
         <Text>
           Connect your Square account to accept credit card and mobile payments.
         </Text>
