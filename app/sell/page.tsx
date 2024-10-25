@@ -405,7 +405,7 @@ function SellContent() {
           customer_id: newSaleFormData?.customer?.userInfo.squareCustomerId,
           state: JSON.stringify(state),
           options: {
-            supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE", "CASH"],
+            supported_tender_types: ["CREDIT_CARD", "CARD_ON_FILE"],
             auto_return: true,
             clear_default_fees: true,
           },
@@ -530,7 +530,6 @@ function SellContent() {
       const tenderTypes = [
         "com.squareup.pos.TENDER_CARD",
         "com.squareup.pos.TENDER_CARD_ON_FILE",
-        "com.squareup.pos.TENDER_CASH",
       ].join(",");
 
       let posUrl
