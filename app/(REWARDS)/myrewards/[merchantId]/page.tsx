@@ -7,7 +7,7 @@ import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { ContactMethod, Merchant, RewardsTier, User as TypeUser, UserReward } from "@/app/types/types";
 import { getAccessToken, getEmbeddedConnectedWallet, useLogin, usePrivy, useWallets, useLinkAccount } from "@privy-io/react-auth";
 import * as Avatar from '@radix-ui/react-avatar';
-import { Avatar as AvatarImage, Button, Callout, Card, Flex, Heading, Spinner, Text, Separator, Box } from "@radix-ui/themes";
+import { Avatar as AvatarImage, Button, Callout, Card, Flex, Heading, Spinner, Text, Separator, Box, AlertDialog, VisuallyHidden } from "@radix-ui/themes";
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useRef, useState, use } from "react";
 import { useUser } from "@/app/contexts/UserContext";
@@ -73,6 +73,8 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
 
   const [showLinkEmail, setShowLinkEmail] = useState<boolean>(false);
   const [showLinkPhone, setShowLinkPhone] = useState<boolean>(false);
+
+  const [showOptInMessage, setShowOptInMessage] = useState<boolean>(false);
 
   let privyLoginMethods: LoginMethod[] = ['sms'];
   if (preferredContact === ContactMethod.Email) {
@@ -879,28 +881,54 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
     }
     
     return (
-      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
-        <Avatar.Root>
-          <Avatar.Image
-            className="MerchantLogo"
-            src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
-            alt="Merchant Logo"
-            style={{ objectFit: "contain", maxWidth: '200px' }}
-          />
-        </Avatar.Root>
-  
-        <Button style={{  width: "250px", backgroundColor: secondaryColor, color: primaryColor }}
-          onClick={handleLogin}
+      <>
+        <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
+          <Avatar.Root>
+            <Avatar.Image
+              className="MerchantLogo"
+              src={merchant?.branding?.logo || '/logos/gogh_logo_black.svg'}
+              alt="Merchant Logo"
+              style={{ objectFit: "contain", maxWidth: '200px' }}
+            />
+          </Avatar.Root>
+    
+          <Button style={{  width: "250px", backgroundColor: secondaryColor, color: primaryColor }}
+            onClick={handleLogin}
+          >
+            Log in
+          </Button>
+    
+          <Button style={{ width: "250px", backgroundColor: secondaryColor, color: primaryColor }} 
+          onClick={() => setShowOptInMessage(true)}
+          >
+            Create an account
+          </Button>
+        </Flex>
+
+        <AlertDialog.Root 
+          open={showOptInMessage}
+          onOpenChange={setShowOptInMessage}
         >
-          Log in
-        </Button>
-  
-        <Button style={{ width: "250px", backgroundColor: secondaryColor, color: primaryColor }} 
-          onClick={handleSignup}
-        >
-          Create an account
-        </Button>
-      </Flex>
+          <AlertDialog.Trigger>
+            <Button style={{ display: 'none' }} />
+          </AlertDialog.Trigger>
+          <AlertDialog.Content maxWidth="450px">
+          <VisuallyHidden>
+            <AlertDialog.Title>Opt in to privacy and terms conditions</AlertDialog.Title>
+          </VisuallyHidden>
+          <AlertDialog.Description size="2" mb="4">
+            By creating an account, you agree to receive texts informing you of your earned rewards from Gogh merchants.
+          </AlertDialog.Description>
+            <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+              <AlertDialog.Action>
+                <Button onClick={handleSignup}>
+                  Got it
+                </Button>
+              </AlertDialog.Action>
+            </Flex>
+          </AlertDialog.Content>
+        </AlertDialog.Root>
+      </>
     );
   }
 

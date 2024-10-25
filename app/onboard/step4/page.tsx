@@ -143,7 +143,10 @@ export default function Step4() {
 
   const validateAndFormatRate = (rate: string): string => { 
     const validRate = rate.match(/^\d+(\.\d{0,2})?$/);
-    return validRate ? validRate[0] : '';
+    if (validRate && parseFloat(validRate[0]) < 100) {
+      return validRate[0];
+    }
+    return '';
   };
 
   useEffect(() => {
