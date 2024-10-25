@@ -6,8 +6,8 @@ type Params = {
   userId: string;
 };
 
-export async function GET(req: NextRequest, context: { params: Params }) {
-  const userId = context.params.userId;
+export async function GET(req: NextRequest, context: { params: Promise<Params> }) {
+  const userId = (await context.params).userId;
   await connectToDatabase();
 
   const allTransfers = await Transfer.find({ user: userId });
@@ -16,7 +16,5 @@ export async function GET(req: NextRequest, context: { params: Params }) {
     console.log(`No transactions returned for buyer ID: ${userId}`);
     return NextResponse.json({ message: "No transactions found." }, { status: 404 });
   }
-
-  console.log("Buyer transactions found:");
   return NextResponse.json({ allTransfers}, { status: 200 });
 }

@@ -6,7 +6,7 @@ import { AlertDialog, Button, Callout, Card, Flex, Heading, IconButton, Link, Se
 import { Header } from "@/app/components/Header";
 import { BalanceProvider } from "@/app/contexts/BalanceContext";
 import { User, RewardsTier, Rewards } from "@/app/types/types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useMerchant } from "@/app/contexts/MerchantContext";
 import { useUser } from "@/app/contexts/UserContext";
 import styles from ".//styles.module.css";
@@ -18,7 +18,8 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function ManageRewards({ params }: { params: { merchantId: string } }) {  
+export default function ManageRewards(props: { params: Promise<{ merchantId: string }> }) {
+  const params = use(props.params);
   const router = useRouter();
 
   const { ready, authenticated, user, getAccessToken } = usePrivy();
@@ -41,6 +42,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   const [submittingWelcomeReward, setSubmittingWelcomeReward] = useState<boolean>(false);
   const [welcomeRewardAmount, setWelcomeRewardAmount] = useState<number | string>('');
   const [welcomeRewardMessage, setWelcomeRewardMessage] = useState<string | null>(null);
+  const [welcomeRewardError, setWelcomeRewardError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
@@ -70,6 +72,10 @@ export default function ManageRewards({ params }: { params: { merchantId: string
 
   const validateMilestone = (value: string): boolean => { 
     return /^[1-9]\d*$|^0$/.test(value);
+  };
+
+  const validateWelcomeReward = (value: string): boolean => { 
+    return /^\d+$/.test(value) && Number(value) > 0 && Number(value) <= 100;
   };
 
   // Function to check if the tier name is unique within the current rewards tiers for this merchant
@@ -226,6 +232,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setWelcomeRewardError(null)
     e.preventDefault();
     
     const milestone = Number(formData.milestone);
@@ -240,6 +247,7 @@ export default function ManageRewards({ params }: { params: { merchantId: string
   };
 
   const handleModify = (tier: RewardsTier) => {
+    setWelcomeRewardError(null)
     setRewardsUpdateOperation('modify');
     if (tier._id) {
       setRewardsTierIdToUpdate(tier._id);
@@ -263,14 +271,23 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     
     updateMerchant('delete', 0, 0, undefined, tierId);
   };
+
   const handleWelcomeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setWelcomeRewardAmount(e.target.value);
   };
 
   const handleSetWelcomeReward = async () => {
+    setWelcomeRewardError(null)
     if (!merchant) return;
     setSubmittingWelcomeReward(true)
     const accessToken = await getAccessToken();
+
+    const isWelcomeRewardValid = validateWelcomeReward((welcomeRewardAmount.toString()))
+    if (!isWelcomeRewardValid) {
+      setSubmittingWelcomeReward(false)
+      setWelcomeRewardError("Please enter a positive whole number not exceeding 100.");
+      return;
+    }
 
     try {
       const response = await fetch(`/api/merchant/update`, {
@@ -292,17 +309,148 @@ export default function ManageRewards({ params }: { params: { merchantId: string
       if (response.ok) {
         setMerchant(data.merchant);
       } else {
+        Sentry.captureException(new Error(`Failed to set welcome reward: ${response.statusText} (Status: ${data.message})`));
         console.error('Failed to set welcome reward:', response.status, data.message);
         setWelcomeRewardMessage(`Failed to set welcome reward. ${data.message}`);
       }
 
     } catch (error) {
+      Sentry.captureException(error)
       console.error('Error setting default tax:', error);
       setWelcomeRewardMessage('Failed to set welcome reward. Please try again.');
     } finally {
       setSubmittingWelcomeReward(false)
     }
   };
+
+  const handleRemoveWelcomeReward = async () => {
+    setWelcomeRewardError(null)
+    if (!merchant) return;
+
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/merchant/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          rewards: {
+            welcome_reward: 0,
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMerchant(data.merchant);
+      } else {
+        Sentry.captureException(new Error(`Failed to set welcome reward: ${response.statusText} (Status: ${data.message})`));
+        console.error('Failed to set welcome reward:', response.status, data.message);
+        setWelcomeRewardMessage(`Failed to set welcome reward. ${data.message}`);
+      }
+
+    } catch (error) {
+      Sentry.captureException(error)
+      console.error('Error setting default tax:', error);
+      setWelcomeRewardMessage('Failed to set welcome reward. Please try again.');
+    } finally {
+      setSubmittingWelcomeReward(false)
+    }
+  };
+
+  useEffect(() => {
+    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+      const timer = setTimeout(() => {
+        router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [merchant, router]);
+
+  if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+    return (
+      <Flex
+      direction={{ initial: "column", sm: "row" }}
+      position="relative"
+      minHeight="100vh"
+      width="100%"
+      style={{
+        background: "linear-gradient(to bottom, #45484d 0%,#000000 100%)",
+      }}
+    >
+      <Flex
+        direction="row"
+        justify="center"
+        align="center"
+        px="4"
+        width={{ initial: "100%", sm: "30%" }}
+        height={{ initial: "120px", sm: "100vh" }}
+        style={{ textAlign: 'center' }}
+      >
+        <Heading size="8" align={"center"} style={{ color: "white" }}>
+          Welcome to Gogh
+        </Heading>
+      </Flex>
+      <Flex
+        direction={"column"}
+        justify={"center"}
+        align={"center"}
+        px={"4"}
+        flexGrow={"1"}
+        style={{
+          background: "white",
+        }}
+      >
+        {ready && authenticated ? (
+          isFetchingMerchant ? (
+            <Spinner />
+          ) : merchant ? (
+            <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+              <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Configure rewards</Heading>
+              <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+                <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
+                <Text>Redirecting...</Text>
+              </Flex>
+            </Flex>
+          ) : (
+            <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To join the Gogh family of small businesses, please reach out. We
+                would love to hear from you.
+              </Text>
+              <Button asChild>
+                <Link
+                  href="mailto:hello@ongogh.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contact Us
+                </Link>
+              </Button>
+            </Flex>
+          )
+        ) : ready && !authenticated ? (
+          <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To continue, please log in.
+              </Text>
+              <Button asChild>
+                <Link href="/">Log in</Link>
+              </Button>
+            </Flex>
+        ) : <Spinner /> }
+      </Flex>
+    </Flex>
+  )
+}
 
   return (
     <Flex 
@@ -316,14 +464,17 @@ export default function ManageRewards({ params }: { params: { merchantId: string
     >
       <Flex direction={'row'} justify={'between'} align={'center'} px={'4'} height={'120px'}>
         <Heading size={'8'} style={{color: "white"}}>Manage rewards</Heading>
-        <Header
-          color={"white"}
-          merchant={currentUser?.merchant}
-          embeddedWallet={embeddedWallet}
-          authenticated={authenticated}
-          walletForPurchase={walletForPurchase}
-          currentUser={currentUser}
-        />
+        {(!merchant || (merchant?.status !== "onboarding")) && (
+          <Header
+            color={"white"}
+            merchant={currentUser?.merchant}
+            embeddedWallet={embeddedWallet}
+            authenticated={authenticated}
+            walletForPurchase={walletForPurchase}
+            currentUser={currentUser}
+          />
+        )}
+        
       </Flex>
       <Flex
         flexGrow={'1'}
@@ -341,27 +492,30 @@ export default function ManageRewards({ params }: { params: { merchantId: string
         {ready && authenticated ? (
           currentUser && !isFetchingMerchant && merchant ? (
             !addNewMilestone ? (
-
-              currentRewardsTiers.length === 0 && !isLoading ? (
-                <>
-                  <Text size={'5'} align={'center'}>
-                    Incentivize your customers to spend more and visit often with automated rewards. 
-                    You&apos;ll configure your reward milestones once and discounts will be automatically applied 
-                    at checkout for in-person sales. Rewards for online sales coming soon.
-                  </Text>
-                  <Button style={{width: '250px'}} onClick={() => setAddNewMilestone(true)}>
-                    Get Started
-                  </Button>
-                </>
-              ) : currentRewardsTiers.length > 0 && !isLoading ? (
+              !isLoading ? (
                 <>
                   <Flex direction={'column'} width={'100%'} gap={'4'}>
+                    {merchant && merchant.status === 'onboarding' && (
+                      <Callout.Root color="green">
+                        <Callout.Icon>
+                          <RocketIcon />
+                        </Callout.Icon>
+                        <Callout.Text size={'3'}>
+                          Set at least one milestone or welcome reward, then you&apos;re all done.
+                          We&apos;ll contact you when your account is activated.
+                        </Callout.Text>
+                      </Callout.Root>
+                    )}
                     <Heading>Welcome reward</Heading>
-                    <Text>Offer a small discount for their next purchase when they join your rewards program.</Text>
+                    <Text>Offer a small discount on their next purchase when they join your rewards program.</Text>
                     <Flex direction={'row'} gap={'4'}>
                       <TextField.Root
                         size={'3'}
-                        placeholder={merchant.rewards?.welcome_reward ? merchant.rewards?.welcome_reward.toString() : 'Enter amount'}
+                        placeholder={
+                          merchant.rewards?.welcome_reward && merchant.rewards?.welcome_reward > 0
+                            ? merchant.rewards.welcome_reward.toString()
+                            : 'Enter amount'
+                        }
                         style={{width: '200px'}}
                         type="number"
                         inputMode="decimal"
@@ -382,10 +536,22 @@ export default function ManageRewards({ params }: { params: { merchantId: string
                         Submit
                       </Button>
                     </Flex>
-                    {merchant.rewards?.welcome_reward && (
+                    {(merchant.rewards?.welcome_reward ?? 0) > 0 && (
+                      <Flex direction={'row'} width={'100%'} justify={'between'} align={'center'}>
                       <Callout.Root color="orange" style={{width: 'max-content', padding: '10px'}}>
                         <Callout.Text size={'3'}>
-                          Welcome reward set at {merchant.rewards.welcome_reward}%
+                          Welcome reward set to {merchant.rewards?.welcome_reward}%
+                        </Callout.Text>
+                      </Callout.Root>
+                      <Button variant="ghost" size={'4'} onClick={handleRemoveWelcomeReward}>
+                        Remove
+                      </Button>
+                      </Flex>
+                    )}
+                    {welcomeRewardError && (
+                      <Callout.Root color="red" style={{padding: '10px'}}>
+                        <Callout.Text size={'3'}>
+                        {welcomeRewardError}
                         </Callout.Text>
                       </Callout.Root>
                     )}

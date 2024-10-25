@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
 const paymentTypes = ['Venmo', 'Zelle', 'Square', 'ManualEntry', 'Cash'];
+const MerchantStatus = ['onboarding', 'active', 'inactive'];
+const ContactMethod = ['email', 'phone', 'either'];
 
 const PaymentMethodSchema = new mongoose.Schema({
   types: [{ type: String, enum: paymentTypes, required: true }],
@@ -54,13 +56,16 @@ const RewardsSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const merchantSchema = new mongoose.Schema({
+  status: { type: String, enum: MerchantStatus},
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
+  preferredContactMethod: { type: String, enum: ContactMethod },
   merchantId: { type: String, required: true },
   walletAddress: { type: String },
   storeImage: { type: String },
   privyId: { type: String },
   admin: { type: Boolean },
+  onboardingStep: { type: Number },
   stripeConnectedAccountId: { type: String },
   taxes: { type: [taxSchema] },
   promo: { type: Boolean },

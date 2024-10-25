@@ -5,6 +5,12 @@ enum DiscountType {
   Percent = 'percent',
 }
 
+export enum ContactMethod {
+  Email = 'email',
+  Phone = 'phone',
+  Either = 'either',
+}
+
 enum MilestoneType {
   DollarsSpent = 'dollars_spent',
   NumberOfVisits = 'number_of_visits',
@@ -13,6 +19,12 @@ enum MilestoneType {
 enum PaymentProvider {
   Venmo = 'Venmo',
   Zelle = 'Zelle',
+}
+
+enum MerchantStatus {
+  Onboarding = 'onboarding',
+  Active = 'active',
+  Inactive = 'inactive',
 }
 
 export enum PaymentTypes {
@@ -49,21 +61,25 @@ export interface User {
   walletAddress: string;
   name?: string;
   email?: string;
+  phone?: string;
   merchant?: boolean;
   creationType: string;
-  smartAccountAddress: string;
+  smartAccountAddress?: string;
   coinbaseAddress: string;
 }
 
 export interface Merchant {
   _id: string;
+  status?: MerchantStatus;
   name: string;
+  preferredContactMethod: ContactMethod;
   walletAddress?: string;
   storeImage?: string;
   privyId?: string;
   stripeConnectedAccountId?: string;
   promo?: boolean;
   admin: boolean;
+  onboardingStep: number;
   taxes: Tax[];
   shopify?: Shopify;
   square?: Square;
@@ -189,7 +205,8 @@ export interface RewardsCustomer {
   userInfo: {
     _id: string,
     name: string,
-    email: string,
+    email?: string,
+    phone?: string,
     squareCustomerId: string,
     privyId: string,
   }
@@ -202,7 +219,7 @@ export interface PaymentMethod {
 }
 
 export interface QrCodeImage {
-  paymentProvider: PaymentProvider
+  //paymentProvider: PaymentProvider
   contentType: string;
   data: Buffer
 }

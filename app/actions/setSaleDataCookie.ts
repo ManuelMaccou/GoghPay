@@ -6,7 +6,7 @@ import { SaleFormData } from '../types/types';
 
 export async function setSaleDataCookie(saleFormData: SaleFormData) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const uniqueId = uuidv4();
 
     // Extract only essential data to minimize cookie size

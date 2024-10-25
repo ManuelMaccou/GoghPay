@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
         privyId: userData?.privyId,
         walletAddress: userData?.walletAddress,
         email: userData?.email,
+        phone: userData?.phone,
+        name: userData?.name,
         smartAccountAddress: userData?.smartAccountAddress,
         creationType: userData?.creationType,
       });

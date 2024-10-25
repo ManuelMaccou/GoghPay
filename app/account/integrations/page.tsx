@@ -9,16 +9,18 @@ import * as Avatar from '@radix-ui/react-avatar';
 import { Suspense, useEffect, useState } from "react";
 import { getAccessToken, getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import crypto from 'crypto';
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import NotificationMessage from "@/app/components/Notification";
 import UploadImage from "@/app/components/UploadImage";
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
 function IntegrationsContent() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [revokeSuccess, setRevokeSuccess] = useState<string | null>(null);
@@ -28,6 +30,7 @@ function IntegrationsContent() {
   const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string>('');
+  const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isFetchingLocations, setIsFetchingLocations] = useState<boolean>(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -46,11 +49,17 @@ function IntegrationsContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const statusParam = searchParams.get('status');
-    const messageParam = searchParams.get('message');
-
-    setStatus(statusParam);
-    setMessage(decodeURIComponent(messageParam || ''));
+    if (typeof window !== 'undefined' && searchParams) {
+      const statusParam = searchParams.get('status');
+      const messageParam = searchParams.get('message');
+      
+      if (statusParam) {
+        setStatus(statusParam);
+      }
+      if (messageParam) {
+        setMessage(decodeURIComponent(messageParam || ''));
+      }
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -105,6 +114,7 @@ function IntegrationsContent() {
   const squareScopes = [
     'CUSTOMERS_READ',
     'CUSTOMERS_WRITE',
+    'DEVICE_CREDENTIAL_MANAGEMENT',
     'ITEMS_WRITE',
     'ITEMS_READ',
     'MERCHANT_PROFILE_READ',
@@ -117,8 +127,10 @@ function IntegrationsContent() {
   ];
   const scopeString = squareScopes.join('+');
 
+  const destinationPath = '/account/integrations';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
+  //const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}`);
+  const redirectUri = encodeURIComponent(`${baseUrl}/api/square/auth/callback?merchantId=${merchant?._id}&path=${destinationPath}`);
   const squareAuthUrl = `https://connect.${squareEnv}.com/oauth2/authorize?client_id=${squareAppId}&scope=${scopeString}&session=false&state=${csrfToken}&redirect_uri=${redirectUri}`
 
   const handleRevokeSquareAccess = async () => {
@@ -170,6 +182,7 @@ function IntegrationsContent() {
         setRevokeError('Failed to revoke Square access');
       }
     } catch (error) {
+      Sentry.captureException(error)
       console.error('Error revoking Square access:', error);
       setRevokeError('Failed to revoke Square access');
     }
@@ -242,9 +255,17 @@ function IntegrationsContent() {
         setSquareLocationName(selectedLocation.name);
       }
     } catch (error) {
+      Sentry.captureException(error)
       console.error('Error updating selected location:', error);
       setError('Failed to update selected location');
     }
+  };
+
+  const handleConnectSquare = () => {
+    setIsAuthenticating(true);
+    setTimeout(() => {
+      router.push(squareAuthUrl);
+    }, 100);
   };
 
   useEffect(() => {
@@ -270,6 +291,7 @@ function IntegrationsContent() {
         }
 
       } catch (err) {
+        Sentry.captureException(err)
         if (isError(err)) {
           console.error(`Error fetching merchant: ${err.message}`);
         } else {
@@ -306,6 +328,7 @@ function IntegrationsContent() {
         }
 
       } catch (error) {
+        Sentry.captureException(error)
         console.error('Error fetching user:', error);
       } finally {
         setIsFetchingLocations(false);
@@ -426,10 +449,13 @@ function IntegrationsContent() {
                                 <RedCircle />
                               </Flex>
                               <Text>{locationError}</Text>
-                              <Button asChild size={'4'} style={{width: '250px'}}>
-                                <Link href={squareAuthUrl}>
-                                  Connect Square
-                                </Link>
+                              <Button 
+                                loading={isAuthenticating}
+                                size={'4'}
+                                style={{width: '250px'}}
+                                onClick={handleConnectSquare}
+                              >
+                                Connect Square
                               </Button>
                             </Flex>
                           ) : (
@@ -485,10 +511,13 @@ function IntegrationsContent() {
                                   </AlertDialog.Root>
                                 </>
                               ) : (
-                                <Button asChild size={'4'} style={{width: '250px'}}>
-                                  <Link href={squareAuthUrl}>
-                                    Connect Square
-                                  </Link>
+                                <Button 
+                                  loading={isAuthenticating}
+                                  size={'4'}
+                                  style={{width: '250px'}}
+                                  onClick={handleConnectSquare}
+                                >
+                                  Connect Square
                                 </Button>
                               )}
                             </>
@@ -535,7 +564,8 @@ function IntegrationsContent() {
                             <Flex direction={'column'}>
                               <UploadImage 
                                 merchantId={merchant._id}
-                                paymentProvider='Venmo'
+                                fieldToUpdate="paymentMethods.venmoQrCodeImage" 
+                                crop={true}
                                 onUploadSuccess={(updatedMerchant: Merchant) => setMerchant(updatedMerchant)} 
                               />
                             </Flex>
@@ -578,7 +608,8 @@ function IntegrationsContent() {
                             <Flex direction={'column'}>
                               <UploadImage 
                                 merchantId={merchant._id}
-                                paymentProvider='Zelle'
+                                fieldToUpdate="paymentMethods.zelleQrCodeImage" 
+                                crop={true}
                                 onUploadSuccess={(updatedMerchant: Merchant) => setMerchant(updatedMerchant)} 
                               />
                             </Flex>

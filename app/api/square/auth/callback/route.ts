@@ -18,29 +18,32 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
   const goghMerchantId = searchParams.get('merchantId');
+  const destinationPath = searchParams.get('path');
+
+  console.log('destinationPath:', destinationPath);
 
   // Parse the cookies from the request
-  const csrfToken = cookies().get('csrfToken');
+  const csrfToken = (await cookies()).get('csrfToken');
   console.log('CSRF Token in cookies:', csrfToken?.value);
 
   if (!csrfToken || state !== csrfToken.value) {
-    return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Invalid+state+parameter`);
+    return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=Invalid+state+parameter`);
   }
 
   if (error) {
     if (error === 'access_denied') {
-      return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Authorization+request+was+denied`);
+      return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=Authorization+request+was+denied`);
     } else {
-      return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=${encodeURIComponent(errorDescription || 'An error occured.')}`);
+      return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=${encodeURIComponent(errorDescription || 'An error occured.')}`);
     }
   }
 
   if (!code) {
-    return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Authorization+code+not+found`);
+    return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=Authorization+code+not+found`);
   }
 
   try {
-    const redirectUri = `${baseUrl}/api/square/auth/callback?merchantId=${goghMerchantId}`;
+    const redirectUri = `${baseUrl}/api/square/auth/callback?merchantId=${goghMerchantId}&path=${destinationPath}`;
     
     const response = await axios.post(`https://connect.${SQUARE_ENV}.com/oauth2/token`, {
       client_id: SQUARE_CLIENT_ID,
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     if (response.status !== 200) {
       const errorData = await response.data;
-      return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Failed+to+obtain+access+token&details=${encodeURIComponent(JSON.stringify(errorData))}`);
+      return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=Failed+to+obtain+access+token&details=${encodeURIComponent(JSON.stringify(errorData))}`);
     }
 
     const data = await response.data;
@@ -80,17 +83,17 @@ export async function GET(request: NextRequest) {
     );
 
     if (result.matchedCount === 0 && result.upsertedCount === 0) {
-      return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Merchant+not+found+and+not+updated`);
+      return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=Merchant+not+found+and+not+updated`);
     }
 
-    return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=success`);
+    return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=success`);
   } catch (err: any) {
     if (err.response) {
         console.error('API Error:', err.response.data);
-        return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=${encodeURIComponent(err.response.data.message)}`);
+        return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=${encodeURIComponent(err.response.data.message)}`);
     } else {
         console.error('Request Failed:', err.message);
-        return NextResponse.redirect(`${baseUrl}/account/integrations?merchantId=${goghMerchantId}&status=error&message=Failed+to+fetch+data&details=${encodeURIComponent(err.message)}`);
+        return NextResponse.redirect(`${baseUrl}${destinationPath}?merchantId=${goghMerchantId}&status=error&message=Failed+to+fetch+data&details=${encodeURIComponent(err.message)}`);
     }
 }
 }

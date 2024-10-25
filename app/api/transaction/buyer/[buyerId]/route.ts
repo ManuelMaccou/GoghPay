@@ -7,8 +7,8 @@ type Params = {
   buyerId: string;
 };
 
-export async function GET(req: NextRequest, context: { params: Params }) {
-  const buyerId = context.params.buyerId;
+export async function GET(req: NextRequest, context: { params: Promise<Params> }) {
+  const buyerId = (await context.params).buyerId;
   await connectToDatabase();
 
   const totalTransactions = await Transaction.find({ 
@@ -24,6 +24,5 @@ export async function GET(req: NextRequest, context: { params: Params }) {
     return new Response(null, { status: 204 });
   }
 
-  console.log("Buyer transactions found:", totalTransactions);
   return NextResponse.json({ totalTransactions }, { status: 200 });
 }

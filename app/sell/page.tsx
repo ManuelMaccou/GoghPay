@@ -7,7 +7,7 @@ import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWal
 import { NewSaleForm } from './components/newSaleForm';
 import * as Avatar from '@radix-ui/react-avatar';
 import { AlertDialog, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Text, VisuallyHidden } from '@radix-ui/themes';
-import { ExclamationTriangleIcon, InfoCircledIcon, RocketIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ExclamationTriangleIcon, InfoCircledIcon, RocketIcon } from '@radix-ui/react-icons';
 import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType, SaleFormData } from '../types/types';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { Header } from '../components/Header';
@@ -18,6 +18,7 @@ import { useDeviceType } from '../contexts/DeviceType';
 import { useSearchParams } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import { setSaleDataCookie } from '../actions/setSaleDataCookie';
+import { useMerchant } from '../contexts/MerchantContext';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -27,6 +28,8 @@ function SellContent() {
   const { appUser} = useUser();
   const { ready, authenticated, user, login } = usePrivy();
   const deviceType = useDeviceType();
+
+  const { isFetchingMerchant } = useMerchant();
 
   const [currentUser, setCurrentUser] = useState<User>();
 
@@ -112,29 +115,34 @@ function SellContent() {
 
   useEffect(() => {
     if (!currentUser) return;
+    if (!merchant) return;
 
-    const statusParam = searchParams.get('status');
-    const messageParam = searchParams.get('message') || '';
-    const customerUpgradedParam = searchParams.get('customerUpgraded');
-    const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
+    if (typeof window !== 'undefined' && searchParams) {
+      const statusParam = searchParams.get('status');
+      const messageParam = searchParams.get('message') || '';
+      const customerUpgradedParam = searchParams.get('customerUpgraded');
+      const rewardsUpdatedParam = searchParams.get('rewardsUpdated') || '';
+      console.log('rewardsUpdated:', rewardsUpdated);
+      console.log('rewardsUpdatedParam:', rewardsUpdatedParam);
 
-    if (statusParam === 'success') {
-      if (customerUpgradedParam === 'true') {
-        setCustomerUpgraded(true)
+      if (statusParam === 'success') {
+        if (customerUpgradedParam === 'true') {
+          setCustomerUpgraded(true)
+        }
+
+        if (rewardsUpdatedParam === 'true') {
+          setRewardsUpdated(true)
+        }
+
+        setShowNewSaleForm(true);
+        setErrorMessage(null);
+
+      } else if (statusParam === 'error' && messageParam) {
+        setShowNewSaleForm(true);
+        setSquarePosErrorMessage(messageParam);
       }
-
-      if (rewardsUpdatedParam === 'true') {
-        setRewardsUpdated(true)
-      }
-
-      setShowNewSaleForm(true);
-      setErrorMessage(null);
-
-    } else if (statusParam === 'error' && messageParam) {
-      setShowNewSaleForm(true);
-      setSquarePosErrorMessage(messageParam);
     }
-  }, [searchParams, currentUser]);
+  }, [searchParams, currentUser, merchant, rewardsUpdated]);
 
   const handleMessageUpdate = (msg: string) => {
     setMessage(msg);
@@ -732,6 +740,10 @@ function SellContent() {
     const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
 
     if (newSaleFormData.customer) {
+      if (newSaleFormData.sellerMerchant && !newSaleFormData.customer.purchaseCount) {
+        console.log('will send text here');
+        //silentlySendTextMessage(newSaleFormData.customer, newSaleFormData.sellerMerchant)
+      }
       try {
         const response = await fetch(`/api/rewards/userRewards/update`, {
           method: 'POST',
@@ -877,6 +889,143 @@ function SellContent() {
     }
   };
 
+  useEffect(() => {
+    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+      const timer = setTimeout(() => {
+        router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [merchant, router]);
+
+  const sendTextMessage = async (customer: RewardsCustomer, merchant: Merchant) => {
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        Sentry.captureMessage("Failed to retrieve access token");
+        return;
+      }
+  
+      const params = new URLSearchParams();
+      params.append("to", customer?.userInfo?.phone || "");
+      if (merchant.rewards?.welcome_reward) {
+        params.append(
+          "body",
+          `Welcome to Gogh Rewards! Enjoy a ${merchant.rewards?.welcome_reward}% discount on your next purchase from ${merchant.name}. View all rewards here: ${process.env.NEXT_PUBLIC_BASE_URL}/myrewards`
+        );
+      } else {
+        params.append(
+          "body",
+          `Welcome to Gogh Rewards! You've enrolled in rewards from ${merchant.name}. View all rewards here: ${process.env.NEXT_PUBLIC_BASE_URL}/myrewards`
+        );
+      }
+      params.append("privyId", `${currentUser?.privyId}`);
+  
+      await fetch("/api/comms/text", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error("Error occurred while sending text message:", error);
+    }
+  };
+  
+  const silentlySendTextMessage = (customer: RewardsCustomer, merchant: Merchant) => {
+    (async () => {
+      try {
+        await sendTextMessage(customer, merchant);
+      } catch (error) {
+        // Log the error but ensure it fails silently
+        console.error("Failed to send text message:", error);
+      }
+    })();
+  };
+  
+
+  if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 5) {
+    return (
+      <Flex
+      direction={{ initial: "column", sm: "row" }}
+      position="relative"
+      minHeight="100vh"
+      width="100%"
+      style={{
+        background: "linear-gradient(to bottom, #45484d 0%,#000000 100%)",
+      }}
+    >
+      <Flex
+        direction="row"
+        justify="center"
+        align="center"
+        px="4"
+        width={{ initial: "100%", sm: "30%" }}
+        height={{ initial: "120px", sm: "100vh" }}
+        style={{ textAlign: 'center' }}
+      >
+        <Heading size="8" align={"center"} style={{ color: "white" }}>
+          Welcome to Gogh
+        </Heading>
+      </Flex>
+      <Flex
+        direction={"column"}
+        justify={"center"}
+        align={"center"}
+        px={"4"}
+        flexGrow={"1"}
+        style={{
+          background: "white",
+        }}
+      >
+        {ready && authenticated ? (
+          isFetchingMerchant ? (
+            <Spinner />
+          ) : merchant ? (
+            <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+              <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+                <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>Please complete the previous onboarding steps before proceeding.</Text>
+                <Text>Redirecting...</Text>
+              </Flex>
+            </Flex>
+          ) : (
+            <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To join the Gogh family of small businesses, please reach out. We
+                would love to hear from you.
+              </Text>
+              <Button asChild>
+                <Link
+                  href="mailto:hello@ongogh.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contact Us
+                </Link>
+              </Button>
+            </Flex>
+          )
+        ) : ready && !authenticated ? (
+          <Flex direction="column" align="center" gap={'4'}>
+              <Heading>Welcome to Gogh!</Heading>
+              <Text>
+                To continue, please log in.
+              </Text>
+              <Button asChild>
+                <Link href="/">Log in</Link>
+              </Button>
+            </Flex>
+        ) : <Spinner /> }
+      </Flex>
+    </Flex>
+  )
+}
+
   return (
     <Flex
       direction='column'
@@ -919,7 +1068,7 @@ function SellContent() {
             merchantVerified ? (
               <>         
                 {newSaleFormData && selectedPaymentMethod === 'Venmo' && (
-                  newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage ? (
+                 
                     <AlertDialog.Root open={showVenmoDialog} onOpenChange={setShowVenmoDialog}>
                       <AlertDialog.Trigger>
                         <Button style={{ display: 'none' }} />
@@ -935,7 +1084,8 @@ function SellContent() {
                         </VisuallyHidden>
                         
                         <Flex direction={'column'} width={'100%'} justify={'center'} align={'center'} gap={'6'}>
-                          
+                        {newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage ? (
+                          <>
                           {newSaleFormData && finalPriceCalculated && finalPrice && (
                             <Flex direction={'column'} justify={'center'}>
                               <Text size={'9'} align={'center'}>${finalPrice}</Text>
@@ -943,24 +1093,29 @@ function SellContent() {
                                 <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
                                 <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                               </Flex>
-                              {rewardsDiscount > 0 && (
+
+                              {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
                                 <Flex direction={'row'} width={'300px'} justify={'between'}>
                                   <Text size={'5'} align={'left'}>Rewards discount:</Text>
                                   {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
                                     <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
-                                  ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                  ) : (
+                                    newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
                                     <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong></Text>
+                                    )
                                   )}
                                 </Flex>
                               )}
 
-                              {welcomeDiscount > 0 && (
+                              {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
                                 <Flex direction={'row'} width={'300px'} justify={'between'}>
                                   <Text size={'5'} align={'left'}>Welcome discount:</Text>
                                   {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
                                     <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
-                                  ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                  ) : (
+                                  newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
                                     <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                  )
                                   )}
                                 </Flex>
                               )}
@@ -982,9 +1137,9 @@ function SellContent() {
                             />
                           </Avatar.Root>
                           <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
-                        </Flex>
+                     
                        
-                        <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                        <Flex direction={'row'} width={'100%'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
                           <AlertDialog.Cancel>
                             <Button size={'4'} variant="ghost" 
                               onClick={() => {
@@ -1005,118 +1160,150 @@ function SellContent() {
                             </Button>
                           </AlertDialog.Action>
                         </Flex>
-                      </AlertDialog.Content>
-                    </AlertDialog.Root>
-                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage && (
-                    <Callout.Root color='red' mx={'4'}>
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text size={'6'}>
-                        Venmo has not been configured. Please add your QR code in {" "} <Link href='/account/integrations'> <Strong>settings</Strong></Link>
-                      </Callout.Text>
-                    </Callout.Root>
-                  )
-                )}
-
+                      </>
+                  ) : (
+                    <>
+                    <Flex direction={'column'} width={'100%'} gap={'6'}>
+                      <Callout.Root color='red'>
+                        <Callout.Text size={'6'}>
+                          Venmo has not been configured. Please add your QR code in {" "}<Link href='/account/integrations'><Strong>settings</Strong></Link>
+                        </Callout.Text>
+                      </Callout.Root>
+                      <Button size={'4'} variant='ghost'
+                         onClick={() => {setShowVenmoDialog(false), setShowNewSaleForm(true)}}>
+                        <Text size={'6'}>
+                         Close
+                        </Text>
+                      </Button>
+                    </Flex>
+                    </>
+                  )}
+                  </Flex>
+                </AlertDialog.Content>
+              </AlertDialog.Root>
+            )} 
                 {newSaleFormData && selectedPaymentMethod === 'Zelle' && (
-                  newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage ? (
-                    <AlertDialog.Root open={showZelleDialog} onOpenChange={setShowZelleDialog}>
-                      <AlertDialog.Trigger>
-                        <Button style={{ display: 'none' }} />
-                      </AlertDialog.Trigger>
-                      <AlertDialog.Content maxWidth="450px">
-                        <VisuallyHidden>
-                          <AlertDialog.Title>Zelle QR code</AlertDialog.Title>
-                        </VisuallyHidden>
-                        <VisuallyHidden>
-                          <AlertDialog.Description size="2" mb="4">
-                          Zelle QR code
-                          </AlertDialog.Description>
-                        </VisuallyHidden>
-                        
-                        <Flex direction={'column'} width={'100%'} align={'center'} gap={'6'}>
+                  <AlertDialog.Root open={showZelleDialog} onOpenChange={setShowZelleDialog}>
+                    <AlertDialog.Trigger>
+                      <Button style={{ display: 'none' }} />
+                    </AlertDialog.Trigger>
+                    <AlertDialog.Content maxWidth="450px">
+                      <VisuallyHidden>
+                        <AlertDialog.Title>Zelle QR code</AlertDialog.Title>
+                      </VisuallyHidden>
+                      <VisuallyHidden>
+                        <AlertDialog.Description size="2" mb="4">
+                        Zelle QR code
+                        </AlertDialog.Description>
+                      </VisuallyHidden>
+                      
+                      <Flex direction={'column'} width={'100%'} align={'center'} gap={'6'}>
+                        {newSaleFormData.sellerMerchant?.paymentMethods?.zelleQrCodeImage ? (
+                          <>
+                            {newSaleFormData && finalPriceCalculated && (
+                              <Flex direction={'column'} justify={'center'}>
+                                <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                                <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                  <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                                  <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                                </Flex>
 
-                          {newSaleFormData && finalPriceCalculated && (
-                            <Flex direction={'column'} justify={'center'}>
-                            <Text size={'9'} align={'center'}>${finalPrice}</Text>
-                            <Flex direction={'row'} width={'300px'} justify={'between'}>
-                              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
-                              <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
-                            </Flex>
-                            {rewardsDiscount > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Rewards discount:</Text>
-                                {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
-                                ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong></Text>
+                                {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
+                                  <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                    <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                                    {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                      <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
+                                    ) : (
+                                      newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                        <Text size={'5'} align={'left'}>
+                                          <Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong>
+                                        </Text>
+                                      )
+                                    )}
+                                  </Flex>
                                 )}
-                              </Flex>
-                            )}
 
-                            {welcomeDiscount > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Welcome discount:</Text>
-                                {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
+                                  <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                    <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                                    {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                      <Text size={'5'} align={'left'}>
+                                        <Strong>{welcomeDiscount}%</Strong>
+                                      </Text>
+                                    ) : (
+                                      newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                        <Text size={'5'} align={'left'}>
+                                          <Strong>${welcomeDiscount}</Strong>
+                                        </Text>
+                                      )
+                                    )}
+                                  </Flex>
                                 )}
-                              </Flex>
-                            )}
-                        
-                            {newSaleFormData.tax > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Sales tax:</Text>
-                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
-                              </Flex>
-                            )}
-                            </Flex>
-                          )}
+                            
+                                {newSaleFormData.tax > 0 && (
+                                  <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                    <Text size={'5'} align={'left'}>Sales tax:</Text>
+                                    <Text size={'5'} align={'left'}>
+                                      <Strong>{newSaleFormData.tax}%</Strong>
+                                    </Text>
+                                  </Flex>
+                                )}
+                                </Flex>
+                              )}
                          
-                          <Avatar.Root>
-                            <Avatar.Image 
-                            src={ newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage }
-                            alt="Zelle QR code"
-                            style={{objectFit: "contain", maxWidth: '100%'}}
-                            />
-                          </Avatar.Root>
-                          <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
-                        </Flex>
-                       
-                        <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
-                          <AlertDialog.Cancel>
-                            <Button size={'4'} variant="ghost" 
-                              onClick={() => {
-                                setSelectedPaymentMethod(null);
-                                setShowNewSaleForm(true);
-                              }}>
-                              Cancel
-                            </Button>
-                          </AlertDialog.Cancel>
-                          <AlertDialog.Action>
-                            <Button size={'4'} 
-                              onClick={() => {
-                                handleSavePaymentAndUpdateRewards(newSaleFormData);
-                                setShowZelleDialog(false);
-                              }}>
-                              Confirm
-                            </Button>
-                          </AlertDialog.Action>
-                        </Flex>
-                      </AlertDialog.Content>
-                    </AlertDialog.Root>
-                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage && (
-                    <Callout.Root color='red' mx={'4'}>
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text size={'6'}>
-                        Zelle has not been configured. Please add your QR code in {" "} <Link href='/account/integrations'> <Strong>settings</Strong></Link>
-                      </Callout.Text>
-                    </Callout.Root>
-                  )
+                              <Avatar.Root>
+                                <Avatar.Image 
+                                  src={ newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage }
+                                  alt="Zelle QR code"
+                                  style={{objectFit: "contain", maxWidth: '100%'}}
+                                />
+                              </Avatar.Root>
+                              <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
+
+                              <Flex direction={'row'} width={'100%'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                                <AlertDialog.Cancel>
+                                  <Button size={'4'} variant="ghost" 
+                                    onClick={() => {
+                                      setSelectedPaymentMethod(null);
+                                      setShowNewSaleForm(true);
+                                    }}>
+                                    Cancel
+                                  </Button>
+                                </AlertDialog.Cancel>
+                                <AlertDialog.Action>
+                                  <Button size={'4'} 
+                                    onClick={() => {
+                                      handleSavePaymentAndUpdateRewards(newSaleFormData);
+                                      setShowZelleDialog(false);
+                                    }}>
+                                    Confirm
+                                  </Button>
+                                </AlertDialog.Action>
+                              </Flex>
+                            </>
+                          ) : (
+                          <>
+                            <Flex direction={'column'} width={'100%'} gap={'6'}>
+                              <Callout.Root color='red'>
+                                <Callout.Text size={'6'}>
+                                  Zelle has not been configured. Please add your QR code in {" "}
+                                  <Link href='/account/integrations'>
+                                    <Strong>settings</Strong>
+                                  </Link>
+                                </Callout.Text>
+                              </Callout.Root>
+                              <Button size={'4'} variant='ghost'
+                                onClick={() => {setShowZelleDialog(false), setShowNewSaleForm(true)}}>
+                                <Text size={'6'}>
+                                  Close
+                                </Text>
+                              </Button>
+                            </Flex>
+                          </>
+                        )}
+                      </Flex>
+                    </AlertDialog.Content>
+                  </AlertDialog.Root>
                 )} 
 
                 {newSaleFormData && selectedPaymentMethod === 'Cash' && (
@@ -1142,7 +1329,7 @@ function SellContent() {
                             <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
                             <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                           </Flex>
-                          {rewardsDiscount > 0 && (
+                          {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Rewards discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1153,7 +1340,7 @@ function SellContent() {
                             </Flex>
                           )}
 
-                          {welcomeDiscount > 0 && (
+                          {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Welcome discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1220,7 +1407,7 @@ function SellContent() {
                             <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
                             <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                           </Flex>
-                          {rewardsDiscount > 0 && (
+                          {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Rewards discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1231,7 +1418,7 @@ function SellContent() {
                             </Flex>
                           )}
 
-                          {welcomeDiscount > 0 && (
+                          {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Welcome discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (

@@ -9,6 +9,7 @@ import { Avatar, Box, Button, Callout, Card, Flex, Heading, Link, Spinner, Text 
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -28,7 +29,7 @@ interface Reward {
   };
 }
 
-export default function ManageRewards() {
+export default function MyRewards() {
   const [currentUser, setCurrentUser] = useState<User>();
   const [walletForPurchase, setWalletForPurchase] = useState<string | null>(null);
   const [isFetchingCurrentUsersRewards, setIsFetchingCurrentUsersRewards] = useState<boolean>(true);
@@ -43,7 +44,6 @@ export default function ManageRewards() {
   const { ready, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-
 
   useEffect(() => {
     if (appUser) {
@@ -93,6 +93,7 @@ export default function ManageRewards() {
           }
         }
       } catch (error: unknown) {
+        Sentry.captureException(error);
         if (isError(error)) {
           console.error("Failed to fetch user rewards:", error.message);
           setError(`Failed to fetch rewards: ${error.message}`);
@@ -107,6 +108,17 @@ export default function ManageRewards() {
   
     fetchCurrentUsersRewards();
   }, [ready, authenticated, appUser]);
+
+  useEffect(() => {
+    if (ready && !authenticated) {
+      const timer = setTimeout(() => {
+        router.push('/');
+      }, 3000);
+    
+
+      return () => clearTimeout(timer);
+    }
+  }, [ready, authenticated, router]);
   
   return (
     <Flex
@@ -155,7 +167,6 @@ export default function ManageRewards() {
         )}
 
         {ready && authenticated ? (
-          
           !isFetchingCurrentUsersRewards ? (
             currentUserRewards.length > 0 ? (
               currentUserRewards.map((reward) => (
@@ -197,29 +208,13 @@ export default function ManageRewards() {
               ))
             ) : (
               <>
-              <Flex direction={'column'}>
-              <Text size={'4'} align={'center'} style={{color: 'white'}}>No rewards yet.</Text>
-                <Flex 
-                  position={'relative'}
-                  direction={'column'}
-                  width={'80vw'}
-                  minHeight={'120px'}
-                  align={'center'}
-                  justify={'center'}
-                  p={'9'}
+              <Flex direction={'column'} justify={'center'} align={'center'} px={'4'} height={'50%'}>
+                <Text 
+                  size={'6'} align={'center'} style={{color: 'white'}}
                 >
-                  <Image
-                    priority
-                    src={'/norewards.png'}
-                    alt={'No rewards'}
-                    fill
-                    sizes="(max-width: 200px) 50vw,"
-                    style={{
-                      objectFit: 'contain',
-                      padding: '10px 50px',
-                    }}
-                  />
-                </Flex>
+                  You&apos;re ready to start earning your first rewards!
+                  Visit a participating merchant to start.
+                </Text>
               </Flex>
               </>
             )
@@ -232,9 +227,10 @@ export default function ManageRewards() {
 
           
         ) : ready && !authenticated && (
-          <Button variant="solid" style={{ width: '250px', color: "black", backgroundColor: 'white' }} size={'4'}  onClick={() => router.push("/")}>
-            Please log in
-          </Button>
+          <Flex direction={'column'} align={'center'} justify={'center'}>
+            <Text size={'4'} align={'center'} style={{color: 'white'}}>Please log in first</Text>
+            <Text size={'4'} align={'center'}  style={{color: 'white'}}>Redirecting...</Text>
+          </Flex>
         )}
         
       </Flex>

@@ -9,6 +9,7 @@ import styles from '../styles.module.css'
 import { Merchant, Tax, RewardsCustomer, PaymentType } from '@/app/types/types';
 import { Cross1Icon, PersonIcon, UpdateIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
+import { useUser } from '@/app/contexts/UserContext';
 
 interface NewSaleFormProps {
   onQrCodeGenerated: (signedUrl: string) => void;
@@ -72,6 +73,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
   const [isCheckingFormStatus, setIsCheckingFormStatus] = useState<boolean>(true);
 
   const {user} = usePrivy();
+  const { appUser } = useUser();
 
   const paymentTypeLogos: Record<PaymentType, string> = {
     [PaymentType.None]: '/paymentMethodLogos/venmo.png',
@@ -294,7 +296,7 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
               {currentCustomer ? (
                 <Button variant='solid' size={'4'} color='green' style={{width: "100%"}}>
                   <PersonIcon height={'25px'} width={'25px'} /> 
-                  {user?.google?.name ? user.google.name : currentCustomer?.userInfo.email}
+                  {currentCustomer?.userInfo?.name ?? currentCustomer?.userInfo?.email ?? currentCustomer?.userInfo?.phone}
                 </Button>
               ) : (
                 <Button variant='surface' size={'4'}>
@@ -359,13 +361,13 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                         style={{ padding: '1.5rem' }}
                       >
                         <Flex direction={'column'}>
-                          {user?.google && user?.google.name && (
+                          {customer && customer.userInfo?.name && (
                             <Text size={'5'} weight="bold">
-                              {user.google.name}
+                              {customer.userInfo.name}
                             </Text>
                           )}
                           <Text color="gray" size="5">
-                            {customer.userInfo.email}
+                            {customer?.userInfo?.phone ?? customer?.userInfo?.email}
                           </Text>
                         </Flex>
                         

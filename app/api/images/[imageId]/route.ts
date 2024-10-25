@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import QrCodeImage from '@/app/models/image';
 import connectToDatabase from '@/app/utils/mongodb';
 
-export async function GET (request: NextRequest,
-  { params }: { params: { imageId: string } }) {
-    const imageId = params.imageId
+export async function GET(request: NextRequest, props: { params: Promise<{ imageId: string }> }) {
+  const params = await props.params;
+  const imageId = params.imageId;
 
   if (!imageId) {
     return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
@@ -19,10 +19,13 @@ export async function GET (request: NextRequest,
       return NextResponse.json({ error: 'Image not found' }, { status: 404 });
     }
 
+    // Set the correct file extension based on content type
+    const extension = image.contentType === 'image/png' ? 'png' : 'jpg';
+
     return new Response(image.data.buffer, {
       headers: {
         'Content-Type': image.contentType,
-        'Content-Disposition': `inline; filename="file.pdf"`, // Suggesting filename and inline view
+        'Content-Disposition': `inline; filename="image.${extension}"`,
       },
     });
   } catch (error) {

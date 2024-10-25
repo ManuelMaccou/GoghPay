@@ -1,5 +1,12 @@
 'use client';
 
+
+
+
+
+
+// THIS SHOULD BE REMOVED OR MODIFIED FOR PAYING IN CRYPTO AT RETAIL STORES.
+
 import { PrivyClient } from '@privy-io/server-auth';
 import { Merchant, User } from '@/app/types/types';
 import { Button, Callout, Card, Flex, Heading, Spinner, Strong, Text } from '@radix-ui/themes';
@@ -10,11 +17,6 @@ import { CheckIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/navigation';
 import { Chain, createPublicClient, createWalletClient, custom, encodeFunctionData, http, parseAbiItem } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
-import { ENTRYPOINT_ADDRESS_V07, walletClientToSmartAccountSigner } from 'permissionless';
-import { createPimlicoBundlerClient } from 'permissionless/clients/pimlico';
-import { pimlicoPaymasterActions } from 'permissionless/actions/pimlico';
-import { signerToSafeSmartAccount } from 'permissionless/accounts';
-
 
 interface PurchaseParams {
   merchantId: string | null;
@@ -96,7 +98,6 @@ function SuccessContent() {
         const sessionData = await sessionResponse.json();
         if (!sessionData.buyerDetails) throw new Error('No session details available');
 
-        console.log('buyer details email:', sessionData.buyerDetails.email);
         await handleUserSearch(sessionData.buyerDetails.email);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Unknown error fetching checkout session');

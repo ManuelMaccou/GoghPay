@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
           'userInfo._id': 1, // Include specific fields from the User document
           'userInfo.name': 1,
           'userInfo.email': 1,
+          'userInfo.phone': 1,
           'userInfo.squareCustomerId': 1,
           'userInfo.privyId': 1,
         }

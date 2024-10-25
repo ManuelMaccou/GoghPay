@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ConnectedWallet, useLogout, usePrivy } from "@privy-io/react-auth";
+import { useUser } from '../contexts/UserContext';
 import { useBalance } from '../contexts/BalanceContext';
 import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link, SegmentedControl } from '@radix-ui/themes';
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
@@ -17,7 +18,7 @@ interface HeaderProps {
   merchant: boolean | undefined;
   embeddedWallet: ConnectedWallet | null;
   authenticated: boolean;
-  currentUser?: User;
+  currentUser?: User | null;
   walletForPurchase?: string | null;
 }
 
@@ -27,6 +28,7 @@ function isError(error: any): error is Error {
 
 export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
   const { user, ready } = usePrivy();
+  const { appUser } = useUser();
   const { balance, isBalanceLoading } = useBalance();
   const router = useRouter();
   const pathname = usePathname()
@@ -40,7 +42,6 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
   })
 
   const navigateTo = (path: string) => {
-    console.log(`navigating to ${path}`)
     if (pathname === path) {
       router.replace(path);
     } else {
@@ -48,9 +49,9 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
     }
   };
 
-  const handleSetMenuState = (value: 'sales' | 'rewards') => {
+  const handleSetMenuState = useCallback((value: 'sales' | 'rewards') => {
     setMenuState(value);
-  };
+  }, []);
 
   useEffect(() => {
     console.log(menuState);
@@ -81,9 +82,9 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
             )}*/}
     
             <Dialog.Root>
-              <Dialog.Trigger>
+              <Dialog.Trigger style={{zIndex: '10'}}>
                 <IconButton variant='ghost' style={{ marginLeft: 'auto' }}>
-                  <HamburgerMenuIcon width={'35px'} height={'35px'} style={{color: color? color : 'black'}} />
+                  <HamburgerMenuIcon width={'35px'} height={'35px'} style={{color: 'white'}} />
                 </IconButton>
               </Dialog.Trigger>
               <Dialog.Content className={styles.content}>
@@ -103,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                           <AvatarIcon />
                           <Box>
                             <Text as="div" size="2" color="gray">
-                              {user?.email?.address || user?.google?.name}
+                              {appUser?.name || user?.email?.address || user?.google?.name}
                             </Text>
                           </Box>
                         </Flex>
@@ -158,16 +159,20 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                 </VisuallyHidden>
                 {currentUser?.merchant ? (
                   <Flex direction={'column'} my={'9'}>
+                    
                     <Flex direction={'column'} mb={'5'}>
                       <SegmentedControl.Root 
-                        defaultValue={menuState}
+                        value={menuState}
                         radius="full"
-                        onValueChange={handleSetMenuState}
+                        onValueChange={(value) => handleSetMenuState(value as 'sales' | 'rewards')}
                       >
                         <SegmentedControl.Item value="sales">Sales</SegmentedControl.Item>
                         <SegmentedControl.Item value="rewards">Rewards</SegmentedControl.Item>
                       </SegmentedControl.Root>
                     </Flex>
+
+                    
+                    
                     {menuState === 'sales' ? (
                       <>
                         <Flex direction={'column'} align={'start'}>

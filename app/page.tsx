@@ -3,61 +3,46 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
-import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
 import axios from 'axios';
-import { Button, Flex, Text, Spinner } from "@radix-ui/themes";
-import { User } from './types/types';
+import { Button, Flex, Text, Spinner, AlertDialog, VisuallyHidden } from "@radix-ui/themes";
 import styles from './components/styles.module.css';
-import { createSmartAccount } from './utils/createSmartAccount';
 import { useUser } from './contexts/UserContext';
+import { useMerchant } from './contexts/MerchantContext';
+import * as Sentry from '@sentry/nextjs';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
 export default function Home() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isFetchingUser, setIsFetchingUser] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showOptInMessage, setShowOptInMessage] = useState<boolean>(false);
 
   const { appUser, setAppUser } = useUser();
+  const { merchant } = useMerchant();
 
   const { ready, getAccessToken, authenticated, logout, user } = usePrivy();
-  const {wallets} = useWallets();
   const router = useRouter();
-
-  const wallet = wallets[0];
-  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-  const chainId = wallet?.chainId;
-  const chainIdNum = process.env.NEXT_PUBLIC_DEFAULT_CHAINID ? Number(process.env.NEXT_PUBLIC_DEFAULT_CHAINID) : null;
 
   const { login } = useLogin({
     onComplete: async (user, isNewUser) => {
-      const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-
-      let smartAccountAddress;
-
       if (isNewUser) {
-        setIsNewUser(true);
-        if (embeddedWallet) {
-          smartAccountAddress = await createSmartAccount(embeddedWallet);
-        };
 
         try {
           const userPayload = {
             privyId: user.id,
             walletAddress: user.wallet?.address,
             email: user.email?.address || user.google?.email,
+            phone: user.phone?.number,
+            name: user.google?.name,
             creationType: 'privy',
-            smartAccountAddress: smartAccountAddress,
           };
 
           const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/api/user`, userPayload);
           setAppUser(response.data.user);
         } catch (error: unknown) {
+          Sentry.captureException(error);
           if (axios.isAxiosError(error)) {
               console.error('Error fetching user details:', error.response?.data?.message || error.message);
           } else if (isError(error)) {
@@ -73,58 +58,25 @@ export default function Home() {
     },
   });
 
-  useEffect(() => {
-    if (!ready) return;
-    if (isNewUser) return;
-    
-    const fetchUser = async () => {
-      if (!user) return;
-      setIsFetchingUser(true)
-      if (!user) return;
+  const handleLogin = () => {
+    login({
+      loginMethods: ['email', 'google', 'sms'],
+      disableSignup: true 
+    });
+  };
 
-      try {
-        const response = await fetch(`/api/user/me/${user.id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch user');
-        }
-        const userData = await response.json();
-        setCurrentUser(userData.user);
-        setAppUser(userData.user);
-        setIsRedirecting(true);
-      } catch (error: unknown) {
-        if (isError(error)) {
-          console.error('Error fetching user:', error.message);
-        } else {
-          console.error('Unknown error:', error);
-        }
-        setError('Error fetching user');
-      } finally {
-        setIsFetchingUser(false);
-        setIsLoading(false);
-      }
-    };
-
-    if (ready && authenticated && user) {
-      fetchUser();
-    } else {
-      setIsLoading(false);
-    }
-  }, [authenticated, ready, user, isNewUser, setAppUser]);
+  const handleSignup = () => {
+    login({ loginMethods: ['sms']
+     });
+  };
 
   useEffect(() => {
-    if (!embeddedWallet) return;
-    if (!currentUser) return;
-    if (currentUser.smartAccountAddress) return;
+    if (!user) return;
+    if (!appUser) return;
 
-    const addSmartAccountAddress = async () => {
-      const accessToken = await getAccessToken();
+    const updateUserWithSmartWalletAddress = async (smartWallet: any) => {
       try {
-       const smartAccountAddress = await createSmartAccount(embeddedWallet);
-
-        if (!smartAccountAddress) {
-          throw new Error('Failed to create smart account.');
-        }
-
+        const accessToken = await getAccessToken();
         const response = await fetch('/api/user/update', {
           method: 'PATCH',
           headers: {
@@ -132,31 +84,62 @@ export default function Home() {
             'Authorization': `Bearer ${accessToken}`, 
           },
           body: JSON.stringify({
-            smartAccountAddress: smartAccountAddress,
-            privyId: user?.id
+            smartAccountAddress: smartWallet?.address,
+            privyId: user.id,
           }),
         });
+  
+        if (response.ok) {
+          const data = await response.json();
+          setAppUser(data.user);
+        } else {
+          const errorMessage = await response.text();
+          Sentry.captureException(new Error(`Updating user with smart wallet address - ${response.statusText} || 'Unknown Error'}, ${response.status}`), {
+            extra: {
+              privyId: user?.id ?? 'unknown privyId'
+            }
+          });
+  
+          console.error(`Failed to update user with smart wallet address: ${errorMessage}`);
+          Sentry.captureException(new Error (`Failed to update user with smart wallet address: ${errorMessage}`));
+        }
+  
+      } catch (err) {
+        Sentry.captureException(err);
+        if (isError(err)) {
+          console.error(`Failed to update user with smart wallet address: ${err.message}`);
+        } else {
+          console.error('Failed to update user with smart wallet address');
+        }
+      }
 
-        if (!response.ok) {
-          throw new Error('Failed to create smart account');
-        }        
-      } catch (error) {
-        console.error('Error adding smart account:', error);
-      } 
-    };
-
-    if (user && embeddedWallet && currentUser && !currentUser.smartAccountAddress) {
-      addSmartAccountAddress();
     }
-  }, [user, currentUser, embeddedWallet, getAccessToken]);
+    const smartWallet = user.linkedAccounts.find((account) => account.type === 'smart_wallet');
+    if (!appUser?.smartAccountAddress && smartWallet) {
+      updateUserWithSmartWalletAddress(smartWallet)
+    }
+  }, [appUser, setAppUser, user, getAccessToken])
 
   useEffect(() => {
-    if (appUser && appUser.merchant) {
-      router.replace('/account/sales')
+    if (!ready || !authenticated || !appUser) return
+    setIsRedirecting(true)
+    if (appUser.merchant) {
+      if (!merchant) return;
+      
+      if (merchant && merchant.status === 'onboarding') {
+        if (merchant.onboardingStep) {
+          router.replace(`/onboard/step${merchant.onboardingStep}`);
+        } else {
+          router.replace('/onboard');
+        }
+       
+      } else {
+        router.replace('/sell')
+      }
     } else if (appUser && !appUser.merchant) {
       router.replace('/myrewards')
     }
-  }, [appUser, router]);
+  }, [ready, authenticated, appUser, router, merchant]);
 
   return (
     <Flex direction={'column'} className={styles.section} position={'relative'} minHeight={'100vh'} width={'100%'}>
@@ -167,7 +150,7 @@ export default function Home() {
         className={styles.fullBackgroundImage}
         fill
         sizes="100vw"
-        style={{ objectFit: "cover" }} 
+        style={{objectFit: "cover"}} 
       />
    
       <Flex direction={'column'} justify={'center'} align={'center'}>
@@ -186,11 +169,11 @@ export default function Home() {
           }} 
         />
 
-        {isLoading || (!ready && (
+        {!ready && (
           <Flex direction={'column'} justify={'center'} align={'center'}>
             <Spinner style={{color: 'white'}} />
           </Flex>
-        ))}
+        )}
 
         {isRedirecting && (
           <>
@@ -198,12 +181,50 @@ export default function Home() {
           </>
         )}
 
-        {ready && (
-          <Flex direction={'column'} justify={'center'} align={'center'}>
-            <Button variant='solid' size={'4'} style={{color: 'black', backgroundColor: 'white', width: "300px"}} onClick={login} loading={authenticated || isLoading}>
-              Log in/Sign up
-            </Button>
-          </Flex>
+        {showOptInMessage && (
+          <AlertDialog.Root 
+            open={showOptInMessage}
+            onOpenChange={setShowOptInMessage}
+          >
+           <AlertDialog.Trigger>
+             <Button style={{ display: 'none' }} />
+           </AlertDialog.Trigger>
+           <AlertDialog.Content maxWidth="450px">
+            <VisuallyHidden>
+              <AlertDialog.Title>Opt in to privacy and terms conditions</AlertDialog.Title>
+            </VisuallyHidden>
+            <AlertDialog.Description size="2" mb="4">
+              By creating an account, you agree to receive texts informing you of your earned rewards from Gogh merchants.
+            </AlertDialog.Description>
+             <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+               <AlertDialog.Action>
+                 <Button onClick={handleSignup}>
+                    Got it
+                 </Button>
+               </AlertDialog.Action>
+             </Flex>
+           </AlertDialog.Content>
+         </AlertDialog.Root>
+        )}
+
+        {ready && !authenticated && (
+          <Flex direction={'column'} justify={'end'} align={'end'} gap={'7'}>
+          <Button size={'4'} style={{width: "250px", backgroundColor: 'white'}}
+            onClick={handleLogin}
+          >
+            <Text size={'5'} style={{color: 'black'}}>
+              Log in
+            </Text>
+          </Button>
+    
+          <Button size={'4'} style={{ width: "250px", backgroundColor: 'white' }} 
+            onClick={() => setShowOptInMessage(true)}
+          >
+            <Text size={'5'} style={{color: 'black'}}>
+              Create an account
+            </Text>
+          </Button>
+        </Flex>
         )}
       </Flex>
     </Flex>

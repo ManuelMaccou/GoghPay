@@ -1,0 +1,4 @@
+# Ignore unused code during Next.js build
+app/utils/createSmartAccount.ts
+app/buy/page.tsx
+app/buy/components/sendUsdcButton.tsx
