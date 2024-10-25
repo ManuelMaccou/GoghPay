@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from "next/image";
 import { usePrivy, useLogin, useWallets, getEmbeddedConnectedWallet, useLinkAccount, User as PrivyUser } from '@privy-io/react-auth';
 import axios from 'axios';
-import {Avatar, Button, Flex, Text, Spinner, Card, TextField, Callout } from "@radix-ui/themes";
+import {Avatar, Button, Flex, Text, Spinner, Card, TextField, Callout, AlertDialog, VisuallyHidden } from "@radix-ui/themes";
 import styles from '@/app/components/styles.module.css';
 import { useUser } from '@/app/contexts/UserContext';
 import { useMerchant } from '@/app/contexts/MerchantContext';
@@ -32,6 +32,7 @@ export default function VintageLand() {
   const [linkGmailError, setLinkGmailError] = useState<string | null>(null);
   const { appUser, setAppUser } = useUser();
   const { merchant } = useMerchant();
+  const [showOptInMessage, setShowOptInMessage] = useState<boolean>(false);
 
   const { ready, getAccessToken, authenticated, logout, user, unlinkEmail, unlinkGoogle, unlinkPhone } = usePrivy();
   const router = useRouter();
@@ -370,7 +371,7 @@ export default function VintageLand() {
   return (
     
    
-    <Flex direction={'column'} justify={'center'} align={'center'} height={'100vh'} width={'100%'} 
+    <Flex direction={'column'} justify={'start'} align={'center'} height={'100vh'} width={'100%'} gap={'7'} py={'9'}
       style={{backgroundColor: '#EC2078', position: 'relative', overflow: 'hidden', zIndex: 1}}
     >
       <Flex width={'100%'} height={'100%'} style={{ position: 'absolute', bottom: 0, overflow: 'hidden', lineHeight: 0, zIndex: -1 }}>
@@ -382,7 +383,7 @@ export default function VintageLand() {
         </svg>
       </Flex>
       {ready && !authenticated && (
-        <Flex height={'100%'} direction={'column'} position={'relative'} gap={'9'} align={'center'} justify={'center'}>
+        <Flex direction={'column'} position={'relative'} gap={'9'} align={'center'} justify={'center'}>
         
           <Image
             src="/logos/lffvl-logo-white.png"
@@ -421,6 +422,32 @@ export default function VintageLand() {
           <Spinner style={{color: 'white'}} />
         )}
 
+        {showOptInMessage && (
+          <AlertDialog.Root 
+            open={showOptInMessage}
+            onOpenChange={setShowOptInMessage}
+          >
+           <AlertDialog.Trigger>
+             <Button style={{ display: 'none' }} />
+           </AlertDialog.Trigger>
+           <AlertDialog.Content maxWidth="450px">
+            <VisuallyHidden>
+              <AlertDialog.Title>Opt in to privacy and terms conditions</AlertDialog.Title>
+            </VisuallyHidden>
+            <AlertDialog.Description size="2" mb="4">
+              By creating an account, you agree to receive texts informing you of your earned rewards from Gogh merchants.
+            </AlertDialog.Description>
+             <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+               <AlertDialog.Action>
+                 <Button onClick={handleSignup}>
+                    Got it
+                 </Button>
+               </AlertDialog.Action>
+             </Flex>
+           </AlertDialog.Content>
+         </AlertDialog.Root>
+        )}
+
         {ready && !authenticated && (
           <Flex direction={'column'} justify={'end'} align={'end'} gap={'7'} style={{marginBottom: '50px'}}>
             <Button size={'4'} style={{width: "250px", backgroundColor: 'white'}}
@@ -432,7 +459,7 @@ export default function VintageLand() {
             </Button>
       
             <Button size={'4'} style={{ width: "250px", backgroundColor: 'white' }} 
-              onClick={handleSignup}
+             onClick={() => setShowOptInMessage(true)}
             >
               <Text size={'5'} style={{color: 'black'}}>
                 Create an account

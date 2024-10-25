@@ -1094,7 +1094,7 @@ function SellContent() {
                                 <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                               </Flex>
 
-                              {rewardsDiscount > 0 && (
+                              {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
                                 <Flex direction={'row'} width={'300px'} justify={'between'}>
                                   <Text size={'5'} align={'left'}>Rewards discount:</Text>
                                   {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1107,7 +1107,7 @@ function SellContent() {
                                 </Flex>
                               )}
 
-                              {welcomeDiscount > 0 && (
+                              {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
                                 <Flex direction={'row'} width={'300px'} justify={'between'}>
                                   <Text size={'5'} align={'left'}>Welcome discount:</Text>
                                   {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1208,7 +1208,7 @@ function SellContent() {
                                   <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                                 </Flex>
 
-                                {rewardsDiscount > 0 && (
+                                {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
                                   <Flex direction={'row'} width={'300px'} justify={'between'}>
                                     <Text size={'5'} align={'left'}>Rewards discount:</Text>
                                     {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1223,7 +1223,7 @@ function SellContent() {
                                   </Flex>
                                 )}
 
-                                {welcomeDiscount > 0 && (
+                                {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
                                   <Flex direction={'row'} width={'300px'} justify={'between'}>
                                     <Text size={'5'} align={'left'}>Welcome discount:</Text>
                                     {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1329,7 +1329,7 @@ function SellContent() {
                             <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
                             <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                           </Flex>
-                          {rewardsDiscount > 0 && (
+                          {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Rewards discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1340,7 +1340,7 @@ function SellContent() {
                             </Flex>
                           )}
 
-                          {welcomeDiscount > 0 && (
+                          {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Welcome discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1407,7 +1407,7 @@ function SellContent() {
                             <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
                             <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                           </Flex>
-                          {rewardsDiscount > 0 && (
+                          {rewardsDiscount > 0 && rewardsDiscount >= welcomeDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Rewards discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
@@ -1418,7 +1418,7 @@ function SellContent() {
                             </Flex>
                           )}
 
-                          {welcomeDiscount > 0 && (
+                          {welcomeDiscount > 0 && welcomeDiscount > rewardsDiscount && (
                             <Flex direction={'row'} width={'300px'} justify={'between'}>
                               <Text size={'5'} align={'left'}>Welcome discount:</Text>
                               {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (

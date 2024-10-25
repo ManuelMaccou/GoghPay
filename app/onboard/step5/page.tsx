@@ -7,7 +7,7 @@ import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import UploadImage from '@/app/components/UploadImage';
 import { useEffect, useState } from 'react';
-import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -135,6 +135,7 @@ export default function Step5() {
                       onUploadSuccess={(updatedMerchant) => {
                         setMerchant(updatedMerchant);
                         setIsVenmoQrUploaded(true);
+                        setErrorMessage(null)
                       }}
                     />
                   </Flex>
@@ -159,6 +160,7 @@ export default function Step5() {
                       onUploadSuccess={(updatedMerchant) => {
                         setMerchant(updatedMerchant);
                         setIsVenmoQrUploaded(true);
+                        setErrorMessage(null)
                       }}
                     />
                   </Flex>
@@ -194,6 +196,7 @@ export default function Step5() {
                       onUploadSuccess={(updatedMerchant) => {
                         setMerchant(updatedMerchant);
                         setIsZelleQrUploaded(true);
+                        setErrorMessage(null);
                       }}
                     />
                   </Flex>
@@ -218,6 +221,7 @@ export default function Step5() {
                     onUploadSuccess={(updatedMerchant) => {
                       setMerchant(updatedMerchant);
                       setIsZelleQrUploaded(true);
+                      setErrorMessage(null);
                     }}
                   />
                 </Flex>
@@ -238,21 +242,9 @@ export default function Step5() {
           )}
         </Flex>
       </Flex>
-      <Flex direction={'column'} align={{initial: 'center', sm: 'end'}} justify={'end'} width={'100%'}>
-        <Button
-          disabled={!merchant}
-          size={'4'}
-          variant='ghost'
-          style={{ width: '250px', cursor: !merchant ? 'default' : 'pointer', fontWeight: 'bold' }}
-          onClick={handleFinishStep5}
-        >
-          Next
-          <ArrowRightIcon height={'20'} width={'20'} />
-        </Button>
-      </Flex>
 
       {errorMessage && (
-        <Callout.Root color='red' mx={'4'}>
+        <Callout.Root color='red' mx={'4'} my={'-5'}>
           <Callout.Icon>
             <InfoCircledIcon />
           </Callout.Icon>
@@ -261,6 +253,31 @@ export default function Step5() {
           </Callout.Text>
         </Callout.Root>
       )}
+
+      <Flex direction={'row'} justify={'between'} mx={'4'}>
+        <Button
+          disabled={!merchant}
+          size={'4'}
+          variant='ghost'
+          style={{ fontWeight: 'bold' }}
+          onClick={() => router.push('/onboard/step4')}
+        >
+          <ArrowLeftIcon height={'20'} width={'20'} />
+          Back
+        </Button>
+
+        <Button
+          disabled={!merchant}
+          size={'4'}
+          variant='ghost'
+          style={{ cursor: !merchant ? 'default' : 'pointer', fontWeight: 'bold' }}
+          onClick={handleFinishStep5}
+        >
+          Next
+          <ArrowRightIcon height={'20'} width={'20'} />
+        </Button>
+      </Flex>
+      
       {errorMessageWithLogin && (
         <Callout.Root color='red' mx={'4'}>
           <Callout.Icon>

@@ -6,7 +6,7 @@ import { Button, Callout, Flex, Heading, Strong, Text } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { useEffect, useState } from 'react';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 
 export default function Step6() {
   const router = useRouter();
@@ -44,7 +44,18 @@ export default function Step6() {
         Once you set at least one milestone or welcome reward, you&apos;ll be all set.
       </Text>
       <Text align={'center'}><Strong>Welcome to Gogh!</Strong></Text>
-      <Button mt={'5'} onClick={() => router.push('/rewards/manage')}>Configure rewards</Button>
+      <Button size={'4'} mt={'5'} onClick={() => router.push('/rewards/manage')}>Configure rewards</Button>
+      <Button
+        disabled={!merchant}
+        size={'4'}
+        variant='ghost'
+        mt={'4'}
+        style={{ fontWeight: 'bold' }}
+        onClick={() => router.push('/onboard/step5')}
+      >
+        <ArrowLeftIcon height={'20'} width={'20'} />
+        Back
+      </Button>
       {errorMessage && (
         <Callout.Root color='red' mx={'4'}>
           <Callout.Icon>
