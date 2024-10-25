@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from "next/image";
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import axios from 'axios';
-import { Button, Flex, Text, Spinner } from "@radix-ui/themes";
+import { Button, Flex, Text, Spinner, AlertDialog, VisuallyHidden } from "@radix-ui/themes";
 import styles from './components/styles.module.css';
 import { useUser } from './contexts/UserContext';
 import { useMerchant } from './contexts/MerchantContext';
@@ -17,6 +17,7 @@ function isError(error: any): error is Error {
 
 export default function Home() {
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
+  const [showOptInMessage, setShowOptInMessage] = useState<boolean>(false);
 
   const { appUser, setAppUser } = useUser();
   const { merchant } = useMerchant();
@@ -180,6 +181,32 @@ export default function Home() {
           </>
         )}
 
+        {showOptInMessage && (
+          <AlertDialog.Root 
+            open={showOptInMessage}
+            onOpenChange={setShowOptInMessage}
+          >
+           <AlertDialog.Trigger>
+             <Button style={{ display: 'none' }} />
+           </AlertDialog.Trigger>
+           <AlertDialog.Content maxWidth="450px">
+            <VisuallyHidden>
+              <AlertDialog.Title>Opt in to privacy and terms conditions</AlertDialog.Title>
+            </VisuallyHidden>
+            <AlertDialog.Description size="2" mb="4">
+              By creating an account, you agree to receive texts informing you of your earned rewards from Gogh merchants.
+            </AlertDialog.Description>
+             <Flex gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+               <AlertDialog.Action>
+                 <Button onClick={handleSignup}>
+                    Got it
+                 </Button>
+               </AlertDialog.Action>
+             </Flex>
+           </AlertDialog.Content>
+         </AlertDialog.Root>
+        )}
+
         {ready && !authenticated && (
           <Flex direction={'column'} justify={'end'} align={'end'} gap={'7'}>
           <Button size={'4'} style={{width: "250px", backgroundColor: 'white'}}
@@ -191,7 +218,7 @@ export default function Home() {
           </Button>
     
           <Button size={'4'} style={{ width: "250px", backgroundColor: 'white' }} 
-            onClick={handleSignup}
+            onClick={() => setShowOptInMessage(true)}
           >
             <Text size={'5'} style={{color: 'black'}}>
               Create an account

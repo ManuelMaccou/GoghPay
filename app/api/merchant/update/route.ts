@@ -17,7 +17,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Validate that there are fields to update or rewards operation
-    if (Object.keys(updateFields).length === 0 && !operation && (rewards.welcome_reward === undefined && rewards.welcome_reward === null)) {
+    const hasValidRewards = rewards && (rewards.welcome_reward !== undefined && rewards.welcome_reward !== null);
+    if (Object.keys(updateFields).length === 0 && !operation && !hasValidRewards) {
       return NextResponse.json({ message: "No fields to update or invalid operation" }, { status: 400 });
     }
 
@@ -61,7 +62,7 @@ export async function PATCH(req: NextRequest) {
     const updateOptions: any = { new: true };  // Returns the updated document
 
     // Handle the 'welcome_reward' separately
-    if (rewards.welcome_reward !== undefined && rewards.welcome_reward !== null) {
+    if (rewards?.welcome_reward !== undefined && rewards?.welcome_reward !== null) {
       fieldsToUpdate['rewards.welcome_reward'] = rewards.welcome_reward;
     }
 

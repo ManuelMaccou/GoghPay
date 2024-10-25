@@ -292,7 +292,8 @@ const fetchAndUpdatePaymentDetails = async (
       console.log('sending text to iOS')
 
       if (!transactionDetails.saleFormData.customer.purchaseCount) {
-        silentlySendTextMessage(transactionDetails)
+        console.log('will send text here');
+        //silentlySendTextMessage(transactionDetails)
       }
      
       finalSquarePaymentResults.rewardsUpdatedInGogh = rewardsUpdateResponse.success;

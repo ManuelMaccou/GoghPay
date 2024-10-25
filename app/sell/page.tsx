@@ -7,7 +7,7 @@ import { getAccessToken, getEmbeddedConnectedWallet, useLogout, usePrivy, useWal
 import { NewSaleForm } from './components/newSaleForm';
 import * as Avatar from '@radix-ui/react-avatar';
 import { AlertDialog, Button, Callout, Card, Flex, Heading, Link, Spinner, Strong, Text, VisuallyHidden } from '@radix-ui/themes';
-import { ExclamationTriangleIcon, InfoCircledIcon, RocketIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ExclamationTriangleIcon, InfoCircledIcon, RocketIcon } from '@radix-ui/react-icons';
 import { Location, Merchant, RewardsCustomer, SquareCatalog, User, PaymentType, SaleFormData } from '../types/types';
 import { BalanceProvider } from '../contexts/BalanceContext';
 import { Header } from '../components/Header';
@@ -741,7 +741,8 @@ function SellContent() {
 
     if (newSaleFormData.customer) {
       if (newSaleFormData.sellerMerchant && !newSaleFormData.customer.purchaseCount) {
-        silentlySendTextMessage(newSaleFormData.customer, newSaleFormData.sellerMerchant)
+        console.log('will send text here');
+        //silentlySendTextMessage(newSaleFormData.customer, newSaleFormData.sellerMerchant)
       }
       try {
         const response = await fetch(`/api/rewards/userRewards/update`, {
@@ -1067,7 +1068,7 @@ function SellContent() {
             merchantVerified ? (
               <>         
                 {newSaleFormData && selectedPaymentMethod === 'Venmo' && (
-                  newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage ? (
+                 
                     <AlertDialog.Root open={showVenmoDialog} onOpenChange={setShowVenmoDialog}>
                       <AlertDialog.Trigger>
                         <Button style={{ display: 'none' }} />
@@ -1083,7 +1084,8 @@ function SellContent() {
                         </VisuallyHidden>
                         
                         <Flex direction={'column'} width={'100%'} justify={'center'} align={'center'} gap={'6'}>
-                          
+                        {newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage ? (
+                          <>
                           {newSaleFormData && finalPriceCalculated && finalPrice && (
                             <Flex direction={'column'} justify={'center'}>
                               <Text size={'9'} align={'center'}>${finalPrice}</Text>
@@ -1091,13 +1093,16 @@ function SellContent() {
                                 <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
                                 <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
                               </Flex>
+
                               {rewardsDiscount > 0 && (
                                 <Flex direction={'row'} width={'300px'} justify={'between'}>
                                   <Text size={'5'} align={'left'}>Rewards discount:</Text>
                                   {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
                                     <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
-                                  ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                  ) : (
+                                    newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
                                     <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong></Text>
+                                    )
                                   )}
                                 </Flex>
                               )}
@@ -1107,8 +1112,10 @@ function SellContent() {
                                   <Text size={'5'} align={'left'}>Welcome discount:</Text>
                                   {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
                                     <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
-                                  ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                  ) : (
+                                  newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
                                     <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                  )
                                   )}
                                 </Flex>
                               )}
@@ -1130,9 +1137,9 @@ function SellContent() {
                             />
                           </Avatar.Root>
                           <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
-                        </Flex>
+                     
                        
-                        <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                        <Flex direction={'row'} width={'100%'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
                           <AlertDialog.Cancel>
                             <Button size={'4'} variant="ghost" 
                               onClick={() => {
@@ -1153,118 +1160,150 @@ function SellContent() {
                             </Button>
                           </AlertDialog.Action>
                         </Flex>
-                      </AlertDialog.Content>
-                    </AlertDialog.Root>
-                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods?.venmoQrCodeImage && (
-                    <Callout.Root color='red' mx={'4'}>
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text size={'6'}>
-                        Venmo has not been configured. Please add your QR code in {" "} <Link href='/account/integrations'> <Strong>settings</Strong></Link>
-                      </Callout.Text>
-                    </Callout.Root>
-                  )
-                )}
-
+                      </>
+                  ) : (
+                    <>
+                    <Flex direction={'column'} width={'100%'} gap={'6'}>
+                      <Callout.Root color='red'>
+                        <Callout.Text size={'6'}>
+                          Venmo has not been configured. Please add your QR code in {" "}<Link href='/account/integrations'><Strong>settings</Strong></Link>
+                        </Callout.Text>
+                      </Callout.Root>
+                      <Button size={'4'} variant='ghost'
+                         onClick={() => {setShowVenmoDialog(false), setShowNewSaleForm(true)}}>
+                        <Text size={'6'}>
+                         Close
+                        </Text>
+                      </Button>
+                    </Flex>
+                    </>
+                  )}
+                  </Flex>
+                </AlertDialog.Content>
+              </AlertDialog.Root>
+            )} 
                 {newSaleFormData && selectedPaymentMethod === 'Zelle' && (
-                  newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage ? (
-                    <AlertDialog.Root open={showZelleDialog} onOpenChange={setShowZelleDialog}>
-                      <AlertDialog.Trigger>
-                        <Button style={{ display: 'none' }} />
-                      </AlertDialog.Trigger>
-                      <AlertDialog.Content maxWidth="450px">
-                        <VisuallyHidden>
-                          <AlertDialog.Title>Zelle QR code</AlertDialog.Title>
-                        </VisuallyHidden>
-                        <VisuallyHidden>
-                          <AlertDialog.Description size="2" mb="4">
-                          Zelle QR code
-                          </AlertDialog.Description>
-                        </VisuallyHidden>
-                        
-                        <Flex direction={'column'} width={'100%'} align={'center'} gap={'6'}>
+                  <AlertDialog.Root open={showZelleDialog} onOpenChange={setShowZelleDialog}>
+                    <AlertDialog.Trigger>
+                      <Button style={{ display: 'none' }} />
+                    </AlertDialog.Trigger>
+                    <AlertDialog.Content maxWidth="450px">
+                      <VisuallyHidden>
+                        <AlertDialog.Title>Zelle QR code</AlertDialog.Title>
+                      </VisuallyHidden>
+                      <VisuallyHidden>
+                        <AlertDialog.Description size="2" mb="4">
+                        Zelle QR code
+                        </AlertDialog.Description>
+                      </VisuallyHidden>
+                      
+                      <Flex direction={'column'} width={'100%'} align={'center'} gap={'6'}>
+                        {newSaleFormData.sellerMerchant?.paymentMethods?.zelleQrCodeImage ? (
+                          <>
+                            {newSaleFormData && finalPriceCalculated && (
+                              <Flex direction={'column'} justify={'center'}>
+                                <Text size={'9'} align={'center'}>${finalPrice}</Text>
+                                <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                  <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
+                                  <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
+                                </Flex>
 
-                          {newSaleFormData && finalPriceCalculated && (
-                            <Flex direction={'column'} justify={'center'}>
-                            <Text size={'9'} align={'center'}>${finalPrice}</Text>
-                            <Flex direction={'row'} width={'300px'} justify={'between'}>
-                              <Text size={'5'} mt={'5'} align={'left'}>Price:</Text>
-                              <Text size={'5'} mt={'5'} align={'left'}><Strong>${parseFloat(newSaleFormData.price).toFixed(2)}</Strong></Text>
-                            </Flex>
-                            {rewardsDiscount > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Rewards discount:</Text>
-                                {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
-                                ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong></Text>
+                                {rewardsDiscount > 0 && (
+                                  <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                    <Text size={'5'} align={'left'}>Rewards discount:</Text>
+                                    {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                      <Text size={'5'} align={'left'}><Strong>{newSaleFormData.customer?.currentDiscount?.amount}%</Strong></Text>
+                                    ) : (
+                                      newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                        <Text size={'5'} align={'left'}>
+                                          <Strong>${newSaleFormData.customer?.currentDiscount?.amount}</Strong>
+                                        </Text>
+                                      )
+                                    )}
+                                  </Flex>
                                 )}
-                              </Flex>
-                            )}
 
-                            {welcomeDiscount > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Welcome discount:</Text>
-                                {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
-                                  <Text size={'5'} align={'left'}><Strong>{welcomeDiscount}%</Strong></Text>
-                                ) : newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
-                                  <Text size={'5'} align={'left'}><Strong>${welcomeDiscount}</Strong></Text>
+                                {welcomeDiscount > 0 && (
+                                  <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                    <Text size={'5'} align={'left'}>Welcome discount:</Text>
+                                    {newSaleFormData.customer?.currentDiscount.type === 'percent' ? (
+                                      <Text size={'5'} align={'left'}>
+                                        <Strong>{welcomeDiscount}%</Strong>
+                                      </Text>
+                                    ) : (
+                                      newSaleFormData.customer?.currentDiscount.type === 'dollar' && (
+                                        <Text size={'5'} align={'left'}>
+                                          <Strong>${welcomeDiscount}</Strong>
+                                        </Text>
+                                      )
+                                    )}
+                                  </Flex>
                                 )}
-                              </Flex>
-                            )}
-                        
-                            {newSaleFormData.tax > 0 && (
-                              <Flex direction={'row'} width={'300px'} justify={'between'}>
-                                <Text size={'5'} align={'left'}>Sales tax:</Text>
-                                <Text size={'5'} align={'left'}><Strong>{newSaleFormData.tax}%</Strong></Text>
-                              </Flex>
-                            )}
-                            </Flex>
-                          )}
+                            
+                                {newSaleFormData.tax > 0 && (
+                                  <Flex direction={'row'} width={'300px'} justify={'between'}>
+                                    <Text size={'5'} align={'left'}>Sales tax:</Text>
+                                    <Text size={'5'} align={'left'}>
+                                      <Strong>{newSaleFormData.tax}%</Strong>
+                                    </Text>
+                                  </Flex>
+                                )}
+                                </Flex>
+                              )}
                          
-                          <Avatar.Root>
-                            <Avatar.Image 
-                            src={ newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage }
-                            alt="Zelle QR code"
-                            style={{objectFit: "contain", maxWidth: '100%'}}
-                            />
-                          </Avatar.Root>
-                          <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
-                        </Flex>
-                       
-                        <Flex direction={'row'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
-                          <AlertDialog.Cancel>
-                            <Button size={'4'} variant="ghost" 
-                              onClick={() => {
-                                setSelectedPaymentMethod(null);
-                                setShowNewSaleForm(true);
-                              }}>
-                              Cancel
-                            </Button>
-                          </AlertDialog.Cancel>
-                          <AlertDialog.Action>
-                            <Button size={'4'} 
-                              onClick={() => {
-                                handleSavePaymentAndUpdateRewards(newSaleFormData);
-                                setShowZelleDialog(false);
-                              }}>
-                              Confirm
-                            </Button>
-                          </AlertDialog.Action>
-                        </Flex>
-                      </AlertDialog.Content>
-                    </AlertDialog.Root>
-                  ) : newSaleFormData && !newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage && (
-                    <Callout.Root color='red' mx={'4'}>
-                      <Callout.Icon>
-                        <InfoCircledIcon />
-                      </Callout.Icon>
-                      <Callout.Text size={'6'}>
-                        Zelle has not been configured. Please add your QR code in {" "} <Link href='/account/integrations'> <Strong>settings</Strong></Link>
-                      </Callout.Text>
-                    </Callout.Root>
-                  )
+                              <Avatar.Root>
+                                <Avatar.Image 
+                                  src={ newSaleFormData.sellerMerchant?.paymentMethods.zelleQrCodeImage }
+                                  alt="Zelle QR code"
+                                  style={{objectFit: "contain", maxWidth: '100%'}}
+                                />
+                              </Avatar.Root>
+                              <Text size={'7'}>Press confirm when you&apos;ve received payment.</Text>
+
+                              <Flex direction={'row'} width={'100%'} gap="3" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                                <AlertDialog.Cancel>
+                                  <Button size={'4'} variant="ghost" 
+                                    onClick={() => {
+                                      setSelectedPaymentMethod(null);
+                                      setShowNewSaleForm(true);
+                                    }}>
+                                    Cancel
+                                  </Button>
+                                </AlertDialog.Cancel>
+                                <AlertDialog.Action>
+                                  <Button size={'4'} 
+                                    onClick={() => {
+                                      handleSavePaymentAndUpdateRewards(newSaleFormData);
+                                      setShowZelleDialog(false);
+                                    }}>
+                                    Confirm
+                                  </Button>
+                                </AlertDialog.Action>
+                              </Flex>
+                            </>
+                          ) : (
+                          <>
+                            <Flex direction={'column'} width={'100%'} gap={'6'}>
+                              <Callout.Root color='red'>
+                                <Callout.Text size={'6'}>
+                                  Zelle has not been configured. Please add your QR code in {" "}
+                                  <Link href='/account/integrations'>
+                                    <Strong>settings</Strong>
+                                  </Link>
+                                </Callout.Text>
+                              </Callout.Root>
+                              <Button size={'4'} variant='ghost'
+                                onClick={() => {setShowZelleDialog(false), setShowNewSaleForm(true)}}>
+                                <Text size={'6'}>
+                                  Close
+                                </Text>
+                              </Button>
+                            </Flex>
+                          </>
+                        )}
+                      </Flex>
+                    </AlertDialog.Content>
+                  </AlertDialog.Root>
                 )} 
 
                 {newSaleFormData && selectedPaymentMethod === 'Cash' && (
