@@ -371,7 +371,7 @@ export default function VintageLand() {
   return (
     
    
-    <Flex direction={'column'} justify={'start'} align={'center'} height={'100vh'} width={'100%'} gap={'7'} py={'9'}
+    <Flex direction={'column'} justify={'start'} align={'center'} minHeight={'100vh'} width={'100%'} gap={'7'} py={'9'}
       style={{backgroundColor: '#EC2078', position: 'relative', overflow: 'hidden', zIndex: 1}}
     >
       <Flex width={'100%'} height={'100%'} style={{ position: 'absolute', bottom: 0, overflow: 'hidden', lineHeight: 0, zIndex: -1 }}>

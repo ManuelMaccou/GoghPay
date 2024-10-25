@@ -882,7 +882,7 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
     
     return (
       <>
-        <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
+        <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} minHeight={'100vh'} style={{ backgroundColor: primaryColor }}>
           <Avatar.Root>
             <Avatar.Image
               className="MerchantLogo"
@@ -934,7 +934,7 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
 
   if (showLinkEmail && merchant) {
     return (
-      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
+      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} minHeight={'100vh'} style={{ backgroundColor: primaryColor }}>
         <Avatar.Root>
           <Avatar.Image
             className="MerchantLogo"
@@ -995,7 +995,7 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
 
   if (showLinkPhone && merchant) {
     return (
-      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} height={'100vh'} style={{ backgroundColor: primaryColor }}>
+      <Flex direction={'column'} justify={'center'} align={'center'} pt={'6'} pb={'4'} px={'4'} gap={'5'} minHeight={'100vh'} style={{ backgroundColor: primaryColor }}>
         <Avatar.Root>
           <Avatar.Image
             className="MerchantLogo"
@@ -1134,7 +1134,7 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
 
   if (!isCheckingSquareDirectory && errorCheckingSquareDirectory) {
     return (
-      <Flex direction={'column'} gap={'4'} height={'100vh'} style={{ background: primaryColor }}>
+      <Flex direction={'column'} gap={'4'} minHeight={'100vh'} style={{ background: primaryColor }}>
         <Flex direction={'row'} justify={'end'} align={'center'} px={'4'} height={'100px'}>
           <Header
             color={secondaryColor}
