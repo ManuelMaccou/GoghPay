@@ -9,7 +9,7 @@ const transactionSchema = new Schema({
   merchant: { type: Schema.Types.ObjectId, ref: 'Merchant' },
   buyer: { type: Schema.Types.ObjectId, ref: 'User' },
   product: {
-    name: { type: String },
+    name: { type: String, default: '' },
     price: { type: Number },
   },
   discount: {

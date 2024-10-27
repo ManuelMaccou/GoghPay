@@ -228,14 +228,12 @@ export default function Sales(props: { params: Promise<{ userId: string }> }) {
           }
 
           const totalDiscountAmount = Math.max(rewardsDiscountAmount, welcomeDiscountAmount);
-          console.log('totalDiscountAmount:', totalDiscountAmount)
 
           if (discount && discount.type === 'percent') {
             if (totalDiscountAmount > 100) {
               priceAfterDiscount = 0
             } else {
               priceAfterDiscount = product.price - ((totalDiscountAmount/100) * product.price)
-              console.log('priceAfterDiscount:', priceAfterDiscount)
             }
 
           } else if (discount && discount.type === 'dollar') {
@@ -249,7 +247,6 @@ export default function Sales(props: { params: Promise<{ userId: string }> }) {
             Number(priceAfterDiscount ?? 0) +
             Number(payment.tipAmount ?? 0) +
             Number(payment.salesTax ?? 0);
-          console.log('finalPrice:', finalPrice)
           
           return {
             ...transaction,
@@ -350,7 +347,7 @@ export default function Sales(props: { params: Promise<{ userId: string }> }) {
                                   <Table.RowHeaderCell>${transaction.finalPrice}</Table.RowHeaderCell>
                                   <Table.Cell>
                                     <Text wrap={'nowrap'}>
-                                      {transaction.merchant.name}: {transaction.product.name}
+                                      {transaction.merchant.name}: {transaction.product?.name}
                                     </Text>
                                   </Table.Cell>
                                   <Table.Cell>

@@ -4,6 +4,7 @@ import { Schema } from 'mongoose';
 const paymentTypes = ['Venmo', 'Zelle', 'Square', 'ManualEntry', 'Cash'];
 const MerchantStatus = ['onboarding', 'active', 'inactive'];
 const ContactMethod = ['email', 'phone', 'either'];
+const MerchantTier = ['free', 'paid'];
 
 const PaymentMethodSchema = new mongoose.Schema({
   types: [{ type: String, enum: paymentTypes, required: true }],
@@ -57,10 +58,11 @@ const RewardsSchema = new mongoose.Schema({
 
 const merchantSchema = new mongoose.Schema({
   status: { type: String, enum: MerchantStatus},
+  tier: { type: String, enum: MerchantTier },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
   preferredContactMethod: { type: String, enum: ContactMethod },
-  merchantId: { type: String, required: true },
+  merchantId: { type: String },
   walletAddress: { type: String },
   storeImage: { type: String },
   privyId: { type: String },

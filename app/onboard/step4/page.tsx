@@ -7,7 +7,7 @@ import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { useEffect, useState } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
-import { Tax } from '@/app/types/types';
+import { MerchantTier, Tax } from '@/app/types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -132,7 +132,7 @@ export default function Step4() {
       }
     } catch (error) {
       console.error('Error updating merchant:', error);
-      setErrorMessage('An unexpected error happened. Please try again later.');
+      setErrorMessage('An unexpected error happened. Please try again later');
       Sentry.captureException(error);
     
       if (isError(error)) {
@@ -152,7 +152,7 @@ export default function Step4() {
   useEffect(() => {
     if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 3) {
       const timer = setTimeout(() => {
-        router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
+        router.push(merchant.onboardingStep ? `/onboard/step${merchant.onboardingStep}` : '/onboard');
       }, 3000);
 
       return () => clearTimeout(timer);
