@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
-import { ContactMethod } from '@/app/types/types';
+import { ContactMethod, MerchantTier } from '@/app/types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -117,6 +117,27 @@ export default function Step1() {
       }
     }
   };
+
+  useEffect(() => {
+    if ( merchant && merchant?.tier !== MerchantTier.paid) {
+      const timer = setTimeout(() => {
+        router.push(`/sell`);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [merchant])
+
+  if (merchant && merchant.tier !== MerchantTier.paid) {
+    return (
+      <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
+        <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>
+        <Flex direction={'column'} justify={'center'} gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 'auto'}}>
+          <Text style={{marginTop: 'auto', marginBottom: 'auto'}}>You are not authorized to view this page.</Text>
+          <Text>Redirecting...</Text>
+        </Flex>
+      </Flex>
+    )
+  }
 
   return (
     <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>

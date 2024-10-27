@@ -472,7 +472,7 @@ export default function Sales(props: { params: Promise<{ userId: string }> }) {
                               </Table.Cell> */}
                               <Table.Cell>
                                 <Text wrap={'nowrap'}>
-                                  {transaction.product.name}
+                                  {transaction.product?.name}
                                 </Text>
                               </Table.Cell>
                               <Table.Cell>
