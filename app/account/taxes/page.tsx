@@ -491,7 +491,7 @@ export default function Taxes(props: { params: Promise<{ userId: string }> }) {
                             <Table.RowHeaderCell>${transaction.payment.salesTax.toFixed(2)}</Table.RowHeaderCell>
                             <Table.Cell>
                               <Text wrap={'nowrap'}>
-                                {transaction.product.name}
+                                {transaction.product?.name}
                               </Text>
                             </Table.Cell>
                             <Table.Cell>

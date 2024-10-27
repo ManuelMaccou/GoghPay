@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/nextjs';
 import UploadImage from '@/app/components/UploadImage';
 import { useEffect, useState } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { MerchantTier } from '@/app/types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -95,10 +96,65 @@ export default function Step5() {
     }
   };
 
+  const handleFinishStep5AndFinish = async () => {
+    if (!merchant) {
+      console.error("No merchant data available");
+      setErrorMessageWithLogin(true);
+      return;
+    }
+
+    if (!isVenmoChecked && !isVenmoQrUploaded && !merchant.paymentMethods?.venmoQrCodeImage) {
+      setErrorMessage("Please add your Venmo QR code or confirm you don't accept Venmo payments.");
+      return;
+    }
+
+    if (!isZelleChecked && !isZelleQrUploaded && !merchant.paymentMethods?.zelleQrCodeImage) {
+      setErrorMessage("Please add your Zelle QR code or confirm you don't accept Zelle payments.");
+      return;
+    }
+
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/merchant/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          name: newMerchantName,
+          onboardingStep: 5,
+          status: 'active'
+        }),
+      });
+
+      if (response.ok) {
+        const updatedMerchant = await response.json();
+        setMerchant(updatedMerchant.merchant);
+        console.log("updated merchant:", updatedMerchant.merchant);
+        router.push('/sell');
+      } else {
+        console.error('Failed to update merchant', response.statusText);
+        Sentry.captureException(new Error(`Failed to update merchant: ${response.statusText} (Status: ${response.status})`));
+        setErrorMessage('An unexpected error happened. Please try again later.');
+      }
+    } catch (error) {
+      console.error('Error updating merchant:', error);
+      setErrorMessage('An unexpected error happened. Please try again later.');
+      Sentry.captureException(error);
+    
+      if (isError(error)) {
+        console.error(error.message);
+      }
+    }
+  };
+
   useEffect(() => {
     if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 4) {
       const timer = setTimeout(() => {
-        router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
+        router.push(merchant.onboardingStep ? `/onboard/step${merchant.onboardingStep}` : '/onboard');
       }, 3000);
 
       return () => clearTimeout(timer);
@@ -254,7 +310,7 @@ export default function Step5() {
         </Callout.Root>
       )}
 
-      <Flex direction={'row'} justify={'between'} mx={'4'}>
+      <Flex direction={'row'} justify={'between'} mx={'4'} align={'center'}>
         <Button
           disabled={!merchant}
           size={'4'}
@@ -266,7 +322,8 @@ export default function Step5() {
           Back
         </Button>
 
-        <Button
+        {merchant?.tier === MerchantTier.paid ? (
+          <Button
           disabled={!merchant}
           size={'4'}
           variant='ghost'
@@ -276,6 +333,17 @@ export default function Step5() {
           Next
           <ArrowRightIcon height={'20'} width={'20'} />
         </Button>
+        ) : (
+          <Button
+          disabled={!merchant}
+          size={'4'}
+          style={{ cursor: !merchant ? 'default' : 'pointer', fontWeight: 'bold' }}
+          onClick={handleFinishStep5AndFinish}
+        >
+          Finish
+        </Button>
+        )}
+        
       </Flex>
       
       {errorMessageWithLogin && (

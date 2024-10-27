@@ -66,7 +66,8 @@ export const config = {
     '/api/rewards/userRewards/customers',
     '/api/rewards/userRewards/update',
     '/api/square/payment/creditCard',
-    '/api/comms/text/'
+    '/api/comms/text/',
+    '/api/user/import-privy-user',
   ]
 };
 

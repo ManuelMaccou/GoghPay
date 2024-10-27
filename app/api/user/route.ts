@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
         phone: userData?.phone,
         name: userData?.name,
         smartAccountAddress: userData?.smartAccountAddress,
+        merchant: userData.merchant,
         creationType: userData?.creationType,
       });
       await user.save();

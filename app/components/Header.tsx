@@ -6,12 +6,13 @@ import { useUser } from '../contexts/UserContext';
 import { useBalance } from '../contexts/BalanceContext';
 import { Box, Card, Flex, Text, Badge, Button, Spinner, Dialog, IconButton, Separator, VisuallyHidden, Link, SegmentedControl } from '@radix-ui/themes';
 import { AvatarIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
-import { User } from '../types/types';
+import { MerchantTier, User } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRightFromBracket, faEnvelope, faGear, faFile, faMoneyBillTransfer, faPlus, faSackDollar, faPiggyBank, faGlobe, faSliders } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation'
 import styles from './styles.module.css'
+import { useMerchant } from '../contexts/MerchantContext';
 
 interface HeaderProps {
   color?: string | null;
@@ -26,9 +27,10 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
+export const Header: React.FC<HeaderProps> = ({ color, embeddedWallet, authenticated, currentUser, walletForPurchase }) => {
   const { user, ready } = usePrivy();
   const { appUser } = useUser();
+  const { merchant } = useMerchant();
   const { balance, isBalanceLoading } = useBalance();
   const router = useRouter();
   const pathname = usePathname()
@@ -62,25 +64,6 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
       <Flex direction={'row'} justify={'end'}>
         {ready && authenticated && (
           <>
-            {/*{!merchant && (
-              !isBalanceLoading ? (
-                <Badge size={'3'} style={{ marginRight: 'auto' }}>USDC Balance: ${balance.toFixed(2)}</Badge>
-              ) : (
-                <Badge size={'3'} style={{ marginRight: 'auto' }}>
-                  USDC balance: 
-                  <Spinner />
-                </Badge>
-              )
-            )} 
-            
-            : (
-              <Badge size={'3'}>
-                <Link href='https://www.coinbase.com/assets' target='_blank' rel='noopener noreferrer'>
-                  View balance on Coinbase
-                </Link>
-              </Badge>
-            )}*/}
-    
             <Dialog.Root>
               <Dialog.Trigger style={{zIndex: '10'}}>
                 <IconButton variant='ghost' style={{ marginLeft: 'auto' }}>
@@ -159,19 +142,19 @@ export const Header: React.FC<HeaderProps> = ({ color, merchant, embeddedWallet,
                 </VisuallyHidden>
                 {currentUser?.merchant ? (
                   <Flex direction={'column'} my={'9'}>
-                    
-                    <Flex direction={'column'} mb={'5'}>
-                      <SegmentedControl.Root 
-                        value={menuState}
-                        radius="full"
-                        onValueChange={(value) => handleSetMenuState(value as 'sales' | 'rewards')}
-                      >
-                        <SegmentedControl.Item value="sales">Sales</SegmentedControl.Item>
-                        <SegmentedControl.Item value="rewards">Rewards</SegmentedControl.Item>
-                      </SegmentedControl.Root>
-                    </Flex>
 
-                    
+                    {merchant?.tier === MerchantTier.paid && (
+                      <Flex direction={'column'} mb={'5'}>
+                        <SegmentedControl.Root 
+                          value={menuState}
+                          radius="full"
+                          onValueChange={(value) => handleSetMenuState(value as 'sales' | 'rewards')}
+                        >
+                          <SegmentedControl.Item value="sales">Sales</SegmentedControl.Item>
+                          <SegmentedControl.Item value="rewards">Rewards</SegmentedControl.Item>
+                        </SegmentedControl.Root>
+                      </Flex>
+                    )}
                     
                     {menuState === 'sales' ? (
                       <>

@@ -6,7 +6,7 @@ import Spinner from '../../components/Spinner';
 import { usePrivy } from '@privy-io/react-auth';
 import { Box, Button, Card, Checkbox, Dialog, Flex, Grid, IconButton, Link, Select, Text, TextField, VisuallyHidden } from '@radix-ui/themes';
 import styles from '../styles.module.css'
-import { Merchant, Tax, RewardsCustomer, PaymentType } from '@/app/types/types';
+import { Merchant, Tax, RewardsCustomer, PaymentType, MerchantTier } from '@/app/types/types';
 import { Cross1Icon, PersonIcon, UpdateIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import { useUser } from '@/app/contexts/UserContext';
@@ -250,11 +250,13 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       return;
     }
 
+    /*
     if (!localFormData.product) {
       setIsLoading(false);
       setErrorMessage("Product name is required.");
       return;
     }
+      */
 
     if (!localFormData.sellerMerchant) {
       setErrorMessage("There was problem loading seller details. Please refresh the page and try again.");
@@ -291,95 +293,98 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
       {!isCheckingFormStatus && (
         <form onSubmit={handleSubmit} className={styles.formGroup}>
           <Flex direction={'column'} justify={'center'} height={'100%'}>
-            <Dialog.Root open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-              <Dialog.Trigger style={{marginBottom: '20px'}}>
-              {currentCustomer ? (
-                <Button variant='solid' size={'4'} color='green' style={{width: "100%"}}>
-                  <PersonIcon height={'25px'} width={'25px'} /> 
-                  {currentCustomer?.userInfo?.name ?? currentCustomer?.userInfo?.email ?? currentCustomer?.userInfo?.phone}
-                </Button>
-              ) : (
-                <Button variant='surface' size={'4'}>
-                  <PersonIcon height={'25px'} width={'25px'} /> 
-                  Select customer
-                </Button>
-              )}
-              </Dialog.Trigger>
+            {merchantFromParent.tier === MerchantTier.paid && (
+              <Dialog.Root open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+                <Dialog.Trigger style={{marginBottom: '20px'}}>
+                {currentCustomer ? (
+                  <Button variant='solid' size={'4'} color='green' style={{width: "100%"}}>
+                    <PersonIcon height={'25px'} width={'25px'} /> 
+                    {currentCustomer?.userInfo?.name ?? currentCustomer?.userInfo?.email ?? currentCustomer?.userInfo?.phone}
+                  </Button>
+                ) : (
+                  <Button variant='surface' size={'4'}>
+                    <PersonIcon height={'25px'} width={'25px'} /> 
+                    Select customer
+                  </Button>
+                )}
+                </Dialog.Trigger>
               
-              <Dialog.Content
-                  style={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '85vh',
-                    borderRadius: '20px 20px 0 0',
-                    padding: '1rem',
-                    backgroundColor: 'white',
-                    overflowY: 'auto',
-                  }}
-                >
-                  <Flex direction={'column'} align={'end'} mb={'7'}>
-                    <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsCustomerDialogOpen(false)}/>
-                  </Flex>
-                    <VisuallyHidden>
-                      <Dialog.Title>Recently checked in</Dialog.Title>
-                    </VisuallyHidden>
-                    <Flex direction={'row'} justify={'between'} align={'center'} width={'85%'} mb={'7'}>
-                    <Text size={'5'} weight={'bold'}>Recently checked in</Text>
-                      <IconButton variant='ghost' onClick={handleCustomerRefresh}>
-                        <UpdateIcon height={'30'} width={'30'} />
-                      </IconButton>
-                  </Flex>
-                  <VisuallyHidden>
-                    <Dialog.Description>
-                      Recently checked in custoemrs
-                    </Dialog.Description>
-                  </VisuallyHidden>
-                  {currentCustomer && (
-                    <Flex direction={'column'} align={'center'}>
-                      <Button size={'4'} variant='ghost' color='red' mb={'7'} 
-                        onClick={() => {
-                          handleSelectCustomer(null);
-                          setIsCustomerDialogOpen(false)
-                        }}>
-                          <Text size={'6'}>
-                            Remove customer
-                          </Text>
-                      </Button>
+                <Dialog.Content
+                    style={{
+                      position: 'fixed',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '85vh',
+                      borderRadius: '20px 20px 0 0',
+                      padding: '1rem',
+                      backgroundColor: 'white',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    <Flex direction={'column'} align={'end'} mb={'7'}>
+                      <Cross1Icon height={'25px'} width={'25px'} onClick={() => setIsCustomerDialogOpen(false)}/>
                     </Flex>
-                    
-                  )}
-                  {customers.length > 0 ? (
-                    customers.map((customer: RewardsCustomer) => (
-                      
-                      <Card
-                        key={customer.userInfo._id}
-                        mb={'5'}
-                        variant="surface"
-                        onClick={() => handleSelectCustomer(customer)}
-                        style={{ padding: '1.5rem' }}
-                      >
-                        <Flex direction={'column'}>
-                          {customer && customer.userInfo?.name && (
-                            <Text size={'5'} weight="bold">
-                              {customer.userInfo.name}
+                      <VisuallyHidden>
+                        <Dialog.Title>Recently checked in</Dialog.Title>
+                      </VisuallyHidden>
+                      <Flex direction={'row'} justify={'between'} align={'center'} width={'85%'} mb={'7'}>
+                      <Text size={'5'} weight={'bold'}>Recently checked in</Text>
+                        <IconButton variant='ghost' onClick={handleCustomerRefresh}>
+                          <UpdateIcon height={'30'} width={'30'} />
+                        </IconButton>
+                    </Flex>
+                    <VisuallyHidden>
+                      <Dialog.Description>
+                        Recently checked in custoemrs
+                      </Dialog.Description>
+                    </VisuallyHidden>
+                    {currentCustomer && (
+                      <Flex direction={'column'} align={'center'}>
+                        <Button size={'4'} variant='ghost' color='red' mb={'7'} 
+                          onClick={() => {
+                            handleSelectCustomer(null);
+                            setIsCustomerDialogOpen(false)
+                          }}>
+                            <Text size={'6'}>
+                              Remove customer
                             </Text>
-                          )}
-                          <Text color="gray" size="5">
-                            {customer?.userInfo?.phone ?? customer?.userInfo?.email}
-                          </Text>
-                        </Flex>
+                        </Button>
+                      </Flex>
+                      
+                    )}
+                    {customers.length > 0 ? (
+                      customers.map((customer: RewardsCustomer) => (
                         
-                      </Card>
-                    ))
-                  ) : (
-                    <Text as="div" size="2" color="gray">
-                      No customers available.
-                    </Text>
-                  )}
-                </Dialog.Content>
-            </Dialog.Root>
+                        <Card
+                          key={customer.userInfo._id}
+                          mb={'5'}
+                          variant="surface"
+                          onClick={() => handleSelectCustomer(customer)}
+                          style={{ padding: '1.5rem' }}
+                        >
+                          <Flex direction={'column'}>
+                            {customer && customer.userInfo?.name && (
+                              <Text size={'5'} weight="bold">
+                                {customer.userInfo.name}
+                              </Text>
+                            )}
+                            <Text color="gray" size="5">
+                              {customer?.userInfo?.phone ?? customer?.userInfo?.email}
+                            </Text>
+                          </Flex>
+                          
+                        </Card>
+                      ))
+                    ) : (
+                      <Text as="div" size="2" color="gray">
+                        No customers available.
+                      </Text>
+                    )}
+                  </Dialog.Content>
+              </Dialog.Root>
+            )}
+            
 
             <label htmlFor="product" className={styles.formLabel}>Product Name</label>
               <TextField.Root
@@ -390,7 +395,6 @@ export const NewSaleForm: React.FC<NewSaleFormProps> = ({
                 name="product"
                 value={localFormData.product}
                 onChange={handleChange}
-                required
               />
             <label htmlFor="price" className={styles.formLabel}>Price</label>
               <TextField.Root

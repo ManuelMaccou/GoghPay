@@ -11,7 +11,7 @@ import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-
 import Cookies from "js-cookie";
 import crypto from 'crypto';
 import { useSearchParams } from "next/navigation";
-import { Location } from '@/app/types/types';
+import { Location, MerchantTier } from '@/app/types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -255,7 +255,7 @@ export default function Step3() {
   useEffect(() => {
     if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 2) {
       const timer = setTimeout(() => {
-        router.push(`/onboard/step${merchant.onboardingStep || '1'}`);
+        router.push(merchant.onboardingStep ? `/onboard/step${merchant.onboardingStep}` : '/onboard');
       }, 3000);
 
       return () => clearTimeout(timer);
