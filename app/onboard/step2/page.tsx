@@ -8,6 +8,7 @@ import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { useEffect, useState } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { MerchantTier } from '@/app/types/types';
 
 export default function Step2() {
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function Step2() {
   };
 
   useEffect(() => {
-    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 1) {
+    if (merchant && merchant.tier === MerchantTier.paid && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 1) {
       const timer = setTimeout(() => {
         router.push(`/onboard`);
       }, 3000);
@@ -77,7 +78,7 @@ export default function Step2() {
     }
   }, [merchant, router]);
 
-  if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 1) {
+  if (merchant && merchant.tier === MerchantTier.paid && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 1) {
     return (
       <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
         <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>

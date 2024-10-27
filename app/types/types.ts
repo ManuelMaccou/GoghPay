@@ -11,6 +11,11 @@ export enum ContactMethod {
   Either = 'either',
 }
 
+export enum MerchantTier {
+  free = 'free',
+  paid = 'paid',
+}
+
 enum MilestoneType {
   DollarsSpent = 'dollars_spent',
   NumberOfVisits = 'number_of_visits',
@@ -55,6 +60,7 @@ export enum PaymentType {
 
 export interface User {
   _id: string;
+  admin: boolean;
   privyId?: string;
   squareCustomerId?: string;
   shopifyCustomerId?: string;
@@ -66,6 +72,7 @@ export interface User {
   creationType: string;
   smartAccountAddress?: string;
   coinbaseAddress: string;
+  createdAt: Date;
 }
 
 export interface Merchant {
@@ -73,6 +80,7 @@ export interface Merchant {
   status?: MerchantStatus;
   name: string;
   preferredContactMethod: ContactMethod;
+  tier?: MerchantTier;
   walletAddress?: string;
   storeImage?: string;
   privyId?: string;

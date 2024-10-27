@@ -14,23 +14,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Bad Request" }, { status: 400 });
     }
 
-    /*
     const userIdFromToken = req.headers.get('x-user-id');
+    console.log('user id from token:', userIdFromToken)
 
     if (!userIdFromToken) {
       return NextResponse.json({ message: "Unauthorized" }, {status: 401});
     }
-    */
 
-
+    console.log('address:', userData.email)
     const user = await privy.importUser({
       linkedAccounts: [
         {
           type: 'email',
-          address: userData.email,
+          address: userData.userData.email,
         },
       ],
       createEmbeddedWallet: true,
+      createEthereumSmartWallet: true,
     });
 
     return NextResponse.json({ user, message: "Privy user imported successfully" }, { status: 201 });
