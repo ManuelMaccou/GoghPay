@@ -132,7 +132,7 @@ export default function Step4() {
       }
     } catch (error) {
       console.error('Error updating merchant:', error);
-      setErrorMessage('An unexpected error happened. Please try again later.');
+      setErrorMessage('An unexpected error happened. Please try again later');
       Sentry.captureException(error);
     
       if (isError(error)) {

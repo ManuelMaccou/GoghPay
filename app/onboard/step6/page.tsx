@@ -32,7 +32,7 @@ export default function Step6() {
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [merchant])
+  }, [merchant, router])
 
   if (merchant && merchant.tier !== MerchantTier.paid) {
     return (

@@ -154,7 +154,7 @@ export default function NewMerchant() {
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [appUser])
+  }, [router, appUser])
 
   if (loading) return <Spinner />;
 
