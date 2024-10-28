@@ -17,7 +17,7 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Sales(props: { params: Promise<{ userId: string }> }) {
+export default function Purchases(props: { params: Promise<{ userId: string }> }) {
   const params = use(props.params);
   const { ready, authenticated, user } = usePrivy();
   const [isLoading, setIsLoading] = useState(true);

@@ -6,7 +6,7 @@ import { useUser } from '@/app/contexts/UserContext';
 import { AlertDialog, Button, Callout, Flex, Heading, Link, RadioGroup, Spinner, Strong, Text, VisuallyHidden } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
-import { use, useEffect, useState } from 'react';
+import { Suspense, use, useEffect, useState } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import Cookies from "js-cookie";
 import crypto from 'crypto';
@@ -17,7 +17,7 @@ function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
 }
 
-export default function Step3() {
+function Step3Content() {
   const router = useRouter();
   const { merchant, setMerchant } = useMerchant();
   const { appUser, setAppUser } = useUser();
@@ -422,5 +422,13 @@ export default function Step3() {
         </Callout.Root>
       )}
     </Flex>
+  );
+}
+
+export default function Step3() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <Step3Content />
+    </Suspense>
   );
 }
