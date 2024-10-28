@@ -1,9 +1,6 @@
 'use client';
 
-import { useMerchant } from "../contexts/MerchantContext";
-import { usePrivy } from "@privy-io/react-auth";
-import { Button, Flex, Heading, Link, Spinner, Text } from "@radix-ui/themes";
-import { useEffect } from "react";
+import { Flex, Heading } from "@radix-ui/themes";
 import React from "react";
 
 export default function OnboardLayout({
@@ -11,12 +8,6 @@ export default function OnboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { ready, authenticated } = usePrivy();
-  const { merchant, isFetchingMerchant } = useMerchant();
-
-  useEffect(() => {
-    console.log('merchant:', merchant)
-  }, [merchant]);
 
   return (
     <Flex
@@ -51,41 +42,7 @@ export default function OnboardLayout({
           background: "white",
         }}
       >
-        {ready && authenticated ? (
-
-          isFetchingMerchant ? (
-            <Spinner />
-          ) : merchant ? (
-            children
-          ) : (
-            <Flex direction="column" align="center" gap={'4'}>
-            <Heading>Welcome to Gogh!</Heading>
-            <Text>
-              To join the Gogh family of small businesses, please reach out. We
-              would love to hear from you.
-            </Text>
-            <Button asChild>
-              <Link
-                href="mailto:hello@ongogh.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Contact Us
-              </Link>
-            </Button>
-          </Flex>
-          )
-        ) : ready && !authenticated ? (
-          <Flex direction="column" align="center" gap={'4'}>
-              <Heading>Welcome to Gogh!</Heading>
-              <Text>
-                To continue, please log in.
-              </Text>
-              <Button asChild>
-                <Link href="/">Log in</Link>
-              </Button>
-            </Flex>
-        ) : <Spinner /> }
+        {children}
       </Flex>
     </Flex>
   );
