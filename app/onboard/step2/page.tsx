@@ -23,6 +23,46 @@ export default function Step2() {
     setIsChecked(checked === true);
   };
 
+  const skipToStep4 = async () => {
+    console.log(merchant)
+    if (!merchant) {
+      console.error("No merchant data available");
+      setErrorMessageWithLogin(true);
+      return;
+    }
+
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/merchant/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          onboardingStep: 3,
+        }),
+      });
+
+      if (response.ok) {
+        const updatedMerchant = await response.json();
+        setMerchant(updatedMerchant.merchant);
+        console.log("updated merchant:", updatedMerchant.merchant);
+        router.push('/onboard/step4');
+      } else {
+        console.error('Failed to update merchant:', response.statusText);
+        setErrorMessage('An unexpected error happened. Please try again later.');
+        Sentry.captureException(new Error(`Failed to update merchant: ${response.statusText} (Status: ${response.status})`));
+      }
+    } catch (error) {
+      console.error('An unexpected error happened:', error);
+      setErrorMessage('An unexpected error happened. Please try again later.');
+      Sentry.captureException(error);
+    }
+  };
+
   const handleFinishStep2 = async () => {
     console.log(merchant)
     if (!merchant) {
@@ -94,6 +134,12 @@ export default function Step2() {
     <Flex direction={'column'} justify={{initial: 'start', sm: 'between'}} width={'100%'} flexGrow={'1'} py={'9'} gap={{initial: '9', sm:'0'}}>
       <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Square</Heading>
       <Flex direction={'column'} justify={'center'}  gap={'5'} width={{initial: '100%', sm: '500px'}} style={{ alignSelf: 'center'}}>
+        <Button size={'4'}
+          mb={'4'}
+          variant='surface'
+          onClick={skipToStep4}>
+          Click here if you don&apos;t use Square
+        </Button>
         <Text>First, let&apos;s confirm you have the right Square POS app installed on your phone. 
           If the icon is grey and looks like the one below, you&apos;re all set. 
           If you have a different app, click the link below to install the correct one. 
