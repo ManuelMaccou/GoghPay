@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { MerchantTier } from '../types/types';
 
-export default function Step1() {
+export default function Onboard() {
   const router = useRouter();
   const { merchant, setMerchant } = useMerchant();
   const { user } = usePrivy();
