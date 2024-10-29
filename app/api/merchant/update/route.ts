@@ -32,6 +32,7 @@ export async function PATCH(req: NextRequest) {
       'square.refresh_token', 
       'square.merchant_id',
       'square.token_expires_at',
+      'square.terminal_device_id',
       'rewards.discount_type',
       'rewards.welcome_reward',
       'rewards.milestone_type',

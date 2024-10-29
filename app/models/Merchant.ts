@@ -19,6 +19,7 @@ const SquareSchema = new mongoose.Schema({
   access_token: { type: String },
   refresh_token: { type: String },
   token_expires_at: { type: Date },
+  terminal_device_id: { type: String },
 }, { timestamps: true });
 
 const BrandingSchema = new mongoose.Schema({
@@ -80,6 +81,7 @@ const merchantSchema = new mongoose.Schema({
   rewards: { type: RewardsSchema },
   branding: { type: BrandingSchema },
   code: { type: String },
+  deviceType: { type: String },
 
 }, { timestamps: true });
 
