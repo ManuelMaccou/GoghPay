@@ -606,7 +606,6 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
         findExistingSquareCustomer(appUser).then(() => {
           setHasSynced(true);
           setIsCheckingSquareDirectory(false);
-          
         });
       } else if (!isCheckingMerchantToken && !merchantTokenIsValid) {
         console.error('There was an error. Please have the seller reconnect to Square from their Gogh account.')
@@ -862,6 +861,36 @@ export default function MyMerchantRewardsContent({ params }: MyMerchantRewardsCo
   }, [usersCurrentRewardsTier, merchant?.rewards?.tiers]);
 
   const sortedMilestoneTiers = merchant?.rewards?.tiers ? [...merchant.rewards.tiers].sort((a, b) => a.milestone - b.milestone) : [];
+
+  // Check Shopify
+  useEffect(() => {
+    const checkForExistingShopifyUser = async () => {
+      const response = await fetch('/api/shopify/user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          merchantId: merchant?._id,
+          customerEmail: appUser?.email,
+        }),
+      });
+    
+      const data = await response.json();
+      if (response.ok) {
+        console.log('User:', data);
+        setShopifyUser(data)
+      } else {
+        console.error('Error:', data.error);
+      }
+    };
+
+    if (merchant && merchant.shopify && appUser) {
+      checkForExistingShopifyUser();
+    }
+
+  }, [appUser, merchant, currentUserMerchantRewards])
+
 
   if (!ready) {
     return (

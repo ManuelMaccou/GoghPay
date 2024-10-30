@@ -21,6 +21,11 @@ const SquareSchema = new mongoose.Schema({
   token_expires_at: { type: Date },
 }, { timestamps: true });
 
+const ShopifySchema = new mongoose.Schema({
+  shopName: { type: String },
+  accessToken: { type: String },
+}, { timestamps: true });
+
 const BrandingSchema = new mongoose.Schema({
   primary_color: { type: String, default: "#FFFFFF", required: true },
   seconday_color: { type: String, default: "#000000", required: true },
@@ -71,10 +76,7 @@ const merchantSchema = new mongoose.Schema({
   stripeConnectedAccountId: { type: String },
   taxes: { type: [taxSchema] },
   promo: { type: Boolean },
-  shopify: {
-    shopName: { type: String },
-    accessToken: { type: String },
-  },
+  shopify: { type: ShopifySchema},
   square: { type: SquareSchema },
   paymentMethods: { type: PaymentMethodSchema },
   rewards: { type: RewardsSchema },
