@@ -7,11 +7,11 @@ import { AlertDialog, Button, Callout, Flex, Heading, Link, RadioGroup, Spinner,
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
 import { Suspense, use, useEffect, useState } from 'react';
-import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon, UpdateIcon } from '@radix-ui/react-icons';
 import Cookies from "js-cookie";
 import crypto from 'crypto';
 import { useSearchParams } from "next/navigation";
-import { Location, MerchantTier } from '@/app/types/types';
+import { Location, SquareTerminalDeviceStatus } from '@/app/types/types';
 
 function isError(error: any): error is Error {
   return error instanceof Error && typeof error.message === "string";
@@ -35,6 +35,13 @@ function Step3Content() {
   const [status, setStatus] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [squareLocationName, setSquareLocationName] = useState<string | null>(null);
+
+  const [showConnectTerminal, setShowConnectTerminal] = useState<boolean>(false);
+  const [deviceCodeStatus, setDeviceCodeStatus] = useState<SquareTerminalDeviceStatus>(SquareTerminalDeviceStatus.UNKNOWN);
+  const [deviceLoginCode, setDeviceLoginCode] = useState<string | null>(null);
+  const [connectingSquareTerminal, setConnectingSquareTerminal] = useState<boolean>(false);
+  const [terminalErrorMessage, setTerminalErrorMessage] = useState<string | null>(null);
+
 
   const searchParams = useSearchParams();
 
@@ -128,6 +135,16 @@ function Step3Content() {
     }
   }, [status]);
 
+  useEffect (() => {
+    if (merchant && merchant.deviceType === 'terminal') {
+      setShowConnectTerminal(true);
+    }
+  }, [status, merchant])
+
+  useEffect(() => {
+    console.log('showConnectTerminal:', showConnectTerminal)
+  }, [showConnectTerminal])
+
   const handleLocationSelect = async () => {
     setErrorMessage(null);
     if (!selectedLocation) return;
@@ -204,6 +221,113 @@ function Step3Content() {
     </svg>
   );
   
+  useEffect(() => {
+    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 2) {
+      const timer = setTimeout(() => {
+        router.push(merchant.onboardingStep ? `/onboard/step${merchant.onboardingStep}` : '/onboard');
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [merchant, router]);
+
+  // Check terminal device connection status
+  useEffect(() => {
+    if (merchant && merchant?.deviceType === 'terminal' && merchant.square?.terminal_device_id) {
+      checkDeviceStatus();
+    };
+  }, [merchant])
+
+  useEffect(() => {
+    console.log('login code:', deviceLoginCode)
+  }, [deviceLoginCode])
+
+  const checkDeviceStatus = async() => {
+    try {
+      const response = await fetch(`/api/square/device/terminal/status?merchantId=${merchant?._id}`)
+      
+      if (response.ok) {
+        const { deviceStatus } = await response.json();
+        setDeviceCodeStatus(deviceStatus);
+      } else {
+        const errorMessage = await response.text();
+        if (response.status === 404) {
+          setTerminalErrorMessage(errorMessage)
+        }
+        console.error('Error fetching device status:', errorMessage);
+      }
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error(error);
+    }
+  }
+
+  const updateMerchant = async(deviceId: string) => {
+    const accessToken = await getAccessToken();
+    try {
+      const response = await fetch(`/api/merchant/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          square: {
+            terminal_device_id: deviceId,
+          },
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to update merchant:', response.statusText);
+        Sentry.captureException(new Error(`Failed to update merchant with Square teminal device ID: ${response.statusText} (Status: ${response.status})`));
+      }
+    } catch (error) {
+      console.error('An unexpected error happened:', error);
+      setErrorMessage('An unexpected error happened. Please try again later.');
+      Sentry.captureException(error);
+    }
+  }
+
+  const connectSquareTerminal = async () => {
+    setConnectingSquareTerminal(true);
+    const accessToken = await getAccessToken();
+
+    try {
+      const response = await fetch(`/api/square/device/terminal/pair`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          merchantId: merchant?._id,
+        }),
+      });
+
+      if (response.ok) {
+        const { deviceStatus, loginCode, deviceId } = await response.json();
+        await updateMerchant(deviceId);
+
+        setDeviceCodeStatus(deviceStatus);
+        setDeviceLoginCode(loginCode);
+      } else {
+        const errorMessage = await response.text();
+        if (response.status === 404) {
+          setTerminalErrorMessage(errorMessage)
+        }
+        console.error('Error fetching device status:', errorMessage);
+      }
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error(error);
+    } finally {
+      setConnectingSquareTerminal(false);
+    }
+  }
+
   const handleFinishStep3 = async () => {
     if (!merchant) {
       console.error("No merchant data available");
@@ -251,16 +375,6 @@ function Step3Content() {
       Sentry.captureException(error);
     }
   };
-
-  useEffect(() => {
-    if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 2) {
-      const timer = setTimeout(() => {
-        router.push(merchant.onboardingStep ? `/onboard/step${merchant.onboardingStep}` : '/onboard');
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [merchant, router]);
 
   if (merchant && merchant.status === "onboarding" && (merchant.onboardingStep ?? 0) < 2) {
     return (
@@ -329,7 +443,7 @@ function Step3Content() {
                   style={{width: '250px'}}
                   onClick={handleConnectSquare}
                 >
-                  Connect Square
+                  Authorize Square
                 </Button>
               </Flex>
             ) : (
@@ -369,7 +483,7 @@ function Step3Content() {
                     style={{width: '250px'}}
                     onClick={handleConnectSquare}
                   >
-                    Connect Square
+                    Authorize Square
                   </Button>
                 )}
               </>
@@ -378,6 +492,51 @@ function Step3Content() {
             <Spinner />
           )}
         </Flex>
+
+        {showConnectTerminal && (
+          deviceCodeStatus !== SquareTerminalDeviceStatus.PAIRED ? (
+            <Flex direction={'column'} width={{initial: '90%', sm: '500px'}} gap={'4'}>
+              <Heading size={{ initial: "5", sm: "8" }} align={'center'}>Connect Terminal Device</Heading>
+              <Button size={'4'}
+                disabled={!merchant}
+                loading={connectingSquareTerminal}
+                onClick={connectSquareTerminal}
+              >
+                {deviceLoginCode ? 'Connected' : 'Connect your Square terminal'}
+              </Button>
+
+              {deviceLoginCode && (
+              <Flex direction={'column'} justify={'center'}>
+                <Text mb={'4'} size={'4'}>Use this code to log into your terminal, then refresh the status below.</Text>
+                <Text align={'center'} size={'8'} weight={'bold'}>{deviceLoginCode}</Text>
+              </Flex>
+              )}
+            </Flex>
+            ) : (
+              <Flex direction={'column'} width={{initial: '90%', sm: '500px'}} gap={'4'}>
+                <Heading>Connect Terminal Device</Heading>
+                <Callout.Root color="green">
+                  <Callout.Icon>
+                    <InfoCircledIcon />
+                  </Callout.Icon>
+                  <Callout.Text>
+                    Terminal device paired.
+                  </Callout.Text>
+                </Callout.Root>
+              </Flex>
+            )
+          )}
+          {showConnectTerminal && deviceCodeStatus && (
+            <Flex direction={'column'} gap={'4'}>
+              <Text size={'5'}>Terminal status: <Strong>{deviceCodeStatus}</Strong></Text>
+              <Button size={'4'} variant='ghost'
+                onClick={checkDeviceStatus}>
+                Refresh
+                <UpdateIcon height={'25'} width={'25'} />
+              </Button>
+            </Flex>
+          )}
+       
       </Flex>
       <Flex direction={'row'} justify={'between'} mx={'4'}>
         <Button

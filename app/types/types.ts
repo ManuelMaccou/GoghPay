@@ -58,6 +58,13 @@ export enum PaymentType {
   Cash = 'Cash'
 }
 
+export enum SquareTerminalDeviceStatus {
+  UNKNOWN = "UNKNOWN",
+  UNPAIRED = "UNPAIRED",
+  PAIRED = "PAIRED",
+  EXPIRED = "EXPIRED"
+}
+
 export interface User {
   _id: string;
   admin: boolean;
@@ -95,6 +102,7 @@ export interface Merchant {
   rewards?: Rewards;
   branding?: Branding;
   code?: string;
+  deviceType?: string;
 }
 
 export interface Square {
@@ -104,6 +112,7 @@ export interface Square {
   token_expires_at?: string;
   location_id?: string;
   location_name?: string;
+  terminal_device_id?: string;
 }
 
 export interface Transaction {

@@ -68,6 +68,8 @@ export const config = {
     '/api/square/payment/creditCard',
     '/api/comms/text/',
     '/api/user/import-privy-user',
+    '/api/square/device/terminal/pair',
+    '/api/square/device/terminal/pay',
   ]
 };
 
