@@ -6,7 +6,7 @@ import { useUser } from '@/app/contexts/UserContext';
 import { AlertDialog, Button, Callout, Flex, Heading, Link, RadioGroup, Spinner, Strong, Text, VisuallyHidden } from "@radix-ui/themes";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 import * as Sentry from '@sentry/nextjs';
-import { Suspense, use, useEffect, useState } from 'react';
+import { Suspense, use, useCallback, useEffect, useState } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon, UpdateIcon } from '@radix-ui/react-icons';
 import Cookies from "js-cookie";
 import crypto from 'crypto';
@@ -231,20 +231,15 @@ function Step3Content() {
     }
   }, [merchant, router]);
 
-  // Check terminal device connection status
-  useEffect(() => {
-    if (merchant && merchant?.deviceType === 'terminal' && merchant.square?.terminal_device_id) {
-      checkDeviceStatus();
-    };
-  }, [merchant])
+  
 
   useEffect(() => {
     console.log('login code:', deviceLoginCode)
   }, [deviceLoginCode])
 
-  const checkDeviceStatus = async() => {
+  const checkDeviceStatus = useCallback(async () => {
     try {
-      const response = await fetch(`/api/square/device/terminal/status?merchantId=${merchant?._id}`)
+      const response = await fetch(`/api/square/device/terminal/status?merchantId=${merchant?._id}`);
       
       if (response.ok) {
         const { deviceStatus } = await response.json();
@@ -252,7 +247,7 @@ function Step3Content() {
       } else {
         const errorMessage = await response.text();
         if (response.status === 404) {
-          setTerminalErrorMessage(errorMessage)
+          setTerminalErrorMessage(errorMessage);
         }
         console.error('Error fetching device status:', errorMessage);
       }
@@ -260,7 +255,14 @@ function Step3Content() {
       Sentry.captureException(error);
       console.error(error);
     }
-  }
+  }, [merchant?._id, setDeviceCodeStatus, setTerminalErrorMessage]);
+
+  // Check terminal device connection status
+  useEffect(() => {
+    if (merchant && merchant?.deviceType === 'terminal' && merchant.square?.terminal_device_id) {
+      checkDeviceStatus();
+    }
+  }, [checkDeviceStatus, merchant]);
 
   const updateMerchant = async(deviceId: string) => {
     const accessToken = await getAccessToken();
