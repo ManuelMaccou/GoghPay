@@ -570,6 +570,173 @@ function SellContent() {
     }
   };
 
+  const handleSquareTerminalPayment = async (newSaleFormData: SaleFormData | null) => {
+    if (!finalPrice || !finalPriceCalculated) {
+      setSquarePosError('Missing payment details. Please refresh the page and try again.')
+      return;
+    } 
+
+    if (!newSaleFormData) {
+      setSquarePosError('Missing sale details. Please refresh the page and try again.')
+      return;
+    } 
+
+    setShowNewSaleForm(true)
+
+    try {
+      const accessToken = await getAccessToken();
+      const response = await fetch(`/api/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: user?.id,
+          buyerPrivyId: user?.id,
+          buyerId: newSaleFormData.customer?.userInfo._id,
+          merchantId: newSaleFormData.sellerMerchant?._id,
+          productName: newSaleFormData.product,
+          productPrice: newSaleFormData.price,
+          discountType: newSaleFormData.customer?.currentDiscount?.type,
+          discountAmount: newSaleFormData.customer?.currentDiscount?.amount,
+          welcomeDiscount: welcomeDiscount,
+          salesTax: newSaleFormData.tax,
+          paymentType: newSaleFormData.paymentMethod,
+          status: 'PENDING',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+      
+        const apiError = new ApiError(
+          `Saving the initial tx pending transaction during Square terminal payment - ${response.statusText} - ${data.message || 'Unknown Error'}`,
+          response.status,
+          data
+        );
+        Sentry.captureException(apiError, {
+          tags: {
+            paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
+          },
+          extra: {
+            responseStatus: response?.status ?? 'unknown',
+            responseMessage: data?.message || 'Unknown Error',
+            product: newSaleFormData?.product ?? 'unknown product',
+            price: newSaleFormData?.price ?? 'unknown price',
+            merchantId: newSaleFormData?.sellerMerchant?._id ?? 'unknown merchant',
+            buyerId: newSaleFormData?.customer?.userInfo._id ?? 'unknown buyer'
+          },
+        });
+        console.error(error);
+      } else {
+        console.log('Transaction from POS saved successfully. Posting payment to terminal:', data);
+        const goghTransactionId = data.transaction._id
+        await postTerminalPayment(goghTransactionId, newSaleFormData);
+      }
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : 'Unknown error';
+      Sentry.captureException(error, {
+        tags: { section: 'Square terminal payment' },
+        extra: {
+          functionName: 'handleSquareTerminalPayment',
+          errorDetails: errMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          finalPrice
+        },
+      });
+      console.error('Error in postTerminalPayment:', errMessage);
+    }
+  }
+
+  const postTerminalPayment = async(goghTransactionId: string, newSaleFormData: SaleFormData) => {
+    const formattedPrice = parseFloat(priceAfterDiscount || '0') * 100
+    try {
+      const accessToken = await getAccessToken();
+      const response = await fetch(`/api/square/device/terminal/pay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          finalPrice: formattedPrice,
+          goghTransactionId,
+          merchantId: merchant?._id,
+          privyId: appUser?.privyId
+        }),
+      });
+
+      if (response.ok) {
+        console.log('Terminal payment successful')
+        await updateTransactionDetails(goghTransactionId)
+        await handleUpdateTransactionFromTerminalPayment(newSaleFormData)
+      }
+
+      if (!response.ok) {
+        console.error(`Error details: ${response.statusText}, status: ${response.status}`);
+        Sentry.captureException(new Error(`Failed to process payment: ${response.statusText}, status: ${response.status}`));
+      }
+
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : 'Unknown error';
+      Sentry.captureException(error, {
+        tags: { section: 'Square terminal payment' },
+        extra: {
+          functionName: 'postTerminalPayment',
+          errorDetails: errMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          goghTransactionId,
+          finalPrice
+        },
+      });
+      console.error('Error in postTerminalPayment:', errMessage);
+    }
+
+  }
+
+  const updateTransactionDetails = async (goghTransactionId: string) => {
+    try {
+  
+      const accessToken = await getAccessToken();
+  
+      const response = await fetch(`/api/transaction/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          transactionId: goghTransactionId,
+          privyId: appUser?.privyId,
+          status: 'SUCCESS: WAITING ON TERMINAL',
+        }),
+      });
+  
+      if (!response.ok) {
+        console.error(`Error details: ${response.statusText}, status: ${response.status}`);
+        Sentry.captureException(new Error(`Failed to process payment: ${response.statusText}, status: ${response.status}`));
+      } else {
+        console.log('Transaction status updated after terminal payment')
+      }
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : 'Unknown error';
+      Sentry.captureException(error, {
+        tags: { section: 'Square terminal payment' },
+        extra: {
+          functionName: 'updateTransactionDetails',
+          errorDetails: errMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          goghTransactionId,
+          finalPrice
+        },
+      });
+      console.error('Error in postTerminalPayment:', errMessage);
+    }
+  }
+
+
   /*
   useEffect(() => {
     const fetchInventory = async () => {
@@ -730,6 +897,92 @@ function SellContent() {
     setSquarePosErrorMessage(null);
     setCustomerUpgraded(false);
   };
+
+  const handleUpdateTransactionFromTerminalPayment = async (newSaleFormData: SaleFormData) => {
+    const accessToken = await getAccessToken();
+    console.log('newsaleformdata:', newSaleFormData);
+
+    const priceNum = parseFloat(newSaleFormData.price);
+    const calculatedSalesTax = parseFloat(((newSaleFormData.tax/100) * priceNum).toFixed(2));
+
+    if (newSaleFormData.customer) {
+      if (newSaleFormData.sellerMerchant && !newSaleFormData.customer.purchaseCount) {
+        console.log('will send text here');
+        //silentlySendTextMessage(newSaleFormData.customer, newSaleFormData.sellerMerchant)
+      }
+      try {
+        const response = await fetch(`/api/rewards/userRewards/update`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            privyId: user?.id,
+            purchaseData: newSaleFormData,
+            priceAfterDiscount,
+          }),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+          setNewSaleFormData(null);
+          setShowNewSaleForm(true);
+          setErrorMessage('There was an error updating the customer rewards. We have received the error and are looking into it.');
+    
+          const apiError = new ApiError(
+            `Updating reward details after QR code or cash payment - ${response.statusText} - ${responseData.message || 'Unknown Error'}`,
+            response.status,
+            responseData
+          );
+          Sentry.captureException(apiError, {
+            tags: {
+              paymentMethod: newSaleFormData?.paymentMethod ?? 'unknown',
+            },
+            extra: {
+              responseStatus: response?.status ?? 'unknown',
+              responseMessage: responseData?.message || 'Unknown Error',
+              privyId: user?.id ?? 'unknown privyId',
+              purchaseData: newSaleFormData ?? 'unknown purchase data',
+              finalPrice: finalPrice ?? 'unknown',
+            },
+          });
+      
+          console.error(apiError);
+        } else {
+          if (merchant) {
+            fetchCheckedInCustomers(merchant._id)
+          }
+          setRewardsUpdated(true);
+          setNewSaleFormData(null);
+          setShowNewSaleForm(true);
+
+          if (responseData.customerUpgraded) {
+            setCustomerUpgraded(responseData.customerUpgraded)
+          }
+
+          console.log('Rewards updated successfully:', responseData);
+        }
+      } catch (error) {
+        Sentry.captureException(error, {
+          tags: {
+            paymentMethod: newSaleFormData?.paymentMethod,
+          },
+          extra: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            privyId: user?.id ?? 'unknown privyId',
+            purchaseData: newSaleFormData ?? 'unknown purchase data',
+            finalPrice: finalPrice ?? 'unknown',
+          },
+        });
+      
+        console.error(error);
+      }
+    }
+    setNewSaleFormData(null);
+  }
 
   const handleSavePaymentAndUpdateRewards = async (newSaleFormData: SaleFormData) => {
     const accessToken = await getAccessToken();
@@ -1446,27 +1699,52 @@ function SellContent() {
                       </Callout.Root>
                       )}
                       
-                      <Flex direction={'column'} gap="7" mt="4" justify={'between'} align={'center'} pt={'4'}>
-                        <AlertDialog.Action>
-                          <Button size={'4'} 
-                            style={{width: '250px'}}
-                            onClick={() => {
-                              handleSquarePosPayment(newSaleFormData);
-                              setShowSquareDialog(false);
-                            }}>
-                            Charge
-                          </Button>
-                        </AlertDialog.Action>
-                        <AlertDialog.Cancel>
-                          <Button size={'4'} variant="ghost" 
-                            onClick={() => {
-                              setSelectedPaymentMethod(null);
-                              setShowNewSaleForm(true);
-                            }}>
-                            Cancel
-                          </Button>
-                        </AlertDialog.Cancel>
-                      </Flex>
+                      {merchant.deviceType === 'terminal' ? (
+                        <Flex direction={'column'} gap="7" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                          <AlertDialog.Action>
+                            <Button size={'4'} 
+                              style={{width: '250px'}}
+                              onClick={() => {
+                                handleSquareTerminalPayment(newSaleFormData);
+                                setShowSquareDialog(false);
+                              }}>
+                              Charge
+                            </Button>
+                          </AlertDialog.Action>
+                          <AlertDialog.Cancel>
+                            <Button size={'4'} variant="ghost" 
+                              onClick={() => {
+                                setSelectedPaymentMethod(null);
+                                setShowNewSaleForm(true);
+                              }}>
+                              Cancel
+                            </Button>
+                          </AlertDialog.Cancel>
+                        </Flex>
+                      ) : (
+                        <Flex direction={'column'} gap="7" mt="4" justify={'between'} align={'center'} pt={'4'}>
+                          <AlertDialog.Action>
+                            <Button size={'4'} 
+                              style={{width: '250px'}}
+                              onClick={() => {
+                                handleSquarePosPayment(newSaleFormData);
+                                setShowSquareDialog(false);
+                              }}>
+                              Charge
+                            </Button>
+                          </AlertDialog.Action>
+                          <AlertDialog.Cancel>
+                            <Button size={'4'} variant="ghost" 
+                              onClick={() => {
+                                setSelectedPaymentMethod(null);
+                                setShowNewSaleForm(true);
+                              }}>
+                              Cancel
+                            </Button>
+                          </AlertDialog.Cancel>
+                        </Flex>
+                      )}
+                     
                     </AlertDialog.Content>
                   </AlertDialog.Root>
                 )} 

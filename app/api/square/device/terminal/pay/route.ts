@@ -4,13 +4,14 @@ import Merchant from '@/app/models/Merchant';
 import { decrypt } from '@/app/lib/encrypt-decrypt';
 import * as Sentry from '@sentry/nextjs';
 import { v4 as uuidv4 } from 'uuid';
+import JSONBig from 'json-bigint';
 
 export async function POST(request: NextRequest) {
-  const { merchantId, privyId } = await request.json();
+  const { finalPrice, goghTransactionId, merchantId, privyId }: { finalPrice: string; goghTransactionId: string, merchantId: string, privyId: string; } = await request.json();
   const idempotencyKey = uuidv4();
 
-  if (!merchantId) {
-    return new NextResponse('Missing merchantId', { status: 400 });
+  if (!finalPrice) {
+    return new NextResponse('Missing saleData', { status: 400 });
   }
 
   if (!privyId) {
@@ -28,25 +29,30 @@ export async function POST(request: NextRequest) {
     return new NextResponse('Merchant not found. Please log in again.', { status: 404 });
   }
 
-  if (!merchant.square) {
-    return new NextResponse('Square not connected. Please reconnect in settings.', { status: 404 });
+  if (!merchant.square?.terminal_device_id) {
+    return new NextResponse('Square terminal not connected. Please reconnect in settings.', { status: 404 });
   }
 
   const decryptedAccessToken = decrypt(merchant.square.access_token);
   
   try {
     const client = createSquareClient(decryptedAccessToken);
+
+    const parsedFinalPrice = parseInt(finalPrice, 10);
+    if (isNaN(parsedFinalPrice)) {
+      return new NextResponse('Invalid finalPrice value', { status: 400 });
+    }
+
     const response = await client.terminalApi.createTerminalCheckout({
       idempotencyKey: idempotencyKey,
       checkout: {
         amountMoney: {
-          amount: 10000,
+          amount: BigInt(parsedFinalPrice),
           currency: 'USD'
         },
-        referenceId: '232323',
-        note: 'hamburger',
+        referenceId: goghTransactionId,
         deviceOptions: {
-          deviceId: 'R5WNWB5BKNG9R',
+          deviceId: merchant.square.terminal_device_id,
           skipReceiptScreen: false,
         }
       }
@@ -61,15 +67,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (response.result.checkout.) {
-      console.log('Terminal device response:', response.result.deviceCode);
-      const { status: deviceStatus, code: loginCode, id: deviceId } = response.result.deviceCode;
-      return new NextResponse(
-        JSON.stringify({ deviceStatus, loginCode, deviceId }),
-        { status: 200 }
-      );
+    if (response.result.checkout) {
+      if (response.result.checkout.status === 'PENDING') {
+        const sanitizedResponse = JSONBig.stringify(response.result.checkout);
+
+        console.log('Terminal device response:', response.result.checkout);
+        return new NextResponse(
+          JSON.stringify({ checkout: sanitizedResponse }),
+          { status: 200 }
+        );
+      }
+      
+      
     } else {
-      return new NextResponse('Device code not found from Square', { status: 404 });
+      return new NextResponse('There was an error processing the terminal payment', { status: 404 });
     }
   
   } catch (error) {

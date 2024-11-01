@@ -69,6 +69,7 @@ export const config = {
     '/api/comms/text/',
     '/api/user/import-privy-user',
     '/api/square/device/terminal/pair',
+    '/api/square/device/terminal/pay',
   ]
 };
 
