@@ -165,7 +165,7 @@ export default function Step2() {
                 checked={isChecked}
                 
               />
-              I have the correct Square POS app installed or I don't use the mobile app.
+              I have the correct Square POS app installed or I don&apos;t use the mobile app.
             </Flex>
           </Text>
         </Flex>
